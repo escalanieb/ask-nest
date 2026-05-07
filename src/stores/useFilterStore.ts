@@ -5,6 +5,8 @@ interface FilterState {
   setSearchQuery: (q: string) => void;
   activeRegion: string | null;
   setActiveRegion: (r: string | null) => void;
+  activeStatus: string | null;
+  setActiveStatus: (s: string | null) => void;
   activeCityMuni: string | null;
   setActiveCityMuni: (c: string | null) => void;
   activeProvince: string | null;
@@ -18,6 +20,8 @@ export const useFilterStore = create<FilterState>((set) => ({
   activeRegion: null,
   setActiveRegion: (r) =>
     set({ activeRegion: r, activeProvince: null, activeCityMuni: null }),
+  activeStatus: null,
+  setActiveStatus: (s) => set({ activeStatus: s }),
   activeCityMuni: null,
   setActiveCityMuni: (c) => set({ activeCityMuni: c }),
   activeProvince: null,
@@ -26,6 +30,7 @@ export const useFilterStore = create<FilterState>((set) => ({
     set({
       searchQuery: "",
       activeRegion: null,
+      activeStatus: null,
       activeCityMuni: null,
       activeProvince: null,
     }),
