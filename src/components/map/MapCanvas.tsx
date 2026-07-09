@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, type JSX } from "react";
 import {
   MapContainer,
   TileLayer,
   GeoJSON,
   CircleMarker,
+  Circle,
   Marker,
   Popup,
   useMapEvents,
@@ -554,11 +555,185 @@ function VolcanoLayer() {
   );
 }
 
-// Placeholder for typhoon overlay
+// Renders live Philippines typhoon markers from the dedicated endpoint
 function TyphoonLayer() {
   const enabled = useDisasterStore((s) => s.typhoonsEnabled);
+  const { data: response } = useQuery({
+    queryKey: ["disasters", "typhoon", "ph"],
+    queryFn: () => disasterApi.typhoonPh(50),
+    enabled,
+    staleTime: 1000 * 60 * 5,
+    refetchInterval: enabled ? 1000 * 60 * 5 : false,
+  });
+
   if (!enabled) return null;
-  return null; // Real-time typhoon data integration pending
+  const events: DisasterEvent[] = response?.data ?? [];
+
+  return (
+    <>
+      {events.map((tc) => {
+        if (tc.lat === null || tc.lng === null) return null;
+
+        const color = severityColor(tc.severity);
+        const stormName: string = (tc.metrics?.storm_name as string) ?? tc.title;
+        const windKph: number | null = (tc.metrics?.wind_speed as number) ?? null;
+        const alertLevel: string = (tc.metrics?.alert_level as string) ?? tc.severity;
+        const gdacsUrl: string | null = (tc.metrics?.url as string) ?? null;
+
+        // Parse storm bbox for impact zone ring: "lonMin lonMax latMin latMax"
+        const rawBbox = (tc.metrics?.storm_bbox as string) ?? "";
+        let impactCircle: JSX.Element | null = null;
+        if (rawBbox) {
+          const [lonMin, lonMax, latMin, latMax] = rawBbox
+            .split(" ")
+            .map(parseFloat);
+          const centerLat = (latMin + latMax) / 2;
+          const centerLng = (lonMin + lonMax) / 2;
+          // Approximate radius from bbox height in degrees → km (1° ≈ 111 km)
+          const radiusKm = ((latMax - latMin) / 2) * 111;
+          // Circle Marker is in pixels (shrinks relative to geographic map when zooming).
+          // We import Circle from react-leaflet to represent a fixed geographic circle in meters.
+          const radiusMeters = radiusKm * 1000;
+          impactCircle = (
+            <Circle
+              key={`${tc.external_id}-bbox`}
+              center={[centerLat, centerLng]}
+              radius={radiusMeters}
+              pathOptions={{
+                color,
+                fillColor: color,
+                fillOpacity: 0.06,
+                weight: 1.5,
+                opacity: 0.4,
+                dashArray: "6 4",
+              }}
+            />
+          );
+        }
+
+        // Spiral typhoon icon using CSS/Unicode
+        const size = 36;
+        const half = size / 2;
+        const tcIcon = L.divIcon({
+          html: `<div style="width:${size}px;height:${size}px;position:relative;display:flex;align-items:center;justify-content:center;overflow:visible">
+            <div class="disaster-marker__ring" style="position:absolute;inset:-8px;border-radius:50%;background:${color};opacity:0.25;animation-duration:1.8s;"></div>
+            <div class="disaster-marker__ring disaster-marker__ring--slow" style="position:absolute;inset:-16px;border-radius:50%;background:${color};opacity:0.12;animation-duration:2.8s;"></div>
+            <div style="position:relative;width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px ${color}90,0 1px 6px rgba(0,0,0,0.3);">
+              <span style="font-size:18px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.4))">🌀</span>
+            </div>
+            <div style="position:absolute;top:${size + 4}px;left:50%;transform:translateX(-50%);white-space:nowrap;background:${color};color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.3);letter-spacing:0.03em">${stormName}</div>
+          </div>`,
+          className: "",
+          iconSize: [size, size],
+          iconAnchor: [half, half],
+        });
+
+        return (
+          <span key={tc.external_id} style={{ display: "contents" }}>
+            {impactCircle}
+            <Marker position={[tc.lat, tc.lng]} icon={tcIcon}>
+              <Popup maxWidth={280}>
+                <div
+                  style={{
+                    fontFamily:
+                      "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    <span style={{ fontSize: "18px" }}>🌀</span>
+                    <strong style={{ fontSize: "12px", lineHeight: 1.3 }}>
+                      {stormName}
+                    </strong>
+                  </div>
+                  <div
+                    style={{
+                      display: "inline-block",
+                      background:
+                        tc.severity === "high"
+                          ? "#fee2e2"
+                          : tc.severity === "medium"
+                            ? "#ffedd5"
+                            : "#dcfce7",
+                      color,
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: "999px",
+                      marginBottom: "8px",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    {alertLevel} Alert
+                  </div>
+                  {windKph != null && (
+                    <p
+                      style={{
+                        fontSize: "11px",
+                        margin: "0 0 4px",
+                        color: "#374151",
+                      }}
+                    >
+                      💨 Max winds:{" "}
+                      <strong>{Math.round(windKph)} km/h</strong>
+                    </p>
+                  )}
+                  {tc.location_label && (
+                    <p
+                      style={{
+                        fontSize: "10px",
+                        color: "#6b7280",
+                        margin: "0 0 4px",
+                      }}
+                    >
+                      📍 {tc.location_label}
+                    </p>
+                  )}
+                  <p
+                    style={{
+                      fontSize: "10px",
+                      color: "#9ca3af",
+                      margin: "0 0 8px",
+                    }}
+                  >
+                    {timeAgo(tc.event_started_at)} · GDACS
+                  </p>
+                  {gdacsUrl && (
+                    <a
+                      href={gdacsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        background: color,
+                        color: "#fff",
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        textDecoration: "none",
+                      }}
+                    >
+                      View on GDACS ↗
+                    </a>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          </span>
+        );
+      })}
+    </>
+  );
 }
 
 // Placeholder for flood overlay

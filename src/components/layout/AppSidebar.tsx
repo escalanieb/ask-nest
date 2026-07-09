@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/useAuthStore";
 import NestLogo from "../NestLogo";
+import AppsMenu from "./AppsMenu";
 
 interface NavItem {
   to: string;
@@ -112,6 +113,8 @@ export default function AppSidebar() {
             </NavLink>
           );
         })}
+        {/* Apps launcher */}
+        <AppsMenu />
       </div>
 
       {/* Logout */}

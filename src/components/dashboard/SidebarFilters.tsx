@@ -1141,11 +1141,11 @@ function DisasterLayers() {
     },
     {
       key: "typhoons",
-      label: "Typhoons",
-      sublabel: "Integration pending",
+      label: "Typhoons 🇵🇭",
+      sublabel: "GDACS · Philippines",
       value: typhoonsEnabled,
       toggle: toggleTyphoons,
-      live: false,
+      live: true,
       countType: "typhoon",
     },
     {

@@ -23,11 +23,16 @@ export interface DisasterMetrics {
   felt?: number | null;
   tsunami?: number;
   alert?: string | null;
-  // GDACS
+  // GDACS (general)
   alert_level?: string;
   event_type?: string;
   event_id?: string | null;
   population?: string | null;
+  // GDACS — Tropical Cyclone specific
+  storm_name?: string | null;
+  storm_bbox?: string | null;   // "lonMin lonMax latMin latMax"
+  wind_speed?: number | null;   // km/h
+  episode_id?: string | null;
   // ReliefWeb
   disaster_types?: string[];
   themes?: string[];
@@ -105,8 +110,14 @@ export const disasterApi = {
 
   /**
    * GET /api/disasters/counts — public; used for sidebar badges.
-   * Uses plain fetch (no auth header needed).
    */
   counts: (): Promise<DisasterCounts> =>
     apiFetch<DisasterCounts>("/disasters/counts"),
+
+  /**
+   * GET /api/disasters/typhoon/ph — public; Philippines-scoped typhoon events.
+   * Cached server-side for 5 minutes.
+   */
+  typhoonPh: (limit = 50): Promise<DisasterListResponse> =>
+    apiFetch<DisasterListResponse>(`/disasters/typhoon/ph?limit=${limit}`),
 };

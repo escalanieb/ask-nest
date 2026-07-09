@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { disasterApi } from "../../services/api/disasterApi";
 import type {
@@ -40,11 +40,12 @@ function timeAgo(iso: string | null): string {
 // Filter tabs
 // ---------------------------------------------------------------------------
 
-type Tab = "all" | DisasterType;
+type Tab = "all" | DisasterType | "typhoon_ph";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "all", label: "All" },
   { key: "earthquake", label: "Earthquakes" },
+  { key: "typhoon_ph", label: "Typhoons 🇵🇭" },
   { key: "alert", label: "Alerts" },
   { key: "humanitarian", label: "Reports" },
 ];
@@ -148,6 +149,7 @@ function EventRow({ ev }: { ev: DisasterEvent }) {
 export default function DisasterPanel() {
   const [activeTab, setActiveTab] = useState<Tab>("all");
 
+  // Main latest events (all types)
   const {
     data: response,
     isLoading,
@@ -160,6 +162,19 @@ export default function DisasterPanel() {
     refetchInterval: 1000 * 60 * 10,
   });
 
+  // Philippines typhoon events (dedicated cached endpoint — no auth required)
+  const {
+    data: phTyphoonResponse,
+    isLoading: isTyphoonLoading,
+    isError: isTyphoonError,
+    refetch: refetchTyphoon,
+  } = useQuery({
+    queryKey: ["disasters", "typhoon", "ph"],
+    queryFn: () => disasterApi.typhoonPh(50),
+    staleTime: 1000 * 60 * 5,
+    refetchInterval: 1000 * 60 * 5,
+  });
+
   // Sync fetched events into the shared store (must be in an effect,
   // never called directly during render to avoid React setState-in-render warning).
   const setEvents = useDisasterStore((s) => s.setEvents);
@@ -170,12 +185,32 @@ export default function DisasterPanel() {
   }, [response, setEvents]);
 
   const events = response?.data ?? [];
+  const phTyphoonEvents: DisasterEvent[] = phTyphoonResponse?.data ?? [];
 
-  const filtered: DisasterEvent[] =
-    activeTab === "all" ? events : events.filter((e) => e.type === activeTab);
+  // Merge PH typhoon events into the All view (deduplicate by external_id)
+  const allEvents = useMemo(() => {
+    const seen = new Set(events.map((e) => e.external_id));
+    const extras = phTyphoonEvents.filter((e) => !seen.has(e.external_id));
+    return [...events, ...extras];
+  }, [events, phTyphoonEvents]);
 
-  const countFor = (tab: Tab) =>
-    tab === "all" ? events.length : events.filter((e) => e.type === tab).length;
+  const filtered: DisasterEvent[] = useMemo(() => {
+    if (activeTab === "all") return allEvents;
+    if (activeTab === "typhoon_ph") return phTyphoonEvents;
+    return events.filter((e) => e.type === activeTab);
+  }, [activeTab, allEvents, events, phTyphoonEvents]);
+
+  const countFor = (tab: Tab) => {
+    if (tab === "all") return allEvents.length;
+    if (tab === "typhoon_ph") return phTyphoonEvents.length;
+    return events.filter((e) => e.type === tab).length;
+  };
+
+  // Per-tab loading / error state so each tab renders independently
+  const tabIsLoading = activeTab === "typhoon_ph" ? isTyphoonLoading : isLoading;
+  const tabIsError   = activeTab === "typhoon_ph" ? isTyphoonError   : isError;
+  const tabRefetch   = activeTab === "typhoon_ph" ? refetchTyphoon   : refetch;
+
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-white">
@@ -245,25 +280,25 @@ export default function DisasterPanel() {
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto">
-        {isLoading && (
+        {tabIsLoading && (
           <div className="flex h-full items-center justify-center text-xs text-slate-400">
             Loading disaster data…
           </div>
         )}
-        {isError && (
+        {tabIsError && (
           <div className="flex h-full flex-col items-center justify-center gap-2">
             <p className="text-xs text-red-400">
               Failed to load disaster data.
             </p>
             <button
-              onClick={() => refetch()}
+              onClick={() => tabRefetch()}
               className="rounded bg-red-50 px-3 py-1 text-[10px] text-red-600 hover:bg-red-100"
             >
               Retry
             </button>
           </div>
         )}
-        {!isLoading && !isError && filtered.length === 0 && (
+        {!tabIsLoading && !tabIsError && filtered.length === 0 && (
           <div className="flex h-full items-center justify-center text-xs text-slate-400">
             No
             {activeTab !== "all"
@@ -272,8 +307,8 @@ export default function DisasterPanel() {
             events.
           </div>
         )}
-        {!isLoading &&
-          !isError &&
+        {!tabIsLoading &&
+          !tabIsError &&
           filtered.map((ev) => <EventRow key={ev.external_id} ev={ev} />)}
       </div>
 
