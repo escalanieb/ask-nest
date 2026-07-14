@@ -12,6 +12,7 @@ interface AuthState {
   token: string | null;
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithTala: (data: { token: string; user: AuthUser }) => void;
   logout: () => Promise<void>;
   isAuthenticated: () => boolean;
   isAdmin: () => boolean;
@@ -41,6 +42,10 @@ export const useAuthStore = create<AuthState>()(
         }
 
         const data = await res.json();
+        set({ token: data.token, user: data.user });
+      },
+
+      loginWithTala: (data: { token: string; user: AuthUser }) => {
         set({ token: data.token, user: data.user });
       },
 

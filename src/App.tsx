@@ -13,6 +13,7 @@ import { useAuthStore } from "./stores/useAuthStore";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Login = lazy(() => import("./pages/Login"));
+const TalaCallbackPage = lazy(() => import("./pages/TalaCallbackPage"));
 const DatasetListPage = lazy(() => import("./pages/datasets/DatasetListPage"));
 const DatasetFormPage = lazy(() => import("./pages/datasets/DatasetFormPage"));
 const DatasetUploadPage = lazy(
@@ -91,6 +92,7 @@ export default function App() {
               path="/login"
               element={token ? <Navigate to="/" replace /> : <Login />}
             />
+            <Route path="/auth/tala/callback" element={<TalaCallbackPage />} />
 
             {/* Authenticated — AppShell provides sidebar + auth guard */}
             <Route element={<AppShell />}>

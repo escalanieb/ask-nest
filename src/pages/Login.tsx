@@ -1,13 +1,19 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { TalaLoginButton } from "@tala/sso-react";
 import { useAuthStore } from "../stores/useAuthStore";
 import NestLogo from "../components/NestLogo";
 
 export default function Login() {
   const login = useAuthStore((s) => s.login);
+  const loginWithTala = useAuthStore((s) => s.loginWithTala);
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -21,6 +27,11 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleTalaSuccess(data: { token: string; user: { id: number; name: string; email: string; role: "admin" | "viewer" } }) {
+    loginWithTala(data);
+    navigate("/");
   }
 
   return (
@@ -81,6 +92,24 @@ export default function Login() {
         <p className="mt-6 text-center text-xs text-slate-400">
           Use your admin or viewer account credentials.
         </p>
+
+        {/* Divider */}
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-slate-200" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-white px-2 text-slate-400">or</span>
+          </div>
+        </div>
+
+        {/* TALA SSO */}
+        <TalaLoginButton
+          redirectEndpoint={`${API_BASE}/auth/tala/redirect`}
+          onLoginSuccess={handleTalaSuccess}
+          onLoginError={(err) => setError(err)}
+          className="w-full justify-center border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+        />
       </div>
     </div>
   );
