@@ -4,6 +4,8 @@ import { TalaLoginButton } from "@tala/sso-react";
 import { useAuthStore } from "../stores/useAuthStore";
 import NestLogo from "../components/NestLogo";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
+
 export default function Login() {
   const login = useAuthStore((s) => s.login);
   const loginWithTala = useAuthStore((s) => s.loginWithTala);
@@ -13,15 +15,12 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
       await login(email, password);
-      // App.tsx will re-render with auth and redirect to dashboard
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed.");
     } finally {
@@ -29,9 +28,20 @@ export default function Login() {
     }
   }
 
-  function handleTalaSuccess(data: { token: string; user: { id: number; name: string; email: string; role: "admin" | "viewer" } }) {
-    loginWithTala(data);
-    navigate("/");
+  function handleTalaSuccess(code: string, state: string) {
+    fetch(`${API_BASE}/auth/tala/callback?code=${code}&state=${state}`, {
+      headers: { Accept: "application/json" },
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json?.success && json?.data) {
+          loginWithTala(json.data);
+          navigate("/");
+        } else {
+          setError(json?.error ?? "TALA login failed.");
+        }
+      })
+      .catch(() => setError("Network error during TALA login."));
   }
 
   return (
@@ -89,12 +99,8 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
-          Use your admin or viewer account credentials.
-        </p>
-
         {/* Divider */}
-        <div className="relative my-4">
+        <div className="relative my-5">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t border-slate-200" />
           </div>
@@ -105,11 +111,15 @@ export default function Login() {
 
         {/* TALA SSO */}
         <TalaLoginButton
-          redirectEndpoint={`${API_BASE}/auth/tala/redirect`}
-          onLoginSuccess={handleTalaSuccess}
+          loginUrl={`${API_BASE}/auth/tala/redirect`}
+          onSuccess={handleTalaSuccess}
           onLoginError={(err) => setError(err)}
           className="w-full justify-center border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
         />
+
+        <p className="mt-6 text-center text-xs text-slate-400">
+          Use your admin or viewer account credentials.
+        </p>
       </div>
     </div>
   );
