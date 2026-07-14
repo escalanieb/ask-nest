@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.4",
+    "@tala/sso-react": "file:tala-sso-react-1.0.4.tgz",
     "@tanstack/react-query": "^5.100.1",
     "@types/leaflet": "^1.9.21",
     "leaflet": "^1.9.4",
