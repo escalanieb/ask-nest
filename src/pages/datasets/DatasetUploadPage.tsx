@@ -9,11 +9,7 @@ import {
   rollbackBatch,
   resolveConflict,
 } from "../../services/api/datasetApi";
-import type {
-  UploadBatch,
-  UploadPreview,
-  ConflictResolution,
-} from "../../services/api/datasetApi";
+import type { UploadBatch, UploadPreview, ConflictResolution } from "../../services/api/datasetApi";
 
 type PreviewTab = "new" | "updates" | "conflicts" | "rejected";
 
@@ -88,8 +84,7 @@ export default function DatasetUploadPage() {
   }
 
   const pendingBatch = batchList?.data?.find((b) => b.status === "pending");
-  const committedBatches =
-    batchList?.data?.filter((b) => b.status !== "pending") ?? [];
+  const committedBatches = batchList?.data?.filter((b) => b.status !== "pending") ?? [];
 
   const tabs: PreviewTab[] = ["new", "updates", "conflicts", "rejected"];
   const tabCounts = preview
@@ -105,10 +100,7 @@ export default function DatasetUploadPage() {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-4">
-        <Link
-          to="/datasets"
-          className="text-slate-400 hover:text-slate-700 transition-colors"
-        >
+        <Link to="/datasets" className="text-slate-400 hover:text-slate-700 transition-colors">
           <svg
             className="h-5 w-5"
             fill="none"
@@ -116,18 +108,12 @@ export default function DatasetUploadPage() {
             stroke="currentColor"
             strokeWidth={2}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 19l-7-7 7-7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-slate-800">Upload Records</h1>
-          <p className="text-xs text-slate-400">
-            {dataset?.name ?? "Loading…"}
-          </p>
+          <p className="text-xs text-slate-400">{dataset?.name ?? "Loading…"}</p>
         </div>
         <button
           onClick={() => navigate(`/datasets/${id}/records`)}
@@ -155,25 +141,20 @@ export default function DatasetUploadPage() {
               />
             </svg>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-amber-800">
-                Uncommitted upload pending
-              </p>
+              <p className="text-sm font-semibold text-amber-800">Uncommitted upload pending</p>
               <p className="text-xs text-amber-600 mt-0.5 truncate">
                 {pendingBatch.original_filename}
               </p>
               {pendingBatch.stats && (
                 <p className="text-xs text-amber-500 mt-1">
-                  +{pendingBatch.stats.new} new · {pendingBatch.stats.updates}{" "}
-                  updated · {pendingBatch.stats.conflicts} conflicts ·{" "}
-                  {pendingBatch.stats.rejected} rejected
+                  +{pendingBatch.stats.new} new · {pendingBatch.stats.updates} updated ·{" "}
+                  {pendingBatch.stats.conflicts} conflicts · {pendingBatch.stats.rejected} rejected
                 </p>
               )}
             </div>
             <button
               onClick={() => {
-                if (
-                  confirm("Discard this pending upload? This cannot be undone.")
-                ) {
+                if (confirm("Discard this pending upload? This cannot be undone.")) {
                   rollback.mutate(pendingBatch.id);
                 }
               }}
@@ -233,9 +214,7 @@ export default function DatasetUploadPage() {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                   />
                 </svg>
-                <p className="text-sm text-slate-500 font-medium">
-                  Analysing file…
-                </p>
+                <p className="text-sm text-slate-500 font-medium">Analysing file…</p>
               </>
             ) : (
               <>
@@ -278,12 +257,8 @@ export default function DatasetUploadPage() {
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h2 className="font-semibold text-slate-800 text-sm">
-                  Upload Preview
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Review changes before committing
-                </p>
+                <h2 className="font-semibold text-slate-800 text-sm">Upload Preview</h2>
+                <p className="text-xs text-slate-400 mt-0.5">Review changes before committing</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -295,11 +270,7 @@ export default function DatasetUploadPage() {
                 <button
                   onClick={() => commit.mutate(preview.batch_id)}
                   disabled={commit.isPending || preview.stats.conflicts > 0}
-                  title={
-                    preview.stats.conflicts > 0
-                      ? "Resolve all conflicts first"
-                      : undefined
-                  }
+                  title={preview.stats.conflicts > 0 ? "Resolve all conflicts first" : undefined}
                   className="rounded-lg bg-green-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {commit.isPending ? "Committing…" : "Commit"}
@@ -340,9 +311,7 @@ export default function DatasetUploadPage() {
             {/* Tab Content */}
             <div className="p-5">
               {preview.preview[activeTab].length === 0 ? (
-                <p className="text-center py-8 text-xs text-slate-300">
-                  No {activeTab} records
-                </p>
+                <p className="text-center py-8 text-xs text-slate-300">No {activeTab} records</p>
               ) : (
                 <DataTable
                   rows={preview.preview[activeTab]}
@@ -362,9 +331,7 @@ export default function DatasetUploadPage() {
           </h2>
           {loadingBatches && <p className="text-xs text-slate-400">Loading…</p>}
           {!loadingBatches && committedBatches.length === 0 && (
-            <p className="text-xs text-slate-300 italic">
-              No committed batches yet
-            </p>
+            <p className="text-xs text-slate-300 italic">No committed batches yet</p>
           )}
           <div className="space-y-2">
             {committedBatches.map((batch) => (
@@ -372,11 +339,7 @@ export default function DatasetUploadPage() {
                 key={batch.id}
                 batch={batch}
                 onRollback={() => {
-                  if (
-                    confirm(
-                      "Roll back this batch? All imported records will be reverted.",
-                    )
-                  ) {
+                  if (confirm("Roll back this batch? All imported records will be reverted.")) {
                     rollback.mutate(batch.id);
                   }
                 }}
@@ -412,9 +375,7 @@ function DataTable({
 
   const allKeys = Array.from(
     new Set(
-      rows.flatMap((r) =>
-        Object.keys(r).filter((k) => k !== "_conflict_id" && k !== "_reason"),
-      ),
+      rows.flatMap((r) => Object.keys(r).filter((k) => k !== "_conflict_id" && k !== "_reason")),
     ),
   );
 
@@ -424,9 +385,7 @@ function DataTable({
         <thead>
           <tr className="border-b border-slate-100">
             {isConflict && (
-              <th className="py-2 pr-3 text-left text-slate-400 font-semibold">
-                Reason
-              </th>
+              <th className="py-2 pr-3 text-left text-slate-400 font-semibold">Reason</th>
             )}
             {allKeys.map((k) => (
               <th
@@ -436,11 +395,7 @@ function DataTable({
                 {k}
               </th>
             ))}
-            {isConflict && (
-              <th className="py-2 text-left text-slate-400 font-semibold">
-                Resolve
-              </th>
-            )}
+            {isConflict && <th className="py-2 text-left text-slate-400 font-semibold">Resolve</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-50">

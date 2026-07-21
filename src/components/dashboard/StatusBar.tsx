@@ -24,13 +24,8 @@ export default function StatusBar() {
         {/* Selected location */}
         {selectedLocation ? (
           <span className="text-slate-500">
-            Viewing{" "}
-            <span className="font-medium text-slate-700">
-              {selectedLocation.name}
-            </span>
-            <span className="ml-1 text-slate-400">
-              ({selectedLocation.psgcCode})
-            </span>
+            Viewing <span className="font-medium text-slate-700">{selectedLocation.name}</span>
+            <span className="ml-1 text-slate-400">({selectedLocation.psgcCode})</span>
           </span>
         ) : (
           <span>No region selected — click the map to begin</span>
@@ -41,8 +36,7 @@ export default function StatusBar() {
           <>
             <span className="h-3.5 w-px bg-slate-200" />
             <span className="font-medium text-amber-600">
-              {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""}{" "}
-              active
+              {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active
             </span>
           </>
         )}

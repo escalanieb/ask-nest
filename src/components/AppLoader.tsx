@@ -22,8 +22,7 @@ export default function AppLoader() {
       <p
         className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400"
         style={{
-          animation:
-            "nest-fade-up 0.6s cubic-bezier(0.22,1,0.36,1) 0.3s forwards",
+          animation: "nest-fade-up 0.6s cubic-bezier(0.22,1,0.36,1) 0.3s forwards",
           opacity: 0,
         }}
       >

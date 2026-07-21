@@ -1,12 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import nestLogo from "./assets/nest-logo.svg";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-  Outlet,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import AppLoader from "./components/AppLoader";
 import AppShell from "./components/layout/AppShell";
 import { useAuthStore } from "./stores/useAuthStore";
@@ -16,12 +10,8 @@ const Login = lazy(() => import("./pages/Login"));
 const TalaCallbackPage = lazy(() => import("./pages/TalaCallbackPage"));
 const DatasetListPage = lazy(() => import("./pages/datasets/DatasetListPage"));
 const DatasetFormPage = lazy(() => import("./pages/datasets/DatasetFormPage"));
-const DatasetUploadPage = lazy(
-  () => import("./pages/datasets/DatasetUploadPage"),
-);
-const DatasetRecordsPage = lazy(
-  () => import("./pages/datasets/DatasetRecordsPage"),
-);
+const DatasetUploadPage = lazy(() => import("./pages/datasets/DatasetUploadPage"));
+const DatasetRecordsPage = lazy(() => import("./pages/datasets/DatasetRecordsPage"));
 
 const BOOT_MS = 1800;
 
@@ -33,9 +23,7 @@ function RequireAdmin() {
 
 function PageFallback() {
   return (
-    <div className="flex h-screen items-center justify-center text-slate-400 text-sm">
-      Loading…
-    </div>
+    <div className="flex h-screen items-center justify-center text-slate-400 text-sm">Loading…</div>
   );
 }
 
@@ -60,12 +48,9 @@ function SmallScreenGuard() {
       </div>
 
       <p className="text-white text-base font-semibold leading-relaxed max-w-xs">
-        Please switch to a larger display size (larger tablet, laptop, or
-        Computer)
+        Please switch to a larger display size (larger tablet, laptop, or Computer)
       </p>
-      <p className="mt-3 text-slate-400 text-xs font-medium tracking-wide">
-        — NEST IT Team
-      </p>
+      <p className="mt-3 text-slate-400 text-xs font-medium tracking-wide">— NEST IT Team</p>
     </div>
   );
 }
@@ -88,10 +73,7 @@ export default function App() {
         <Suspense fallback={<PageFallback />}>
           <Routes>
             {/* Public */}
-            <Route
-              path="/login"
-              element={token ? <Navigate to="/" replace /> : <Login />}
-            />
+            <Route path="/login" element={token ? <Navigate to="/" replace /> : <Login />} />
             <Route path="/auth/tala/callback" element={<TalaCallbackPage />} />
 
             {/* Authenticated — AppShell provides sidebar + auth guard */}
@@ -101,21 +83,12 @@ export default function App() {
               <Route element={<RequireAdmin />}>
                 <Route path="/datasets" element={<DatasetListPage />} />
                 <Route path="/datasets/new" element={<DatasetFormPage />} />
-                <Route
-                  path="/datasets/:id/edit"
-                  element={<DatasetFormPage />}
-                />
-                <Route
-                  path="/datasets/:id/upload"
-                  element={<DatasetUploadPage />}
-                />
+                <Route path="/datasets/:id/edit" element={<DatasetFormPage />} />
+                <Route path="/datasets/:id/upload" element={<DatasetUploadPage />} />
               </Route>
 
               {/* Records — any authenticated user */}
-              <Route
-                path="/datasets/:id/records"
-                element={<DatasetRecordsPage />}
-              />
+              <Route path="/datasets/:id/records" element={<DatasetRecordsPage />} />
             </Route>
 
             {/* Fallback */}

@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
-import {
-  fetchDataset,
-  fetchMapPanelRecords,
-} from "../../services/api/datasetApi";
+import { fetchDataset, fetchMapPanelRecords } from "../../services/api/datasetApi";
 
 // Max columns to show in the compact panel
 const MAX_COLUMNS = 3;
@@ -14,12 +11,8 @@ const MAX_COLUMNS = 3;
  * Rnd drag/resize chrome). No positioning or Rnd here.
  */
 export default function DatasetRecordsPanel() {
-  const activeLayerDatasetId = useDatasetLayerStore(
-    (s) => s.activeLayerDatasetId,
-  );
-  const choroplethSelection = useDatasetLayerStore(
-    (s) => s.choroplethSelection,
-  );
+  const activeLayerDatasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
+  const choroplethSelection = useDatasetLayerStore((s) => s.choroplethSelection);
 
   const psgcPrefix = choroplethSelection?.prefix;
 
@@ -39,8 +32,7 @@ export default function DatasetRecordsPanel() {
 
   const { data: records, isLoading: recLoading } = useQuery({
     queryKey: ["map-panel-records", activeLayerDatasetId, psgcPrefix, page],
-    queryFn: () =>
-      fetchMapPanelRecords(activeLayerDatasetId!, psgcPrefix, page),
+    queryFn: () => fetchMapPanelRecords(activeLayerDatasetId!, psgcPrefix, page),
     enabled: !!activeLayerDatasetId,
     staleTime: 1000 * 30,
   });
@@ -119,11 +111,7 @@ export default function DatasetRecordsPanel() {
       <div className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-20 text-slate-400 text-xs gap-2">
-            <svg
-              className="h-4 w-4 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
+            <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle
                 className="opacity-25"
                 cx="12"
@@ -183,15 +171,10 @@ export default function DatasetRecordsPanel() {
             <tbody className="divide-y divide-slate-100">
               {rows.map((row, idx) => (
                 <tr key={row.id} className="hover:bg-red-50 transition-colors">
-                  <td className="px-3 py-2 text-slate-400 tabular-nums">
-                    {idx + 1}
-                  </td>
+                  <td className="px-3 py-2 text-slate-400 tabular-nums">{idx + 1}</td>
                   {columns.length > 0 ? (
                     columns.map((col) => (
-                      <td
-                        key={col.key}
-                        className="px-3 py-2 text-slate-700 max-w-[160px] truncate"
-                      >
+                      <td key={col.key} className="px-3 py-2 text-slate-700 max-w-[160px] truncate">
                         {String(row.data[col.key] ?? "—")}
                       </td>
                     ))

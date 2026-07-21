@@ -5,13 +5,7 @@ import { apiFetch } from "./_fetch";
 // ---------------------------------------------------------------------------
 
 export type DisasterType =
-  | "earthquake"
-  | "typhoon"
-  | "flood"
-  | "volcano"
-  | "drought"
-  | "alert"
-  | "humanitarian";
+  "earthquake" | "typhoon" | "flood" | "volcano" | "drought" | "alert" | "humanitarian";
 
 export type DisasterSeverity = "low" | "medium" | "high";
 export type DisasterSource = "USGS" | "GDACS" | "ReliefWeb";
@@ -30,8 +24,8 @@ export interface DisasterMetrics {
   population?: string | null;
   // GDACS — Tropical Cyclone specific
   storm_name?: string | null;
-  storm_bbox?: string | null;   // "lonMin lonMax latMin latMax"
-  wind_speed?: number | null;   // km/h
+  storm_bbox?: string | null; // "lonMin lonMax latMin latMax"
+  wind_speed?: number | null; // km/h
   episode_id?: string | null;
   // ReliefWeb
   disaster_types?: string[];
@@ -87,8 +81,7 @@ export interface DisasterQueryParams {
 function buildQuery(params: DisasterQueryParams): string {
   const parts: string[] = [];
   if (params.type) parts.push(`type=${encodeURIComponent(params.type)}`);
-  if (params.severity)
-    parts.push(`severity=${encodeURIComponent(params.severity)}`);
+  if (params.severity) parts.push(`severity=${encodeURIComponent(params.severity)}`);
   if (params.source) parts.push(`source=${encodeURIComponent(params.source)}`);
   if (params.bbox) parts.push(`bbox=${encodeURIComponent(params.bbox)}`);
   if (params.limit) parts.push(`limit=${params.limit}`);
@@ -111,8 +104,7 @@ export const disasterApi = {
   /**
    * GET /api/disasters/counts — public; used for sidebar badges.
    */
-  counts: (): Promise<DisasterCounts> =>
-    apiFetch<DisasterCounts>("/disasters/counts"),
+  counts: (): Promise<DisasterCounts> => apiFetch<DisasterCounts>("/disasters/counts"),
 
   /**
    * GET /api/disasters/typhoon/ph — public; Philippines-scoped typhoon events.

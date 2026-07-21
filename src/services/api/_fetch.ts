@@ -32,10 +32,7 @@ async function tryRefresh(): Promise<string | null> {
   }
 }
 
-export async function apiFetch<T>(
-  path: string,
-  options?: RequestInit,
-): Promise<T> {
+export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const extraHeaders = options?.headers as Record<string, string> | undefined;
 
   const res = await fetch(`${BASE_URL}${path}`, {

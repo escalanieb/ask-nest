@@ -75,13 +75,8 @@ export default function EvaluateTab() {
           { label: "Avg. Sentiment", value: "—" },
           { label: "Flagged", value: "—" },
         ].map((stat) => (
-          <div
-            key={stat.label}
-            className="flex flex-1 flex-col items-center py-3 px-4"
-          >
-            <span className="text-lg font-bold text-slate-800">
-              {stat.value}
-            </span>
+          <div key={stat.label} className="flex flex-1 flex-col items-center py-3 px-4">
+            <span className="text-lg font-bold text-slate-800">{stat.value}</span>
             <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
               {stat.label}
             </span>
@@ -93,18 +88,13 @@ export default function EvaluateTab() {
       <div className="flex-1 overflow-y-auto p-5">
         <div className="flex flex-col gap-3">
           {PLACEHOLDER_POSTS.map((post) => (
-            <div
-              key={post.id}
-              className="rounded-xl border border-slate-200 bg-white p-4"
-            >
+            <div key={post.id} className="rounded-xl border border-slate-200 bg-white p-4">
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                     {post.platform}
                   </span>
-                  <p className="mt-0.5 text-sm text-slate-700 line-clamp-2">
-                    {post.preview}
-                  </p>
+                  <p className="mt-0.5 text-sm text-slate-700 line-clamp-2">{post.preview}</p>
                 </div>
                 <span
                   className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize ${SENTIMENT_COLORS[post.sentiment]}`}
@@ -128,17 +118,12 @@ export default function EvaluateTab() {
                 </div>
                 <div>
                   <div className="mb-1 flex items-center justify-between">
-                    <span className="text-[10px] text-slate-400">
-                      Sentiment
-                    </span>
+                    <span className="text-[10px] text-slate-400">Sentiment</span>
                     <span className="text-[11px] font-semibold tabular-nums text-slate-600">
                       {post.sentimentScore}%
                     </span>
                   </div>
-                  <ScoreBar
-                    value={post.sentimentScore}
-                    color="bg-emerald-400"
-                  />
+                  <ScoreBar value={post.sentimentScore} color="bg-emerald-400" />
                 </div>
                 <div>
                   <div className="mb-1 flex items-center justify-between">

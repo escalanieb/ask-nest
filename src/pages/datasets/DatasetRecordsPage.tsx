@@ -8,10 +8,7 @@ import {
   updateRecord,
   updateRecordStatus,
 } from "../../services/api/datasetApi";
-import type {
-  DatasetRecord,
-  RecordHistoryEntry,
-} from "../../services/api/datasetApi";
+import type { DatasetRecord, RecordHistoryEntry } from "../../services/api/datasetApi";
 
 const ACTION_LABELS: Record<string, string> = {
   created: "Created",
@@ -29,9 +26,7 @@ export default function DatasetRecordsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [selectedRecord, setSelectedRecord] = useState<DatasetRecord | null>(
-    null,
-  );
+  const [selectedRecord, setSelectedRecord] = useState<DatasetRecord | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState<Record<string, string>>({});
 
@@ -60,11 +55,7 @@ export default function DatasetRecordsPage() {
 
   const saveEdit = useMutation({
     mutationFn: () =>
-      updateRecord(
-        datasetId,
-        selectedRecord!.id,
-        editData as Record<string, unknown>,
-      ),
+      updateRecord(datasetId, selectedRecord!.id, editData as Record<string, unknown>),
     onSuccess: (updated) => {
       setSelectedRecord(updated);
       setEditMode(false);
@@ -99,10 +90,7 @@ export default function DatasetRecordsPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-4 shrink-0">
-        <Link
-          to="/datasets"
-          className="text-slate-400 hover:text-slate-700 transition-colors"
-        >
+        <Link to="/datasets" className="text-slate-400 hover:text-slate-700 transition-colors">
           <svg
             className="h-5 w-5"
             fill="none"
@@ -110,18 +98,12 @@ export default function DatasetRecordsPage() {
             stroke="currentColor"
             strokeWidth={2}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 19l-7-7 7-7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-slate-800">Records</h1>
-          <p className="text-xs text-slate-400">
-            {dataset?.name ?? "Loading…"}
-          </p>
+          <p className="text-xs text-slate-400">{dataset?.name ?? "Loading…"}</p>
         </div>
         <Link
           to={`/datasets/${id}/upload`}
@@ -188,12 +170,8 @@ export default function DatasetRecordsPage() {
                         {f.label}
                       </th>
                     ))}
-                    <th className="px-3 py-2.5 text-left font-semibold text-slate-400">
-                      Status
-                    </th>
-                    <th className="px-3 py-2.5 text-left font-semibold text-slate-400">
-                      Updated
-                    </th>
+                    <th className="px-3 py-2.5 text-left font-semibold text-slate-400">Status</th>
+                    <th className="px-3 py-2.5 text-left font-semibold text-slate-400">Updated</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -205,14 +183,10 @@ export default function DatasetRecordsPage() {
                         setEditMode(false);
                       }}
                       className={`cursor-pointer transition-colors hover:bg-slate-50 ${
-                        selectedRecord?.id === record.id
-                          ? "bg-indigo-50/50"
-                          : ""
+                        selectedRecord?.id === record.id ? "bg-indigo-50/50" : ""
                       }`}
                     >
-                      <td className="px-5 py-2 font-mono text-slate-500">
-                        {record.psgc_code}
-                      </td>
+                      <td className="px-5 py-2 font-mono text-slate-500">{record.psgc_code}</td>
                       {fields.slice(0, 4).map((f) => (
                         <td
                           key={f.key}
@@ -285,9 +259,7 @@ export default function DatasetRecordsPage() {
               )}
               <button
                 onClick={() =>
-                  toggleStatus.mutate(
-                    selectedRecord.status === "active" ? "inactive" : "active",
-                  )
+                  toggleStatus.mutate(selectedRecord.status === "active" ? "inactive" : "active")
                 }
                 disabled={toggleStatus.isPending}
                 className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
@@ -309,11 +281,7 @@ export default function DatasetRecordsPage() {
                   stroke="currentColor"
                   strokeWidth={2}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -360,11 +328,7 @@ export default function DatasetRecordsPage() {
                           <input
                             className="input text-sm"
                             type={
-                              f.type === "number"
-                                ? "number"
-                                : f.type === "date"
-                                  ? "date"
-                                  : "text"
+                              f.type === "number" ? "number" : f.type === "date" ? "date" : "text"
                             }
                             value={editData[f.key] ?? ""}
                             onChange={(e) =>
@@ -378,9 +342,7 @@ export default function DatasetRecordsPage() {
                       </div>
                     ))}
                     {saveEdit.isError && (
-                      <p className="text-xs text-red-600">
-                        {(saveEdit.error as Error).message}
-                      </p>
+                      <p className="text-xs text-red-600">{(saveEdit.error as Error).message}</p>
                     )}
                     <div className="flex gap-2 pt-2">
                       <button
@@ -452,14 +414,10 @@ function HistoryList({ entries }: { entries: RecordHistoryEntry[] }) {
             </span>
           </div>
           {entry.changed_by_user && (
-            <p className="text-[10px] text-slate-400">
-              {entry.changed_by_user.name}
-            </p>
+            <p className="text-[10px] text-slate-400">{entry.changed_by_user.name}</p>
           )}
           {entry.batch && (
-            <p className="text-[10px] text-slate-300 italic">
-              {entry.batch.original_filename}
-            </p>
+            <p className="text-[10px] text-slate-300 italic">{entry.batch.original_filename}</p>
           )}
         </li>
       ))}

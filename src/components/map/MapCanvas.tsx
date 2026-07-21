@@ -19,10 +19,7 @@ import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
 import type { ChoroplethSelection } from "../../stores/useDatasetLayerStore";
 import { useDisasterStore } from "../../stores/useDisasterStore";
 import { fetchDatasetLayer } from "../../services/api/datasetApi";
-import type {
-  LayerDataPoint,
-  LayerResponse,
-} from "../../services/api/datasetApi";
+import type { LayerDataPoint, LayerResponse } from "../../services/api/datasetApi";
 import { disasterApi } from "../../services/api/disasterApi";
 import type { DisasterEvent } from "../../services/api/disasterApi";
 import { queryClient } from "../../lib/queryClient";
@@ -34,8 +31,7 @@ import iconUrl from "leaflet/dist/images/marker-icon.png";
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
 import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 
-delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)
-  ._getIconUrl;
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 
 const PH_CENTER: [number, number] = [12.8797, 121.774];
@@ -162,9 +158,7 @@ const GEO_LEVEL_TYPES = {
   municity: "City/Municipality",
 } as const;
 
-async function fetchGeoJSON(
-  url: string,
-): Promise<GeoJSON.FeatureCollection | null> {
+async function fetchGeoJSON(url: string): Promise<GeoJSON.FeatureCollection | null> {
   try {
     const r = await fetch(url);
     if (!r.ok) return null;
@@ -208,11 +202,7 @@ const PH_VOLCANOES = [
 ];
 
 // Renders all municity dots for the active choropleth layer
-function AllChoroplethDots({
-  layerData,
-}: {
-  layerData: LayerResponse | undefined;
-}) {
+function AllChoroplethDots({ layerData }: { layerData: LayerResponse | undefined }) {
   if (!layerData?.layer_data.length) return null;
   return (
     <>
@@ -238,11 +228,7 @@ function AllChoroplethDots({
 }
 
 // Renders count numbers on municity centroids
-function ChoroplethNumbers({
-  layerData,
-}: {
-  layerData: LayerResponse | undefined;
-}) {
+function ChoroplethNumbers({ layerData }: { layerData: LayerResponse | undefined }) {
   if (!layerData?.layer_data.length) return null;
   return (
     <>
@@ -254,13 +240,7 @@ function ChoroplethNumbers({
           className: "",
           iconAnchor: [0, 0],
         });
-        return (
-          <Marker
-            key={`num-${pt.psgc_code}`}
-            position={[pos.lat, pos.lng]}
-            icon={icon}
-          />
-        );
+        return <Marker key={`num-${pt.psgc_code}`} position={[pos.lat, pos.lng]} icon={icon} />;
       })}
     </>
   );
@@ -334,9 +314,7 @@ function EarthquakeLayer() {
                   <br />
                 </span>
               )}
-              <span className="text-xs text-gray-500">
-                {timeAgo(eq.event_started_at)}
-              </span>
+              <span className="text-xs text-gray-500">{timeAgo(eq.event_started_at)}</span>
             </Popup>
           </Marker>
         );
@@ -371,11 +349,7 @@ function GdacsLayer() {
           iconAnchor: [9, 9],
         });
         return (
-          <Marker
-            key={ev.external_id}
-            position={[ev.lat, ev.lng]}
-            icon={gdacsIcon}
-          >
+          <Marker key={ev.external_id} position={[ev.lat, ev.lng]} icon={gdacsIcon}>
             <Popup>
               <strong>{ev.title}</strong>
               <br />
@@ -385,13 +359,9 @@ function GdacsLayer() {
                   <br />
                 </span>
               )}
-              <span className="text-xs">
-                Alert: {ev.metrics?.alert_level ?? ev.severity}
-              </span>
+              <span className="text-xs">Alert: {ev.metrics?.alert_level ?? ev.severity}</span>
               <br />
-              <span className="text-xs text-gray-500">
-                {timeAgo(ev.event_started_at)}
-              </span>
+              <span className="text-xs text-gray-500">{timeAgo(ev.event_started_at)}</span>
             </Popup>
           </Marker>
         );
@@ -432,8 +402,7 @@ function ReliefWebLayer() {
             <Popup maxWidth={300}>
               <div
                 style={{
-                  fontFamily:
-                    "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+                  fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
                 }}
               >
                 {ev.metrics?.url ? (
@@ -450,12 +419,8 @@ function ReliefWebLayer() {
                       display: "block",
                       marginBottom: "6px",
                     }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.textDecoration = "underline")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.textDecoration = "none")
-                    }
+                    onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                    onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
                   >
                     {ev.title}
                   </a>
@@ -479,9 +444,7 @@ function ReliefWebLayer() {
                       lineHeight: 1.4,
                     }}
                   >
-                    {ev.summary.length > 120
-                      ? ev.summary.slice(0, 120) + "…"
-                      : ev.summary}
+                    {ev.summary.length > 120 ? ev.summary.slice(0, 120) + "…" : ev.summary}
                   </p>
                 )}
                 {ev.metrics?.url && (
@@ -584,9 +547,7 @@ function TyphoonLayer() {
         const rawBbox = (tc.metrics?.storm_bbox as string) ?? "";
         let impactCircle: JSX.Element | null = null;
         if (rawBbox) {
-          const [lonMin, lonMax, latMin, latMax] = rawBbox
-            .split(" ")
-            .map(parseFloat);
+          const [lonMin, lonMax, latMin, latMax] = rawBbox.split(" ").map(parseFloat);
           const centerLat = (latMin + latMax) / 2;
           const centerLng = (lonMin + lonMax) / 2;
           // Approximate radius from bbox height in degrees → km (1° ≈ 111 km)
@@ -635,8 +596,7 @@ function TyphoonLayer() {
               <Popup maxWidth={280}>
                 <div
                   style={{
-                    fontFamily:
-                      "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+                    fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
                   }}
                 >
                   <div
@@ -648,9 +608,7 @@ function TyphoonLayer() {
                     }}
                   >
                     <span style={{ fontSize: "18px" }}>🌀</span>
-                    <strong style={{ fontSize: "12px", lineHeight: 1.3 }}>
-                      {stormName}
-                    </strong>
+                    <strong style={{ fontSize: "12px", lineHeight: 1.3 }}>{stormName}</strong>
                   </div>
                   <div
                     style={{
@@ -681,8 +639,7 @@ function TyphoonLayer() {
                         color: "#374151",
                       }}
                     >
-                      💨 Max winds:{" "}
-                      <strong>{Math.round(windKph)} km/h</strong>
+                      💨 Max winds: <strong>{Math.round(windKph)} km/h</strong>
                     </p>
                   )}
                   {tc.location_label && (
@@ -810,10 +767,7 @@ function choroplethStyle(
       fillOpacity: 0.5,
     };
   const ratio = point.display_value / maxVal;
-  const idx = Math.min(
-    Math.floor(ratio * CHOROPLETH_COLORS.length),
-    CHOROPLETH_COLORS.length - 1,
-  );
+  const idx = Math.min(Math.floor(ratio * CHOROPLETH_COLORS.length), CHOROPLETH_COLORS.length - 1);
   return {
     color: "#dc2626",
     weight: 1,
@@ -874,15 +828,9 @@ export default function MapCanvas() {
   const showDots = useMapStore((s) => s.showDots);
   const showNumbers = useMapStore((s) => s.showNumbers);
   const activeRegion = useFilterStore((s) => s.activeRegion);
-  const activeLayerDatasetId = useDatasetLayerStore(
-    (s) => s.activeLayerDatasetId,
-  );
-  const choroplethSelection = useDatasetLayerStore(
-    (s) => s.choroplethSelection,
-  );
-  const setChoroplethSelection = useDatasetLayerStore(
-    (s) => s.setChoroplethSelection,
-  );
+  const activeLayerDatasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
+  const choroplethSelection = useDatasetLayerStore((s) => s.choroplethSelection);
+  const setChoroplethSelection = useDatasetLayerStore((s) => s.setChoroplethSelection);
   const geoJsonRef = useRef<L.GeoJSON | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -891,9 +839,7 @@ export default function MapCanvas() {
   const [geoVersion, setGeoVersion] = useState(0);
 
   // Draggable popup position (set when a choropleth area is clicked)
-  const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(
-    null,
-  );
+  const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
   const dragState = useRef<{
     startX: number;
     startY: number;
@@ -947,9 +893,7 @@ export default function MapCanvas() {
     return m;
   }, [layerData, mapAreaLevel]);
 
-  const maxVal = layerData
-    ? Math.max(...layerData.layer_data.map((p) => p.display_value), 1)
-    : 1;
+  const maxVal = layerData ? Math.max(...layerData.layer_data.map((p) => p.display_value), 1) : 1;
 
   // When layer data loads, auto-derive dominant region and set it so the
   // correct GeoJSON tiles (municity/province) load automatically.
@@ -962,9 +906,7 @@ export default function MapCanvas() {
       const prefix = pt.psgc_code.substring(0, 2);
       prefixCounts[prefix] = (prefixCounts[prefix] ?? 0) + 1;
     }
-    const topPrefix = Object.entries(prefixCounts).sort(
-      ([, a], [, b]) => b - a,
-    )[0]?.[0];
+    const topPrefix = Object.entries(prefixCounts).sort(([, a], [, b]) => b - a)[0]?.[0];
     if (topPrefix) {
       useFilterStore.getState().setActiveRegion(topPrefix + "0000000");
     }
@@ -1029,14 +971,10 @@ export default function MapCanvas() {
 
       try {
         if (mapAreaLevel === "region") {
-          const data = await fetchGeoJSON(
-            `${BASE_GEO_URL}regions/hires/regions.0.1.json`,
-          );
+          const data = await fetchGeoJSON(`${BASE_GEO_URL}regions/hires/regions.0.1.json`);
           if (cancelled) return;
           if (!data || data.features.length === 0) {
-            setGeoError(
-              "Could not load region boundaries. Check your connection and try again.",
-            );
+            setGeoError("Could not load region boundaries. Check your connection and try again.");
             return;
           }
           geoJsonRef.current.clearLayers();
@@ -1044,16 +982,13 @@ export default function MapCanvas() {
           setGeoVersion((v) => v + 1);
         } else if (mapAreaLevel === "province") {
           const urls = PROVINCE_REGION_CODES.map(
-            (code) =>
-              `${BASE_GEO_URL}provinces/hires/provinces-region-ph${code}.0.1.json`,
+            (code) => `${BASE_GEO_URL}provinces/hires/provinces-region-ph${code}.0.1.json`,
           );
           const results = await Promise.all(urls.map(fetchGeoJSON));
           if (cancelled) return;
           const merged = mergeCollections(results);
           if (merged.features.length === 0) {
-            setGeoError(
-              "Could not load province boundaries. Check your connection and try again.",
-            );
+            setGeoError("Could not load province boundaries. Check your connection and try again.");
             return;
           }
           geoJsonRef.current.clearLayers();
@@ -1067,12 +1002,9 @@ export default function MapCanvas() {
           }
           // Match province files by first 2 digits of region code
           const prefix = activeRegion.substring(0, 2);
-          const codes = MUNICITY_PROVINCE_CODES.filter((c) =>
-            c.startsWith(prefix),
-          );
+          const codes = MUNICITY_PROVINCE_CODES.filter((c) => c.startsWith(prefix));
           const urls = codes.map(
-            (code) =>
-              `${BASE_GEO_URL}municties/hires/municities-province-ph${code}.0.1.json`,
+            (code) => `${BASE_GEO_URL}municties/hires/municities-province-ph${code}.0.1.json`,
           );
           const results = await Promise.all(urls.map(fetchGeoJSON));
           if (cancelled) return;
@@ -1127,9 +1059,7 @@ export default function MapCanvas() {
 
     // For province/municity features, also capture the parent region code
     const regionRaw = props.ADM1_PCODE ?? "";
-    const regionCode = regionRaw.startsWith("PH")
-      ? regionRaw.slice(2)
-      : regionRaw;
+    const regionCode = regionRaw.startsWith("PH") ? regionRaw.slice(2) : regionRaw;
 
     // Store centroid for dot rendering (municity level only)
     if (level === "municity") {
@@ -1143,14 +1073,12 @@ export default function MapCanvas() {
     const path = layer as L.Path;
 
     path.on("mouseover", () => {
-      const isSelected =
-        useMapStore.getState().selectedLocation?.psgcCode === psgcCode;
+      const isSelected = useMapStore.getState().selectedLocation?.psgcCode === psgcCode;
       if (!isSelected) path.setStyle(hoverStyle);
     });
 
     path.on("mouseout", () => {
-      const isSelected =
-        useMapStore.getState().selectedLocation?.psgcCode === psgcCode;
+      const isSelected = useMapStore.getState().selectedLocation?.psgcCode === psgcCode;
       if (!isSelected) {
         // Restore correct style: choropleth (from cache), or default
         path.setStyle(getChoroplethStyleFromCache(psgcCode));
@@ -1188,9 +1116,7 @@ export default function MapCanvas() {
             : level === "province"
               ? psgcCode.substring(0, 4)
               : psgcCode; // municity: exact match
-        const matching = (cached?.layer_data ?? []).filter((p) =>
-          p.psgc_code.startsWith(prefix),
-        );
+        const matching = (cached?.layer_data ?? []).filter((p) => p.psgc_code.startsWith(prefix));
         const aggCount = matching.reduce((s, p) => s + p.count, 0);
         // Merge tooltip breakdowns across matching areas
         const mergedTooltip: Record<string, Record<string, number>> = {};
@@ -1199,9 +1125,7 @@ export default function MapCanvas() {
             if (key === "Total") continue;
             if (typeof val === "object" && val !== null) {
               mergedTooltip[key] ??= {};
-              for (const [v, cnt] of Object.entries(
-                val as Record<string, number>,
-              )) {
+              for (const [v, cnt] of Object.entries(val as Record<string, number>)) {
                 mergedTooltip[key][v] = (mergedTooltip[key][v] ?? 0) + cnt;
               }
             }
@@ -1248,18 +1172,12 @@ export default function MapCanvas() {
         />
         <GeoJSON
           ref={geoJsonRef}
-          data={
-            { type: "FeatureCollection", features: [] } as GeoJSON.GeoJsonObject
-          }
+          data={{ type: "FeatureCollection", features: [] } as GeoJSON.GeoJsonObject}
           style={defaultStyle}
           onEachFeature={onEachFeature}
         />
-        {activeLayerDatasetId && showDots && (
-          <AllChoroplethDots layerData={layerData} />
-        )}
-        {activeLayerDatasetId && showNumbers && (
-          <ChoroplethNumbers layerData={layerData} />
-        )}
+        {activeLayerDatasetId && showDots && <AllChoroplethDots layerData={layerData} />}
+        {activeLayerDatasetId && showNumbers && <ChoroplethNumbers layerData={layerData} />}
         <EarthquakeLayer />
         <GdacsLayer />
         <ReliefWebLayer />
@@ -1285,41 +1203,36 @@ export default function MapCanvas() {
                   }}
                 />
               ))}
-              <span className="ml-1.5 text-xs font-medium text-slate-600">
-                Loading map areas…
-              </span>
+              <span className="ml-1.5 text-xs font-medium text-slate-600">Loading map areas…</span>
             </div>
           </div>
         </div>
       )}
 
       {/* Municity hint — shown when no region is selected */}
-      {mapAreaLevel === "municity" &&
-        !activeRegion &&
-        !geoLoading &&
-        !geoError && (
-          <div className="pointer-events-none absolute left-1/2 top-4 z-[800] w-[min(340px,90%)] -translate-x-1/2">
-            <div className="flex items-center gap-2.5 rounded-xl bg-white/90 px-4 py-3 shadow-lg ring-1 ring-slate-200 backdrop-blur-sm">
-              <svg
-                className="h-4 w-4 shrink-0 text-slate-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <p className="text-xs text-slate-600">
-                Select a <span className="font-semibold">Region</span> in the
-                Filters panel to view cities &amp; municipalities.
-              </p>
-            </div>
+      {mapAreaLevel === "municity" && !activeRegion && !geoLoading && !geoError && (
+        <div className="pointer-events-none absolute left-1/2 top-4 z-[800] w-[min(340px,90%)] -translate-x-1/2">
+          <div className="flex items-center gap-2.5 rounded-xl bg-white/90 px-4 py-3 shadow-lg ring-1 ring-slate-200 backdrop-blur-sm">
+            <svg
+              className="h-4 w-4 shrink-0 text-slate-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p className="text-xs text-slate-600">
+              Select a <span className="font-semibold">Region</span> in the Filters panel to view
+              cities &amp; municipalities.
+            </p>
           </div>
-        )}
+        </div>
+      )}
 
       {/* Error banner */}
       {geoError && (
@@ -1339,9 +1252,7 @@ export default function MapCanvas() {
               />
             </svg>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-red-700">
-                Map areas could not be loaded
-              </p>
+              <p className="text-xs font-semibold text-red-700">Map areas could not be loaded</p>
               <p className="mt-0.5 text-[11px] text-slate-500">{geoError}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -1370,11 +1281,7 @@ export default function MapCanvas() {
             </p>
             <div className="flex items-center gap-1.5 mb-1">
               {CHOROPLETH_COLORS.map((c, i) => (
-                <div
-                  key={i}
-                  className="h-3 flex-1 rounded-sm"
-                  style={{ backgroundColor: c }}
-                />
+                <div key={i} className="h-3 flex-1 rounded-sm" style={{ backgroundColor: c }} />
               ))}
             </div>
             <div className="flex justify-between text-[9px] text-slate-400">
@@ -1408,12 +1315,8 @@ export default function MapCanvas() {
               onPointerMove={(e) => {
                 if (!dragState.current) return;
                 setPopupPos({
-                  x:
-                    dragState.current.origX +
-                    (e.clientX - dragState.current.startX),
-                  y:
-                    dragState.current.origY +
-                    (e.clientY - dragState.current.startY),
+                  x: dragState.current.origX + (e.clientX - dragState.current.startX),
+                  y: dragState.current.origY + (e.clientY - dragState.current.startY),
                 });
               }}
               onPointerUp={() => {
@@ -1440,9 +1343,7 @@ export default function MapCanvas() {
                     {choroplethSelection.name}
                   </p>
                   {layerData && (
-                    <p className="text-[9px] text-red-200 truncate">
-                      {layerData.dataset.name}
-                    </p>
+                    <p className="text-[9px] text-red-200 truncate">{layerData.dataset.name}</p>
                   )}
                 </div>
                 <button
@@ -1456,11 +1357,7 @@ export default function MapCanvas() {
                     stroke="currentColor"
                     strokeWidth={2.5}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
@@ -1492,11 +1389,7 @@ export default function MapCanvas() {
                       stroke="currentColor"
                       strokeWidth={2}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M9 5l7 7-7 7"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </Link>
                 </div>

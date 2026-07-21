@@ -81,9 +81,7 @@ export default function RssFeedPanel() {
         <div className="flex shrink-0 items-center gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2">
           <select
             value={activeFeedId ?? ""}
-            onChange={(e) =>
-              setActiveFeedId(e.target.value ? Number(e.target.value) : null)
-            }
+            onChange={(e) => setActiveFeedId(e.target.value ? Number(e.target.value) : null)}
             className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 focus:outline-none"
           >
             <option value="">— Select a feed —</option>
@@ -170,9 +168,7 @@ export default function RssFeedPanel() {
       {/* Feed selector modal/dropdown */}
       {showMultiSelector && (
         <div className="border-b border-slate-100 bg-slate-50 px-3 py-2">
-          <div className="mb-2 text-[9px] font-semibold uppercase text-slate-400">
-            Select feeds
-          </div>
+          <div className="mb-2 text-[9px] font-semibold uppercase text-slate-400">Select feeds</div>
           <div className="flex flex-wrap gap-1">
             {allFeeds.map((feed) => (
               <button
@@ -258,10 +254,7 @@ function SingleFeedView({
   const allItems = result?.items ?? [];
   const totalPages = Math.max(1, Math.ceil(allItems.length / pageSize));
   const safePage = Math.min(page, totalPages - 1);
-  const items = allItems.slice(
-    safePage * pageSize,
-    safePage * pageSize + pageSize,
-  );
+  const items = allItems.slice(safePage * pageSize, safePage * pageSize + pageSize);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -350,10 +343,7 @@ function MultiFeedView({
   const allItems = result.items ?? [];
   const totalPages = Math.max(1, Math.ceil(allItems.length / pageSize));
   const safePage = Math.min(page, totalPages - 1);
-  const items = allItems.slice(
-    safePage * pageSize,
-    safePage * pageSize + pageSize,
-  );
+  const items = allItems.slice(safePage * pageSize, safePage * pageSize + pageSize);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -463,9 +453,7 @@ function ArticleItem({ item }: ArticleItemProps) {
                 {item.summary}
               </p>
             )}
-            <p className="mt-1 text-[9px] text-slate-400">
-              {timeAgo(item.published)}
-            </p>
+            <p className="mt-1 text-[9px] text-slate-400">{timeAgo(item.published)}</p>
           </div>
         </div>
       </button>
@@ -543,11 +531,7 @@ function ArticleItem({ item }: ArticleItemProps) {
                 stroke="currentColor"
                 strokeWidth={2}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
               Dismiss
             </button>

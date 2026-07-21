@@ -16,9 +16,7 @@ interface VideoSource {
 
 // Accepts a raw <iframe> embed snippet OR a plain embed src/URL.
 // Always returns { src, platform, label } or null if unrecognised.
-function parseEmbedInput(
-  raw: string,
-): { src: string; platform: Platform; label: string } | null {
+function parseEmbedInput(raw: string): { src: string; platform: Platform; label: string } | null {
   const trimmed = raw.trim();
 
   // Extract src from an <iframe …> embed snippet
@@ -191,9 +189,7 @@ export default function VideoPanel() {
               key={idx}
               className={[
                 "flex items-center gap-1.5 rounded px-2 py-0.5 text-[9px] font-semibold cursor-pointer transition-colors",
-                idx === activeIdx
-                  ? "bg-slate-700 text-white"
-                  : "text-slate-400 hover:bg-slate-800",
+                idx === activeIdx ? "bg-slate-700 text-white" : "text-slate-400 hover:bg-slate-800",
               ].join(" ")}
               onClick={() => setActiveIdx(idx)}
             >
@@ -227,9 +223,8 @@ export default function VideoPanel() {
               <FacebookLogo className="h-8 w-8 text-blue-600" />
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Open the{" "}
-              <span className="font-semibold text-slate-300">Video Links</span>{" "}
-              section in the sidebar
+              Open the <span className="font-semibold text-slate-300">Video Links</span> section in
+              the sidebar
               <br />
               and click a saved link to load it here.
             </p>

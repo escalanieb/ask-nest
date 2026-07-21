@@ -24,9 +24,7 @@ export default function DetailInspector() {
 
   const filteredRecords = (data?.records ?? []).filter((r) => {
     const matchesStatus = activeStatus ? r.status === activeStatus : true;
-    const matchesCityMuni = activeCityMuni
-      ? r.city_muni_code === activeCityMuni
-      : true;
+    const matchesCityMuni = activeCityMuni ? r.city_muni_code === activeCityMuni : true;
     const matchesSearch = searchQuery
       ? r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -53,9 +51,7 @@ export default function DetailInspector() {
           </svg>
         </div>
         <div>
-          <p className="text-sm font-medium text-slate-600">
-            No region selected
-          </p>
+          <p className="text-sm font-medium text-slate-600">No region selected</p>
           <p className="text-xs text-slate-400 mt-1">
             Click a region on the map to inspect its data
           </p>
@@ -73,9 +69,7 @@ export default function DetailInspector() {
             <h2 className="text-sm font-semibold text-slate-900 leading-tight truncate">
               {selectedLocation.name}
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              PSGC {selectedLocation.psgcCode}
-            </p>
+            <p className="text-xs text-slate-400 mt-0.5">PSGC {selectedLocation.psgcCode}</p>
           </div>
           <span className="shrink-0 rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600">
             {selectedLocation.type}
@@ -89,9 +83,7 @@ export default function DetailInspector() {
               <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
                 Total Records
               </p>
-              <p className="text-xl font-bold text-red-600 leading-tight">
-                {data.total_records}
-              </p>
+              <p className="text-xl font-bold text-red-600 leading-tight">{data.total_records}</p>
             </div>
             <div className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2">
               <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
@@ -167,9 +159,7 @@ export default function DetailInspector() {
                   d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                 />
               </svg>
-              <p className="text-sm text-slate-500">
-                No records match the current filters
-              </p>
+              <p className="text-sm text-slate-500">No records match the current filters</p>
             </div>
           ) : (
             <table className="w-full border-collapse text-xs">
@@ -188,19 +178,13 @@ export default function DetailInspector() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredRecords.map((r) => (
-                  <tr
-                    key={r.id}
-                    className="hover:bg-slate-50 transition-colors"
-                  >
-                    <td className="px-4 py-2.5 font-medium text-slate-800">
-                      {r.name}
-                    </td>
+                  <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-2.5 font-medium text-slate-800">{r.name}</td>
                     <td className="px-4 py-2.5 text-slate-500">{r.category}</td>
                     <td className="px-4 py-2.5">
                       <span
                         className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                          STATUS_COLOR[r.status] ??
-                          "text-slate-500 bg-slate-100 border-slate-200"
+                          STATUS_COLOR[r.status] ?? "text-slate-500 bg-slate-100 border-slate-200"
                         }`}
                       >
                         {r.status}

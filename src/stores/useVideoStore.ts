@@ -18,9 +18,7 @@ interface VideoStore {
 
   // Transient signal: sidebar → VideoPanel "load this now"
   pendingSource: { url: string; platform: VideoPlatform; name: string } | null;
-  setPendingSource: (
-    source: { url: string; platform: VideoPlatform; name: string } | null,
-  ) => void;
+  setPendingSource: (source: { url: string; platform: VideoPlatform; name: string } | null) => void;
 }
 
 export const useVideoStore = create<VideoStore>()(

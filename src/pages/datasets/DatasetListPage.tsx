@@ -54,10 +54,7 @@ export default function DatasetListPage() {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-4">
-        <Link
-          to="/"
-          className="text-slate-400 hover:text-slate-700 transition-colors"
-        >
+        <Link to="/" className="text-slate-400 hover:text-slate-700 transition-colors">
           <svg
             className="h-5 w-5"
             fill="none"
@@ -65,11 +62,7 @@ export default function DatasetListPage() {
             stroke="currentColor"
             strokeWidth={2}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 19l-7-7 7-7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
         <div className="flex-1">
@@ -89,11 +82,7 @@ export default function DatasetListPage() {
             stroke="currentColor"
             strokeWidth={2.5}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 4v16m8-8H4"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
           New Dataset
         </Link>
@@ -102,11 +91,7 @@ export default function DatasetListPage() {
       <main className="max-w-6xl mx-auto px-6 py-8">
         {isLoading && (
           <div className="flex items-center justify-center py-20 text-slate-400 text-sm gap-2">
-            <svg
-              className="h-4 w-4 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
+            <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle
                 className="opacity-25"
                 cx="12"
@@ -167,9 +152,7 @@ export default function DatasetListPage() {
               <div
                 key={ds.id}
                 className={`rounded-xl border bg-white shadow-sm transition-all ${
-                  ds.is_active
-                    ? "border-slate-200"
-                    : "border-slate-100 opacity-60"
+                  ds.is_active ? "border-slate-200" : "border-slate-100 opacity-60"
                 }`}
               >
                 <div className="flex items-start gap-4 p-5">
@@ -180,9 +163,7 @@ export default function DatasetListPage() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="font-semibold text-slate-800 text-sm">
-                        {ds.name}
-                      </h2>
+                      <h2 className="font-semibold text-slate-800 text-sm">{ds.name}</h2>
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${ENTITY_COLORS[ds.entity_type] ?? "bg-slate-100 text-slate-600"}`}
                       >
@@ -198,17 +179,12 @@ export default function DatasetListPage() {
                       )}
                     </div>
                     {ds.description && (
-                      <p className="mt-1 text-xs text-slate-400 line-clamp-1">
-                        {ds.description}
-                      </p>
+                      <p className="mt-1 text-xs text-slate-400 line-clamp-1">{ds.description}</p>
                     )}
                     <div className="mt-2 flex items-center gap-4 text-xs text-slate-400">
                       <span>{ds.field_definitions?.length ?? 0} fields</span>
                       <span className="h-3 w-px bg-slate-200" />
-                      <span>
-                        {(ds.records_count ?? 0).toLocaleString()} active
-                        records
-                      </span>
+                      <span>{(ds.records_count ?? 0).toLocaleString()} active records</span>
                       <span className="h-3 w-px bg-slate-200" />
                       <span>by {ds.creator?.name ?? "—"}</span>
                     </div>
