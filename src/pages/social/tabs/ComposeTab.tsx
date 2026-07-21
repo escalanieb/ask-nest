@@ -44,9 +44,7 @@ export default function ComposeTab() {
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
           {/* Platform selector */}
           <div>
-            <label className="mb-2 block text-xs font-semibold text-slate-600">
-              Post to
-            </label>
+            <label className="mb-2 block text-xs font-semibold text-slate-600">Post to</label>
             <div className="flex flex-wrap gap-2">
               {PLATFORMS.map((p) => (
                 <button
@@ -62,9 +60,7 @@ export default function ComposeTab() {
 
           {/* Post body */}
           <div>
-            <label className="mb-2 block text-xs font-semibold text-slate-600">
-              Content
-            </label>
+            <label className="mb-2 block text-xs font-semibold text-slate-600">Content</label>
             <textarea
               rows={6}
               placeholder="What would you like to post?"
@@ -121,15 +117,11 @@ export default function ComposeTab() {
             <div className="mb-3 flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-slate-200" />
               <div>
-                <p className="text-xs font-semibold text-slate-700">
-                  CommsDash Official
-                </p>
+                <p className="text-xs font-semibold text-slate-700">CommsDash Official</p>
                 <p className="text-[10px] text-slate-400">Just now</p>
               </div>
             </div>
-            <p className="text-sm text-slate-400 italic">
-              Your post content will appear here…
-            </p>
+            <p className="text-sm text-slate-400 italic">Your post content will appear here…</p>
           </div>
         </div>
 

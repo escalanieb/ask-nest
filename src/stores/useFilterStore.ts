@@ -18,8 +18,7 @@ export const useFilterStore = create<FilterState>((set) => ({
   searchQuery: "",
   setSearchQuery: (q) => set({ searchQuery: q }),
   activeRegion: null,
-  setActiveRegion: (r) =>
-    set({ activeRegion: r, activeProvince: null, activeCityMuni: null }),
+  setActiveRegion: (r) => set({ activeRegion: r, activeProvince: null, activeCityMuni: null }),
   activeStatus: null,
   setActiveStatus: (s) => set({ activeStatus: s }),
   activeCityMuni: null,

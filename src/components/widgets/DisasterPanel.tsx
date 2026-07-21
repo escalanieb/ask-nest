@@ -1,10 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { disasterApi } from "../../services/api/disasterApi";
-import type {
-  DisasterEvent,
-  DisasterType,
-} from "../../services/api/disasterApi";
+import type { DisasterEvent, DisasterType } from "../../services/api/disasterApi";
 import { useDisasterStore } from "../../stores/useDisasterStore";
 
 // ---------------------------------------------------------------------------
@@ -77,17 +74,13 @@ function EventRow({ ev }: { ev: DisasterEvent }) {
               {ev.location_label}
             </span>
           )}
-          <span className="text-[9px] text-slate-400">
-            {timeAgo(ev.event_started_at)}
-          </span>
+          <span className="text-[9px] text-slate-400">{timeAgo(ev.event_started_at)}</span>
           <span className="ml-auto shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-slate-500">
             {ev.source}
           </span>
         </div>
         {ev.summary && (
-          <p className="mt-0.5 text-[9px] text-slate-400 line-clamp-2 leading-snug">
-            {ev.summary}
-          </p>
+          <p className="mt-0.5 text-[9px] text-slate-400 line-clamp-2 leading-snug">{ev.summary}</p>
         )}
         {/* Earthquake metrics */}
         {ev.type === "earthquake" && ev.metrics?.magnitude != null && (
@@ -95,9 +88,7 @@ function EventRow({ ev }: { ev: DisasterEvent }) {
             M{ev.metrics.magnitude.toFixed(1)}
             {ev.metrics.depth_km != null && ` · ${ev.metrics.depth_km} km deep`}
             {ev.metrics.tsunami === 1 && (
-              <span className="ml-1 text-blue-500 font-semibold">
-                · Tsunami warning
-              </span>
+              <span className="ml-1 text-blue-500 font-semibold">· Tsunami warning</span>
             )}
           </p>
         )}
@@ -137,9 +128,7 @@ function EventRow({ ev }: { ev: DisasterEvent }) {
     );
   }
 
-  return (
-    <div className="border-b border-slate-100 hover:bg-slate-50">{inner}</div>
-  );
+  return <div className="border-b border-slate-100 hover:bg-slate-50">{inner}</div>;
 }
 
 // ---------------------------------------------------------------------------
@@ -208,9 +197,8 @@ export default function DisasterPanel() {
 
   // Per-tab loading / error state so each tab renders independently
   const tabIsLoading = activeTab === "typhoon_ph" ? isTyphoonLoading : isLoading;
-  const tabIsError   = activeTab === "typhoon_ph" ? isTyphoonError   : isError;
-  const tabRefetch   = activeTab === "typhoon_ph" ? refetchTyphoon   : refetch;
-
+  const tabIsError = activeTab === "typhoon_ph" ? isTyphoonError : isError;
+  const tabRefetch = activeTab === "typhoon_ph" ? refetchTyphoon : refetch;
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-white">
@@ -265,9 +253,7 @@ export default function DisasterPanel() {
               {count > 0 && (
                 <span
                   className={`ml-1 rounded-full px-1 text-[8px] font-bold ${
-                    activeTab === t.key
-                      ? "bg-red-100 text-red-600"
-                      : "bg-slate-200 text-slate-500"
+                    activeTab === t.key ? "bg-red-100 text-red-600" : "bg-slate-200 text-slate-500"
                   }`}
                 >
                   {count}
@@ -287,9 +273,7 @@ export default function DisasterPanel() {
         )}
         {tabIsError && (
           <div className="flex h-full flex-col items-center justify-center gap-2">
-            <p className="text-xs text-red-400">
-              Failed to load disaster data.
-            </p>
+            <p className="text-xs text-red-400">Failed to load disaster data.</p>
             <button
               onClick={() => tabRefetch()}
               className="rounded bg-red-50 px-3 py-1 text-[10px] text-red-600 hover:bg-red-100"
@@ -301,10 +285,7 @@ export default function DisasterPanel() {
         {!tabIsLoading && !tabIsError && filtered.length === 0 && (
           <div className="flex h-full items-center justify-center text-xs text-slate-400">
             No
-            {activeTab !== "all"
-              ? ` ${TYPE_LABELS[activeTab] ?? activeTab}`
-              : ""}{" "}
-            events.
+            {activeTab !== "all" ? ` ${TYPE_LABELS[activeTab] ?? activeTab}` : ""} events.
           </div>
         )}
         {!tabIsLoading &&

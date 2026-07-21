@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import {
-  fetchDataset,
-  createDataset,
-  updateDataset,
-} from "../../services/api/datasetApi";
+import { fetchDataset, createDataset, updateDataset } from "../../services/api/datasetApi";
 import type {
   DatasetPayload,
   FieldDefinition,
@@ -17,21 +13,9 @@ import type {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const ENTITY_TYPES: EntityType[] = [
-  "person",
-  "establishment",
-  "location",
-  "event",
-];
+const ENTITY_TYPES: EntityType[] = ["person", "establishment", "location", "event"];
 const PSGC_LEVELS: PsgcLevel[] = ["barangay", "city", "province"];
-const FIELD_TYPES = [
-  "text",
-  "number",
-  "date",
-  "select",
-  "email",
-  "url",
-] as const;
+const FIELD_TYPES = ["text", "number", "date", "select", "email", "url"] as const;
 const AGGREGATE_FNS = ["count", "sum", "average", "max"] as const;
 
 const STEPS = [
@@ -114,17 +98,13 @@ export default function DatasetFormPage() {
       if (!name.trim()) errs.name = "Name is required";
     }
     if (step === 2) {
-      if (fields.some((f) => !f.key.trim()))
-        errs.fields = "All fields must have a key";
-      if (fields.some((f) => !f.label.trim()))
-        errs.fields = "All fields must have a label";
+      if (fields.some((f) => !f.key.trim())) errs.fields = "All fields must have a key";
+      if (fields.some((f) => !f.label.trim())) errs.fields = "All fields must have a label";
       const keys = fields.map((f) => f.key.trim());
-      if (new Set(keys).size !== keys.length)
-        errs.fields = "Field keys must be unique";
+      if (new Set(keys).size !== keys.length) errs.fields = "Field keys must be unique";
     }
     if (step === 3) {
-      if (matchKeys.length === 0)
-        errs.matchKeys = "Select at least one match key";
+      if (matchKeys.length === 0) errs.matchKeys = "Select at least one match key";
     }
     if (step === 4) {
       if (!layerConfig.color_field) errs.layer = "Color field is required";
@@ -187,9 +167,7 @@ export default function DatasetFormPage() {
     setMatchKeys((prev) => prev.filter((k) => k !== removed));
   }
   function toggleMatchKey(key: string) {
-    setMatchKeys((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
-    );
+    setMatchKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   }
 
   const definedKeys = fields.map((f) => f.key.trim()).filter(Boolean);
@@ -206,10 +184,7 @@ export default function DatasetFormPage() {
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
       {/* ── Top header ── */}
       <header className="sticky top-0 z-20 bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-4">
-        <Link
-          to="/datasets"
-          className="text-slate-400 hover:text-slate-700 transition-colors"
-        >
+        <Link to="/datasets" className="text-slate-400 hover:text-slate-700 transition-colors">
           <svg
             className="h-5 w-5"
             fill="none"
@@ -217,11 +192,7 @@ export default function DatasetFormPage() {
             stroke="currentColor"
             strokeWidth={2}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 19l-7-7 7-7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
         <div className="flex-1">
@@ -229,9 +200,7 @@ export default function DatasetFormPage() {
             {isEdit ? "Edit Dataset" : "New Dataset"}
           </h1>
           <p className="text-xs text-slate-400">
-            {isEdit
-              ? `Editing: ${existing?.name}`
-              : "Create a new universal dataset"}
+            {isEdit ? `Editing: ${existing?.name}` : "Create a new universal dataset"}
           </p>
         </div>
         <span className="text-xs text-slate-400">
@@ -246,15 +215,10 @@ export default function DatasetFormPage() {
             const isDone = doneSteps.has(step.id);
             const isCurrent = currentStep === step.id;
             const isReachable =
-              step.id === 1 ||
-              doneSteps.has(step.id - 1) ||
-              step.id <= currentStep;
+              step.id === 1 || doneSteps.has(step.id - 1) || step.id <= currentStep;
 
             return (
-              <div
-                key={step.id}
-                className="flex items-center flex-1 last:flex-none"
-              >
+              <div key={step.id} className="flex items-center flex-1 last:flex-none">
                 {/* Circle + label */}
                 <button
                   type="button"
@@ -282,11 +246,7 @@ export default function DatasetFormPage() {
                         stroke="currentColor"
                         strokeWidth={3}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M5 13l4 4L19 7"
-                        />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     ) : (
                       step.id
@@ -294,11 +254,7 @@ export default function DatasetFormPage() {
                   </span>
                   <span
                     className={`text-[10px] font-semibold hidden sm:block whitespace-nowrap ${
-                      isCurrent
-                        ? "text-red-600"
-                        : isDone
-                          ? "text-green-600"
-                          : "text-slate-400"
+                      isCurrent ? "text-red-600" : isDone ? "text-green-600" : "text-slate-400"
                     }`}
                   >
                     {step.label}
@@ -353,9 +309,7 @@ export default function DatasetFormPage() {
                     <select
                       className="input"
                       value={entityType}
-                      onChange={(e) =>
-                        setEntityType(e.target.value as EntityType)
-                      }
+                      onChange={(e) => setEntityType(e.target.value as EntityType)}
                     >
                       {ENTITY_TYPES.map((t) => (
                         <option key={t} value={t}>
@@ -372,9 +326,7 @@ export default function DatasetFormPage() {
                     <select
                       className="input"
                       value={psgcLevel}
-                      onChange={(e) =>
-                        setPsgcLevel(e.target.value as PsgcLevel)
-                      }
+                      onChange={(e) => setPsgcLevel(e.target.value as PsgcLevel)}
                     >
                       {PSGC_LEVELS.map((l) => (
                         <option key={l} value={l}>
@@ -400,8 +352,8 @@ export default function DatasetFormPage() {
                       Allow duplicate entries
                     </span>
                     <p className="text-[11px] text-slate-400 mt-0.5">
-                      When enabled, each upload row is always inserted as a new
-                      record regardless of match keys.
+                      When enabled, each upload row is always inserted as a new record regardless of
+                      match keys.
                     </p>
                   </div>
                 </label>
@@ -428,11 +380,7 @@ export default function DatasetFormPage() {
                     stroke="currentColor"
                     strokeWidth={2.5}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 4.5v15m7.5-7.5h-15"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                   </svg>
                   Add Field
                 </button>
@@ -440,10 +388,7 @@ export default function DatasetFormPage() {
             >
               <div className="space-y-3">
                 {fields.map((field, i) => (
-                  <div
-                    key={i}
-                    className="rounded-lg border border-slate-200 bg-slate-50 p-3"
-                  >
+                  <div key={i} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                     <div className="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-2 items-end">
                       <div>
                         <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
@@ -454,9 +399,7 @@ export default function DatasetFormPage() {
                           value={field.key}
                           onChange={(e) =>
                             updateField(i, {
-                              key: e.target.value
-                                .replace(/\s+/g, "_")
-                                .toLowerCase(),
+                              key: e.target.value.replace(/\s+/g, "_").toLowerCase(),
                             })
                           }
                           placeholder="field_key"
@@ -469,9 +412,7 @@ export default function DatasetFormPage() {
                         <input
                           className="input text-sm"
                           value={field.label}
-                          onChange={(e) =>
-                            updateField(i, { label: e.target.value })
-                          }
+                          onChange={(e) => updateField(i, { label: e.target.value })}
                           placeholder="Display label"
                         />
                       </div>
@@ -503,9 +444,7 @@ export default function DatasetFormPage() {
                           type="checkbox"
                           className="h-4 w-4"
                           checked={!!field.required}
-                          onChange={(e) =>
-                            updateField(i, { required: e.target.checked })
-                          }
+                          onChange={(e) => updateField(i, { required: e.target.checked })}
                         />
                       </div>
                       <button
@@ -566,18 +505,15 @@ export default function DatasetFormPage() {
             >
               {definedKeys.length === 0 ? (
                 <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
-                  No fields defined yet. Go back to Step 2 and add at least one
-                  field first.
+                  No fields defined yet. Go back to Step 2 and add at least one field first.
                 </div>
               ) : (
                 <>
                   <p className="text-xs text-slate-400 mb-4">
                     Pick the fields that together{" "}
-                    <strong className="text-slate-600">
-                      uniquely identify one entity
-                    </strong>
-                    . For example: <em>last_name + first_name + birthdate</em>.
-                    At least one key is required.
+                    <strong className="text-slate-600">uniquely identify one entity</strong>. For
+                    example: <em>last_name + first_name + birthdate</em>. At least one key is
+                    required.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {definedKeys.map((key) => (
@@ -602,9 +538,8 @@ export default function DatasetFormPage() {
 
                   {matchKeys.length > 0 && (
                     <div className="mt-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-xs text-green-700">
-                      <span className="font-semibold">Selected:</span>{" "}
-                      {matchKeys.join(" + ")} — records sharing the same
-                      combination will be merged on upload.
+                      <span className="font-semibold">Selected:</span> {matchKeys.join(" + ")} —
+                      records sharing the same combination will be merged on upload.
                     </div>
                   )}
                 </>
@@ -651,8 +586,7 @@ export default function DatasetFormPage() {
                       onChange={(e) =>
                         setLayerConfig((l) => ({
                           ...l,
-                          aggregate_function: e.target
-                            .value as LayerConfig["aggregate_function"],
+                          aggregate_function: e.target.value as LayerConfig["aggregate_function"],
                         }))
                       }
                     >
@@ -663,8 +597,7 @@ export default function DatasetFormPage() {
                       ))}
                     </select>
                     <p className="mt-1 text-[11px] text-slate-400">
-                      How to combine multiple records in the same area (Count =
-                      total rows).
+                      How to combine multiple records in the same area (Count = total rows).
                     </p>
                   </Field>
                 </div>
@@ -678,9 +611,7 @@ export default function DatasetFormPage() {
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {["__count__", ...definedKeys].map((key) => {
-                      const active = layerConfig.tooltip_fields.some(
-                        (t) => t.field === key,
-                      );
+                      const active = layerConfig.tooltip_fields.some((t) => t.field === key);
                       return (
                         <button
                           key={key}
@@ -689,15 +620,12 @@ export default function DatasetFormPage() {
                             setLayerConfig((l) => ({
                               ...l,
                               tooltip_fields: active
-                                ? l.tooltip_fields.filter(
-                                    (t) => t.field !== key,
-                                  )
+                                ? l.tooltip_fields.filter((t) => t.field !== key)
                                 : [
                                     ...l.tooltip_fields,
                                     {
                                       field: key,
-                                      label:
-                                        key === "__count__" ? "Total" : key,
+                                      label: key === "__count__" ? "Total" : key,
                                     },
                                   ],
                             }))
@@ -725,24 +653,15 @@ export default function DatasetFormPage() {
               hint="Check everything looks correct before saving. Click Edit on any section to go back and change it."
             >
               <div className="space-y-4">
-                <ReviewSection
-                  label="Basic Information"
-                  onEdit={() => handleJump(1)}
-                >
+                <ReviewSection label="Basic Information" onEdit={() => handleJump(1)}>
                   <ReviewRow label="Name" value={name} />
                   <ReviewRow label="Description" value={description || "—"} />
                   <ReviewRow label="Entity Type" value={entityType} />
                   <ReviewRow label="PSGC Level" value={psgcLevel} />
-                  <ReviewRow
-                    label="Allow Duplicates"
-                    value={allowDuplicates ? "Yes" : "No"}
-                  />
+                  <ReviewRow label="Allow Duplicates" value={allowDuplicates ? "Yes" : "No"} />
                 </ReviewSection>
 
-                <ReviewSection
-                  label="Field Definitions"
-                  onEdit={() => handleJump(2)}
-                >
+                <ReviewSection label="Field Definitions" onEdit={() => handleJump(2)}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
@@ -763,19 +682,10 @@ export default function DatasetFormPage() {
                       </thead>
                       <tbody>
                         {fields.map((f, i) => (
-                          <tr
-                            key={i}
-                            className="border-b border-slate-50 last:border-0"
-                          >
-                            <td className="py-1.5 pr-3 font-mono text-slate-700">
-                              {f.key || "—"}
-                            </td>
-                            <td className="py-1.5 pr-3 text-slate-600">
-                              {f.label || "—"}
-                            </td>
-                            <td className="py-1.5 pr-3 text-slate-500">
-                              {f.type}
-                            </td>
+                          <tr key={i} className="border-b border-slate-50 last:border-0">
+                            <td className="py-1.5 pr-3 font-mono text-slate-700">{f.key || "—"}</td>
+                            <td className="py-1.5 pr-3 text-slate-600">{f.label || "—"}</td>
+                            <td className="py-1.5 pr-3 text-slate-500">{f.type}</td>
                             <td className="py-1.5">
                               {f.required ? (
                                 <span className="inline-block rounded-full bg-red-100 text-red-700 px-2 py-0.5 text-[10px] font-semibold">
@@ -792,14 +702,9 @@ export default function DatasetFormPage() {
                   </div>
                 </ReviewSection>
 
-                <ReviewSection
-                  label="Deduplication Keys"
-                  onEdit={() => handleJump(3)}
-                >
+                <ReviewSection label="Deduplication Keys" onEdit={() => handleJump(3)}>
                   {matchKeys.length === 0 ? (
-                    <span className="text-slate-300 text-xs italic">
-                      None selected
-                    </span>
+                    <span className="text-slate-300 text-xs italic">None selected</span>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {matchKeys.map((k) => (
@@ -814,10 +719,7 @@ export default function DatasetFormPage() {
                   )}
                 </ReviewSection>
 
-                <ReviewSection
-                  label="Map Layer Configuration"
-                  onEdit={() => handleJump(4)}
-                >
+                <ReviewSection label="Map Layer Configuration" onEdit={() => handleJump(4)}>
                   <ReviewRow
                     label="Color Field"
                     value={
@@ -826,18 +728,13 @@ export default function DatasetFormPage() {
                         : layerConfig.color_field
                     }
                   />
-                  <ReviewRow
-                    label="Aggregate Function"
-                    value={layerConfig.aggregate_function}
-                  />
+                  <ReviewRow label="Aggregate Function" value={layerConfig.aggregate_function} />
                   <ReviewRow
                     label="Tooltip Fields"
                     value={
                       layerConfig.tooltip_fields.length === 0
                         ? "—"
-                        : layerConfig.tooltip_fields
-                            .map((t) => t.label || t.field)
-                            .join(", ")
+                        : layerConfig.tooltip_fields.map((t) => t.label || t.field).join(", ")
                     }
                   />
                 </ReviewSection>
@@ -867,11 +764,7 @@ export default function DatasetFormPage() {
                     stroke="currentColor"
                     strokeWidth={2}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15 19l-7-7 7-7"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
                   Back
                 </button>
@@ -900,11 +793,7 @@ export default function DatasetFormPage() {
                     stroke="currentColor"
                     strokeWidth={2}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 5l7 7-7 7"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
               ) : (
@@ -914,11 +803,7 @@ export default function DatasetFormPage() {
                   disabled={save.isPending}
                   className="rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-60"
                 >
-                  {save.isPending
-                    ? "Saving…"
-                    : isEdit
-                      ? "Save Changes"
-                      : "Create Dataset"}
+                  {save.isPending ? "Saving…" : isEdit ? "Save Changes" : "Create Dataset"}
                 </button>
               )}
             </div>
@@ -1039,9 +924,7 @@ function ReviewSection({
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline gap-2 py-1.5 text-xs border-b border-slate-50 last:border-0">
-      <span className="w-40 flex-shrink-0 font-medium text-slate-500">
-        {label}
-      </span>
+      <span className="w-40 flex-shrink-0 font-medium text-slate-500">{label}</span>
       <span className="text-slate-700">{value}</span>
     </div>
   );

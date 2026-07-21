@@ -11,11 +11,7 @@ export type PsgcLevel = "barangay" | "city" | "province";
 export type AggregateFunction = "count" | "sum" | "average" | "max";
 export type RecordStatus = "active" | "inactive";
 export type BatchStatus = "pending" | "committed" | "rolled_back";
-export type ConflictResolution =
-  | "pending"
-  | "keep_existing"
-  | "take_new"
-  | "merge";
+export type ConflictResolution = "pending" | "keep_existing" | "take_new" | "merge";
 
 export interface FieldDefinition {
   key: string;
@@ -165,10 +161,7 @@ export interface LayerDataPoint {
 }
 
 export interface LayerResponse {
-  dataset: Pick<
-    Dataset,
-    "id" | "name" | "entity_type" | "psgc_level" | "layer_config"
-  >;
+  dataset: Pick<Dataset, "id" | "name" | "entity_type" | "psgc_level" | "layer_config">;
   layer_data: LayerDataPoint[];
 }
 
@@ -230,10 +223,7 @@ export function getTemplateUrl(id: number): string {
 // Upload / Batch
 // ---------------------------------------------------------------------------
 
-export async function uploadDatasetFile(
-  datasetId: number,
-  file: File,
-): Promise<UploadPreview> {
+export async function uploadDatasetFile(datasetId: number, file: File): Promise<UploadPreview> {
   const form = new FormData();
   form.append("file", file);
   return apiFetch<UploadPreview>(`/datasets/${datasetId}/upload`, {
@@ -242,9 +232,7 @@ export async function uploadDatasetFile(
   });
 }
 
-export async function fetchBatches(
-  datasetId: number,
-): Promise<{ data: UploadBatch[] }> {
+export async function fetchBatches(datasetId: number): Promise<{ data: UploadBatch[] }> {
   return apiFetch<{ data: UploadBatch[] }>(`/datasets/${datasetId}/batches`);
 }
 
@@ -252,17 +240,13 @@ export async function fetchBatch(batchId: number): Promise<UploadBatch> {
   return apiFetch<UploadBatch>(`/batches/${batchId}`);
 }
 
-export async function commitBatch(
-  batchId: number,
-): Promise<{ message: string }> {
+export async function commitBatch(batchId: number): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/batches/${batchId}/commit`, {
     method: "POST",
   });
 }
 
-export async function rollbackBatch(
-  batchId: number,
-): Promise<{ message: string }> {
+export async function rollbackBatch(batchId: number): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/batches/${batchId}/rollback`, {
     method: "POST",
   });
@@ -274,14 +258,11 @@ export async function resolveConflict(
   resolution: Exclude<ConflictResolution, "pending">,
   mergedData?: Record<string, unknown>,
 ): Promise<BatchConflict> {
-  return apiFetch<BatchConflict>(
-    `/batches/${batchId}/conflicts/${conflictId}`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ resolution, merged_data: mergedData }),
-    },
-  );
+  return apiFetch<BatchConflict>(`/batches/${batchId}/conflicts/${conflictId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ resolution, merged_data: mergedData }),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -324,32 +305,25 @@ export async function updateRecordStatus(
   recordId: number,
   status: RecordStatus,
 ): Promise<DatasetRecord> {
-  return apiFetch<DatasetRecord>(
-    `/datasets/${datasetId}/records/${recordId}/status`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    },
-  );
+  return apiFetch<DatasetRecord>(`/datasets/${datasetId}/records/${recordId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
 }
 
 export async function fetchRecordHistory(
   datasetId: number,
   recordId: number,
 ): Promise<RecordHistoryEntry[]> {
-  return apiFetch<RecordHistoryEntry[]>(
-    `/datasets/${datasetId}/records/${recordId}/history`,
-  );
+  return apiFetch<RecordHistoryEntry[]>(`/datasets/${datasetId}/records/${recordId}/history`);
 }
 
 // ---------------------------------------------------------------------------
 // Map Layer
 // ---------------------------------------------------------------------------
 
-export async function fetchDatasetLayer(
-  datasetId: number,
-): Promise<LayerResponse> {
+export async function fetchDatasetLayer(datasetId: number): Promise<LayerResponse> {
   const res = await apiFetch<LayerResponse>(`/datasets/${datasetId}/layer`);
   // Ensure psgc_code is always a string regardless of DB column type
   res.layer_data = res.layer_data
@@ -381,7 +355,5 @@ export async function fetchMapPanelRecords(
   const params: Record<string, string> = { per_page: "20", page: String(page) };
   if (psgcPrefix) params.psgc_prefix = psgcPrefix;
   const qs = "?" + new URLSearchParams(params).toString();
-  return apiFetch<MapPanelRecordsResponse>(
-    `/datasets/${datasetId}/records${qs}`,
-  );
+  return apiFetch<MapPanelRecordsResponse>(`/datasets/${datasetId}/records${qs}`);
 }

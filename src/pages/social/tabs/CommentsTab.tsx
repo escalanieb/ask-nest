@@ -56,13 +56,9 @@ export default function CommentsTab() {
               key={thread.id}
               className="w-full border-b border-slate-100 px-4 py-3 text-left transition-colors hover:bg-slate-50"
             >
-              <p className="text-xs font-semibold text-slate-700 line-clamp-2">
-                {thread.post}
-              </p>
+              <p className="text-xs font-semibold text-slate-700 line-clamp-2">{thread.post}</p>
               <div className="mt-1 flex items-center gap-2">
-                <span className="text-[10px] text-slate-400">
-                  {thread.platform}
-                </span>
+                <span className="text-[10px] text-slate-400">{thread.platform}</span>
                 <span className="text-[10px] text-slate-400">
                   · {thread.comments.length} comments
                 </span>
@@ -76,22 +72,15 @@ export default function CommentsTab() {
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Thread header */}
         <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-3">
-          <p className="text-xs font-semibold text-slate-700">
-            {PLACEHOLDER_THREADS[0].post}
-          </p>
-          <span className="text-[10px] text-slate-400">
-            Facebook · 3 comments
-          </span>
+          <p className="text-xs font-semibold text-slate-700">{PLACEHOLDER_THREADS[0].post}</p>
+          <span className="text-[10px] text-slate-400">Facebook · 3 comments</span>
         </div>
 
         {/* Comments */}
         <div className="flex-1 overflow-y-auto p-5">
           <div className="flex flex-col gap-3">
             {PLACEHOLDER_THREADS[0].comments.map((comment) => (
-              <div
-                key={comment.id}
-                className="rounded-xl border border-slate-200 bg-white p-3.5"
-              >
+              <div key={comment.id} className="rounded-xl border border-slate-200 bg-white p-3.5">
                 <div className="mb-2 flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-[11px] font-bold text-slate-600">
                     {comment.author[0]}
@@ -103,9 +92,7 @@ export default function CommentsTab() {
                     className={`h-2 w-2 rounded-full ${SENTIMENT_DOT[comment.sentiment]}`}
                     title={comment.sentiment}
                   />
-                  <span className="text-[10px] text-slate-400">
-                    {comment.time}
-                  </span>
+                  <span className="text-[10px] text-slate-400">{comment.time}</span>
                 </div>
                 <p className="text-xs text-slate-600">{comment.text}</p>
                 <div className="mt-2 flex gap-2">

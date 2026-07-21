@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import TalaIcon from "../../assets/app_icons/tala.svg?react";
 import InsightIcon from "../../assets/app_icons/insight.svg?react";
 
-
 // ── Icons ─────────────────────────────────────────────────────────────────
 
 const AppsIcon = () => (
@@ -40,11 +39,7 @@ const ExternalLinkIcon = () => (
 const LetterIcon = ({ label }: { label: string }) => {
   const letter = label.trim()[0]?.toUpperCase() ?? "?";
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-full w-full"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 24 24" className="h-full w-full" aria-hidden="true">
       <text
         x="12"
         y="17"
@@ -72,16 +67,12 @@ const APP_LINKS: AppLink[] = [
   {
     label: "TALA",
     href: "https://tala.asc-nest.org/",
-    icon: (
-      <TalaIcon className="h-7 w-7" />
-    ),
+    icon: <TalaIcon className="h-7 w-7" />,
   },
   {
     label: "Insight",
     href: "https://insight.asc-nest.org/",
-    icon: (
-      <InsightIcon className="h-7 w-7" />
-    ),
+    icon: <InsightIcon className="h-7 w-7" />,
   },
   {
     label: "TIPAS",
@@ -131,9 +122,7 @@ export default function AppsMenu() {
         aria-label="Apps"
         className={[
           "group relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
-          open
-            ? "bg-slate-700 text-white"
-            : "text-slate-400 hover:bg-slate-800 hover:text-white",
+          open ? "bg-slate-700 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white",
         ].join(" ")}
       >
         <AppsIcon />

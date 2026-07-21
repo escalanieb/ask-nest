@@ -74,13 +74,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
   persist(
     (set, get) => ({
       widgets: defaultWidgets,
-      panelOrder: [
-        "analyticsPanel",
-        "rssFeedPanel",
-        "recordsPanel",
-        "videoPanel",
-        "disasterPanel",
-      ],
+      panelOrder: ["analyticsPanel", "rssFeedPanel", "recordsPanel", "videoPanel", "disasterPanel"],
       reorderPanels: (newOrder) => set({ panelOrder: newOrder }),
       updateWidget: (id, layout) =>
         set((state) => ({
@@ -166,8 +160,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
     {
       name: "workspace-layout",
       merge: (persisted, current) => {
-        const persistedWidgets =
-          (persisted as Partial<WorkspaceState>)?.widgets ?? {};
+        const persistedWidgets = (persisted as Partial<WorkspaceState>)?.widgets ?? {};
         // Deep-merge per widget so fields from defaultWidgets (e.g. `type`)
         // always win when the persisted entry is missing them.
         const mergedWidgets: Record<string, WidgetLayout> = {
@@ -178,18 +171,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             ...(current.widgets[id] ?? {}),
             ...pw,
             // Ensure type is always set from the default (never lost to old localStorage)
-            type: (current.widgets[id]?.type ??
-              pw.type) as WidgetLayout["type"],
+            type: (current.widgets[id]?.type ?? pw.type) as WidgetLayout["type"],
           };
         }
         // Ensure any new panels added to defaults are appended to the
         // persisted order so they don't silently disappear after updates.
         const persistedOrder =
-          (persisted as Partial<WorkspaceState>)?.panelOrder ??
-          current.panelOrder;
-        const missingIds = current.panelOrder.filter(
-          (id) => !persistedOrder.includes(id),
-        );
+          (persisted as Partial<WorkspaceState>)?.panelOrder ?? current.panelOrder;
+        const missingIds = current.panelOrder.filter((id) => !persistedOrder.includes(id));
         return {
           ...current,
           ...(persisted as Partial<WorkspaceState>),

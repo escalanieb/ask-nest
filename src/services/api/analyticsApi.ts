@@ -7,9 +7,7 @@ export interface AnalyticsSummary {
   by_region: Record<string, number>;
 }
 
-export async function fetchAnalyticsSummary(
-  psgcCode?: string | null,
-): Promise<AnalyticsSummary> {
+export async function fetchAnalyticsSummary(psgcCode?: string | null): Promise<AnalyticsSummary> {
   const qs = psgcCode ? `?psgc_code=${encodeURIComponent(psgcCode)}` : "";
   const res = await fetch(`${BASE_URL}/analytics/summary${qs}`);
   if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`);
@@ -29,9 +27,7 @@ export interface DatasetCoverage {
   total_records: number;
 }
 
-export async function fetchDatasetCoverage(
-  psgcPrefix?: string | null,
-): Promise<DatasetCoverage> {
+export async function fetchDatasetCoverage(psgcPrefix?: string | null): Promise<DatasetCoverage> {
   const qs = psgcPrefix ? `?psgc_prefix=${encodeURIComponent(psgcPrefix)}` : "";
   const res = await fetch(`${BASE_URL}/analytics/datasets${qs}`);
   if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`);

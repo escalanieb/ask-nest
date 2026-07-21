@@ -56,15 +56,11 @@ export interface MapItemsPage {
   last_page: number;
 }
 
-export async function fetchLocationData(
-  psgcCode: string,
-): Promise<MapLocationData> {
+export async function fetchLocationData(psgcCode: string): Promise<MapLocationData> {
   return apiFetch<MapLocationData>(`/map/location/${psgcCode}`);
 }
 
-export async function fetchMapItems(
-  params?: Record<string, string>,
-): Promise<MapItemsPage> {
+export async function fetchMapItems(params?: Record<string, string>): Promise<MapItemsPage> {
   const qs = params ? "?" + new URLSearchParams(params).toString() : "";
   return apiFetch<MapItemsPage>(`/items${qs}`);
 }
@@ -77,10 +73,7 @@ export async function createMapItem(payload: MapItemPayload): Promise<MapItem> {
   });
 }
 
-export async function updateMapItem(
-  id: number,
-  payload: MapItemPayload,
-): Promise<MapItem> {
+export async function updateMapItem(id: number, payload: MapItemPayload): Promise<MapItem> {
   return apiFetch<MapItem>(`/items/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },

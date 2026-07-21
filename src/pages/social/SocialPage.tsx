@@ -28,12 +28,8 @@ export default function SocialPage() {
         style={{ height: 56 }}
       >
         <div>
-          <h1 className="text-sm font-bold text-slate-800 leading-none">
-            Social Media
-          </h1>
-          <p className="mt-0.5 text-[11px] text-slate-400">
-            {current.description}
-          </p>
+          <h1 className="text-sm font-bold text-slate-800 leading-none">Social Media</h1>
+          <p className="mt-0.5 text-[11px] text-slate-400">{current.description}</p>
         </div>
 
         {/* Tab bar */}

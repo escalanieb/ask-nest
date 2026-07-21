@@ -36,9 +36,7 @@ export default function WidgetShell({
   const deleteWidget = useWorkspaceStore((s) => s.deleteWidget);
   const duplicateWidget = useWorkspaceStore((s) => s.duplicateWidget);
 
-  const handleClose = BASE_WIDGET_IDS.has(id)
-    ? () => toggleWidget(id)
-    : () => deleteWidget(id);
+  const handleClose = BASE_WIDGET_IDS.has(id) ? () => toggleWidget(id) : () => deleteWidget(id);
 
   return (
     <div
@@ -59,11 +57,7 @@ export default function WidgetShell({
       >
         <div className="flex items-center gap-2 min-w-0">
           {/* Drag dots */}
-          <svg
-            className="h-3 w-3 shrink-0 text-slate-300"
-            viewBox="0 0 12 12"
-            fill="currentColor"
-          >
+          <svg className="h-3 w-3 shrink-0 text-slate-300" viewBox="0 0 12 12" fill="currentColor">
             <circle cx="4" cy="3" r="1" />
             <circle cx="8" cy="3" r="1" />
             <circle cx="4" cy="6" r="1" />

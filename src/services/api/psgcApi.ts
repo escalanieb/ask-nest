@@ -58,27 +58,20 @@ export const psgcApi = {
   // Top-level collections
   regions: () => apiFetch<PsgcRegion[]>("/psgc/regions"),
   provinces: () => apiFetch<PsgcProvince[]>("/psgc/provinces"),
-  citiesMunicipalities: () =>
-    apiFetch<PsgcCityMunicipality[]>("/psgc/cities-municipalities"),
+  citiesMunicipalities: () => apiFetch<PsgcCityMunicipality[]>("/psgc/cities-municipalities"),
   barangays: () => apiFetch<PsgcBarangay[]>("/psgc/barangays"),
 
   // Region sub-resources
-  regionDetail: (regionCode: string) =>
-    apiFetch<PsgcRegion>(`/psgc/regions/${regionCode}`),
+  regionDetail: (regionCode: string) => apiFetch<PsgcRegion>(`/psgc/regions/${regionCode}`),
   regionProvinces: (regionCode: string) =>
     apiFetch<PsgcProvince[]>(`/psgc/regions/${regionCode}/provinces`),
   regionDistricts: (regionCode: string) =>
     apiFetch<PsgcDistrict[]>(`/psgc/regions/${regionCode}/districts`),
-  regionCities: (regionCode: string) =>
-    apiFetch<PsgcCity[]>(`/psgc/regions/${regionCode}/cities`),
+  regionCities: (regionCode: string) => apiFetch<PsgcCity[]>(`/psgc/regions/${regionCode}/cities`),
   regionMunicipalities: (regionCode: string) =>
     apiFetch<PsgcMunicipality[]>(`/psgc/regions/${regionCode}/municipalities`),
   regionCitiesMunicipalities: (regionCode: string) =>
-    apiFetch<PsgcCityMunicipality[]>(
-      `/psgc/regions/${regionCode}/cities-municipalities`,
-    ),
+    apiFetch<PsgcCityMunicipality[]>(`/psgc/regions/${regionCode}/cities-municipalities`),
   barangaysByCityMunicipality: (cityMuniCode: string) =>
-    apiFetch<PsgcBarangay[]>(
-      `/psgc/cities-municipalities/${cityMuniCode}/barangays`,
-    ),
+    apiFetch<PsgcBarangay[]>(`/psgc/cities-municipalities/${cityMuniCode}/barangays`),
 };

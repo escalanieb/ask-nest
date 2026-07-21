@@ -125,11 +125,7 @@ export default function Dashboard() {
               <Suspense
                 fallback={
                   <div className="flex h-full items-center justify-center text-slate-400 text-sm gap-2">
-                    <svg
-                      className="h-4 w-4 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle
                         className="opacity-25"
                         cx="12"

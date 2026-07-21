@@ -1,15 +1,7 @@
 import { create } from "zustand";
-import type {
-  DisasterCounts,
-  DisasterEvent,
-} from "../services/api/disasterApi";
+import type { DisasterCounts, DisasterEvent } from "../services/api/disasterApi";
 
-export type DisasterLayerKey =
-  | "earthquakes"
-  | "volcanoes"
-  | "typhoons"
-  | "floods"
-  | "heatmap";
+export type DisasterLayerKey = "earthquakes" | "volcanoes" | "typhoons" | "floods" | "heatmap";
 
 // ---------------------------------------------------------------------------
 // State shape
@@ -70,10 +62,8 @@ export const useDisasterStore = create<DisasterState>((set) => ({
   isLoading: false,
 
   // Toggle actions
-  toggleEarthquakes: () =>
-    set((s) => ({ earthquakesEnabled: !s.earthquakesEnabled })),
-  toggleVolcanoes: () =>
-    set((s) => ({ volcanoesEnabled: !s.volcanoesEnabled })),
+  toggleEarthquakes: () => set((s) => ({ earthquakesEnabled: !s.earthquakesEnabled })),
+  toggleVolcanoes: () => set((s) => ({ volcanoesEnabled: !s.volcanoesEnabled })),
   toggleTyphoons: () => set((s) => ({ typhoonsEnabled: !s.typhoonsEnabled })),
   toggleFloods: () => set((s) => ({ floodsEnabled: !s.floodsEnabled })),
   toggleHeatmap: () => set((s) => ({ heatmapEnabled: !s.heatmapEnabled })),

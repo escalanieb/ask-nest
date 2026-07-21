@@ -24,20 +24,14 @@ export interface RssFetchResult {
 export const rssFeedApi = {
   list: (): Promise<RssFeed[]> => apiFetch<RssFeed[]>("/rss/feeds"),
 
-  fetch: (id: number): Promise<RssFetchResult> =>
-    apiFetch<RssFetchResult>(`/rss/fetch?id=${id}`),
+  fetch: (id: number): Promise<RssFetchResult> => apiFetch<RssFetchResult>(`/rss/fetch?id=${id}`),
 
-  create: (data: {
-    name: string;
-    url: string;
-    category?: string;
-  }): Promise<RssFeed> =>
+  create: (data: { name: string; url: string; category?: string }): Promise<RssFeed> =>
     apiFetch<RssFeed>("/rss/feeds", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }),
 
-  remove: (id: number): Promise<void> =>
-    apiFetch<void>(`/rss/feeds/${id}`, { method: "DELETE" }),
+  remove: (id: number): Promise<void> => apiFetch<void>(`/rss/feeds/${id}`, { method: "DELETE" }),
 };

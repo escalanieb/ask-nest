@@ -1,8 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  fetchDatasetCoverage,
-  type DatasetCoverageItem,
-} from "../../services/api/analyticsApi";
+import { fetchDatasetCoverage, type DatasetCoverageItem } from "../../services/api/analyticsApi";
 import { useMapStore } from "../../stores/useMapStore";
 import type { MapAreaLevel } from "../../stores/useMapStore";
 
@@ -28,16 +25,13 @@ function toPsgcPrefix(psgcCode: string, level: MapAreaLevel): string {
 
 function DatasetRow({ ds, max }: { ds: DatasetCoverageItem; max: number }) {
   const pct = max > 0 ? Math.round((ds.record_count / max) * 100) : 0;
-  const colorClass =
-    ENTITY_COLORS[ds.entity_type] ?? "bg-slate-100 text-slate-600";
+  const colorClass = ENTITY_COLORS[ds.entity_type] ?? "bg-slate-100 text-slate-600";
 
   return (
     <div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs font-semibold text-slate-700 truncate">
-            {ds.name}
-          </span>
+          <span className="text-xs font-semibold text-slate-700 truncate">{ds.name}</span>
           <span
             className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${colorClass}`}
           >
@@ -89,9 +83,7 @@ export default function AnalyticsPanel() {
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             {levelLabel ?? "Overview"}
           </p>
-          <p className="text-xs font-semibold text-slate-700 truncate">
-            {areaLabel}
-          </p>
+          <p className="text-xs font-semibold text-slate-700 truncate">{areaLabel}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {data && (
@@ -159,25 +151,19 @@ export default function AnalyticsPanel() {
               {selectedLocation ? ` in ${selectedLocation.name}` : ""}
             </p>
             {!selectedLocation && (
-              <p className="text-[10px]">
-                Click a region, province, or city on the map
-              </p>
+              <p className="text-[10px]">Click a region, province, or city on the map</p>
             )}
           </div>
         )}
 
-        {!isLoading &&
-          datasets.map((ds) => (
-            <DatasetRow key={ds.id} ds={ds} max={maxCount} />
-          ))}
+        {!isLoading && datasets.map((ds) => <DatasetRow key={ds.id} ds={ds} max={maxCount} />)}
       </div>
 
       {/* Footer: dataset count badge */}
       {!isLoading && datasets.length > 0 && (
         <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-4 py-2 flex items-center justify-between">
           <span className="text-[10px] text-slate-400">
-            {datasets.length} dataset{datasets.length !== 1 ? "s" : ""} with
-            records
+            {datasets.length} dataset{datasets.length !== 1 ? "s" : ""} with records
           </span>
           <span className="text-[10px] text-slate-400">
             {selectedLocation
