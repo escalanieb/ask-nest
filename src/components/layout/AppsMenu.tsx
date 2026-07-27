@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { NavLink } from "react-router-dom";
 import TalaIcon from "../../assets/app_icons/tala.svg?react";
 import InsightIcon from "../../assets/app_icons/insight.svg?react";
 
@@ -61,6 +62,7 @@ interface AppLink {
   label: string;
   href: string;
   icon?: React.ReactNode;
+  internal?: boolean;
 }
 
 const APP_LINKS: AppLink[] = [
@@ -71,8 +73,9 @@ const APP_LINKS: AppLink[] = [
   },
   {
     label: "Insight",
-    href: "https://insight.asc-nest.org/",
+    href: "/insight",
     icon: <InsightIcon className="h-7 w-7" />,
+    internal: true,
   },
   {
     label: "TIPAS",
@@ -152,19 +155,32 @@ export default function AppsMenu() {
           <ul className="py-1">
             {APP_LINKS.map((link) => (
               <li key={link.href}>
-                <a
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
-                  onClick={() => setOpen(false)}
-                >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center text-slate-400">
-                    {link.icon ?? <LetterIcon label={link.label} />}
-                  </span>
-                  <span className="flex-1 leading-tight">{link.label}</span>
-                  <ExternalLinkIcon />
-                </a>
+                {link.internal ? (
+                  <NavLink
+                    to={link.href}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+                    onClick={() => setOpen(false)}
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center text-slate-400">
+                      {link.icon ?? <LetterIcon label={link.label} />}
+                    </span>
+                    <span className="flex-1 leading-tight">{link.label}</span>
+                  </NavLink>
+                ) : (
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+                    onClick={() => setOpen(false)}
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center text-slate-400">
+                      {link.icon ?? <LetterIcon label={link.label} />}
+                    </span>
+                    <span className="flex-1 leading-tight">{link.label}</span>
+                    <ExternalLinkIcon />
+                  </a>
+                )}
               </li>
             ))}
           </ul>

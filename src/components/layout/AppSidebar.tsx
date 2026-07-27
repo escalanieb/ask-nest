@@ -43,6 +43,21 @@ const DatasetIcon = () => (
   </svg>
 );
 
+const InsightIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-5 w-5"
+  >
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -61,6 +76,7 @@ const LogoutIcon = () => (
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "Map Dashboard", icon: <MapIcon />, end: true },
+  { to: "/insight", label: "INSIGHT", icon: <InsightIcon /> },
   {
     to: "/datasets",
     label: "Datasets",

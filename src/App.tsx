@@ -12,6 +12,7 @@ const DatasetListPage = lazy(() => import("./pages/datasets/DatasetListPage"));
 const DatasetFormPage = lazy(() => import("./pages/datasets/DatasetFormPage"));
 const DatasetUploadPage = lazy(() => import("./pages/datasets/DatasetUploadPage"));
 const DatasetRecordsPage = lazy(() => import("./pages/datasets/DatasetRecordsPage"));
+const InsightPage = lazy(() => import("./pages/insight/InsightPage"));
 
 const BOOT_MS = 1800;
 
@@ -89,6 +90,9 @@ export default function App() {
 
               {/* Records — any authenticated user */}
               <Route path="/datasets/:id/records" element={<DatasetRecordsPage />} />
+
+              {/* INSIGHT newsroom — any authenticated user */}
+              <Route path="/insight" element={<InsightPage />} />
             </Route>
 
             {/* Fallback */}
