@@ -102,10 +102,34 @@ function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) 
               </svg>
             </div>
             <div>
-              <h2 className="text-base font-semibold text-[#374151]">INSIGHT Login</h2>
+              <h2 className="text-base font-semibold text-[#374151]">INSIGHT Newsroom</h2>
               <p className="mt-0.5 text-xs text-[#6b7280]">
-                Sign in with your INSIGHT account to continue
+                Access require authentication
               </p>
+            </div>
+          </div>
+
+          {error && (
+            <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+              {error}
+            </p>
+          )}
+
+          {/* TALA SSO Button - Make it primary and prominent */}
+          <TalaLoginButton
+            loginUrl={`${INSIGHT_API_BASE}/auth/tala/redirect`}
+            onSuccess={handleTalaSuccess}
+            onLoginError={(err) => setError(err)}
+            className="w-full justify-center rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 font-semibold py-2 px-4 shadow transition-colors"
+          />
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-slate-200" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-2 text-slate-400">or login with credentials</span>
             </div>
           </div>
 
@@ -139,42 +163,18 @@ function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) 
               />
             </div>
 
-            {error && (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
-                {error}
-              </p>
-            )}
-
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-emerald-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+              className="w-full rounded-lg border border-[#e5e7eb] py-2 text-sm font-semibold text-[#374151] transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
-              {loading ? "Signing in…" : "Sign in to INSIGHT"}
+              {loading ? "Signing in…" : "Sign in"}
             </button>
           </form>
-
-          {/* Divider */}
-          <div className="relative my-5">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-slate-200" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-2 text-slate-400">or</span>
-            </div>
-          </div>
-
-          {/* TALA SSO Button */}
-          <TalaLoginButton
-            loginUrl={`${INSIGHT_API_BASE}/auth/tala/redirect`}
-            onSuccess={handleTalaSuccess}
-            onLoginError={(err) => setError(err)}
-            className="w-full justify-center border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-          />
         </div>
 
         <p className="mt-4 text-center text-xs text-[#6b7280]">
-          Use your INSIGHT account or TALA credentials.
+          Authorized personnel only.
         </p>
       </div>
     </div>
