@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster, toast } from "sonner";
 import { TalaLoginButton } from "@tala/sso-react";
@@ -26,6 +26,18 @@ interface InsightUser {
   email: string;
 }
 
+// ── Helper to find parent TALA token ──────────────────────────────────────────
+function getParentTalaToken(): string | null {
+  try {
+    const raw = localStorage.getItem("commsdash-auth");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.state?.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Login Gate ────────────────────────────────────────────────────────────────
 
 function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) {
@@ -33,6 +45,36 @@ function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) 
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Attempt auto-login using parent token on mount
+  useEffect(() => {
+    const parentToken = getParentTalaToken();
+    if (!parentToken) return;
+
+    setLoading(true);
+    fetch(`${INSIGHT_API_BASE}/auth/tala/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ tala_token: parentToken }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then((json) => {
+        if (json?.success && json?.data?.token) {
+          setInsightToken(json.data.token);
+          onAuthenticated();
+        }
+      })
+      .catch(() => {
+        // Silent failure — do nothing, show regular login gate
+      })
+      .finally(() => setLoading(false));
+  }, [onAuthenticated]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,6 +120,15 @@ function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) 
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Network error during TALA login."))
       .finally(() => setLoading(false));
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center bg-[#f0f8ff] gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+        <p className="text-sm font-semibold text-[#6b7280]">Connecting to INSIGHT...</p>
+      </div>
+    );
   }
 
   return (
