@@ -17,6 +17,17 @@ export interface NewsItem {
   summary: string;
   main_themes: string[];
   reco_action: string;
+  comment_count?: number | null;
+  reaction_count?: number | null;
+  reactions?: {
+    like?: number;
+    love?: number;
+    haha?: number;
+    wow?: number;
+    sad?: number;
+    angry?: number;
+    care?: number;
+  } | null;
   user_id: number;
   created_at: string;
   updated_at: string;

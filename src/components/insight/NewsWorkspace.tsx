@@ -166,11 +166,11 @@ const columnHelper = createColumnHelper<NewsItem>();
 
 type CreateSingleLinkPayload = {
   link: string;
-  comment_count: number;
+  comment_count?: number | null;
   source?: string;
 };
 type CreateBulkLinksPayload = {
-  links: Array<{ link: string; comment_count: number; source?: string }>;
+  links: Array<{ link: string; comment_count?: number | null; source?: string }>;
 };
 type FullNewsPayload = {
   title: string;
@@ -599,9 +599,13 @@ export default function NewsWorkspace() {
           }
           try {
             const normalized = new URL(urlToTest).toString();
+            const totalCommentsRaw = entry.totalComments.trim();
+            const commentCount = totalCommentsRaw
+              ? calculateCommentCount(Number(totalCommentsRaw) || 0)
+              : null;
             return {
               url: normalized,
-              commentCount: calculateCommentCount(Number(entry.totalComments) || 0),
+              commentCount,
               source: entry.source.trim() || undefined,
             };
           } catch {
@@ -610,12 +614,12 @@ export default function NewsWorkspace() {
         })
         .filter((entry) => entry !== null) as Array<{
         url: string;
-        commentCount: number;
+        commentCount: number | null;
         source?: string;
       }>;
 
       if (validEntries.length === 0) {
-        toast.error("Please provide at least one valid URL with comment count.");
+        toast.error("Please provide at least one valid URL.");
         return;
       }
 
@@ -964,11 +968,10 @@ export default function NewsWorkspace() {
             {editorMode === "create" ? (
               <div className="space-y-4">
                 <div className="space-y-3">
-                  <Label>Add links with comment counts</Label>
+                  <Label>Add links (Optional comment limit)</Label>
                   <p className="text-sm text-muted-foreground">
-                    Enter each Facebook link and its total comment count. We&apos;ll
-                    automatically calculate the sample size needed at{" "}
-                    <span className="font-medium">95% confidence level</span>.
+                    Enter each Facebook link. Optionally, specify a total comment count limit;
+                    otherwise, the count and reactions will be derived automatically from the scrape.
                   </p>
                   <div className="space-y-3">
                     {form.linkEntries.map((entry) => (
@@ -999,7 +1002,7 @@ export default function NewsWorkspace() {
                             <Input
                               type="number"
                               min="0"
-                              placeholder="Total comments"
+                              placeholder="Limit (optional)"
                               value={entry.totalComments}
                               onChange={(e) =>
                                 setForm((current) => ({
@@ -1025,7 +1028,7 @@ export default function NewsWorkspace() {
                                 </p>
                               </div>
                             ) : (
-                              <span className="text-xs text-muted-foreground">-</span>
+                              <span className="text-xs text-muted-foreground">Auto</span>
                             )}
                           </div>
                           <Button
@@ -1446,7 +1449,11 @@ export default function NewsWorkspace() {
                           },
                           {
                             label: "Total comments",
-                            value: String(sentimentTarget.sentiment?.total_comments ?? 0),
+                            value: String(sentimentTarget.sentiment?.total_comments ?? sentimentTarget.comment_count ?? 0),
+                          },
+                          {
+                            label: "Reaction count",
+                            value: sentimentTarget.reaction_count !== null && sentimentTarget.reaction_count !== undefined ? String(sentimentTarget.reaction_count) : "-",
                           },
                         ] as const
                       ).map(({ label, value }) => (
@@ -1455,6 +1462,22 @@ export default function NewsWorkspace() {
                           <span className="font-medium">{value}</span>
                         </div>
                       ))}
+
+                      {sentimentTarget.reactions && Object.keys(sentimentTarget.reactions).length > 0 && (
+                        <div className="border-t border-border/70 pt-3 mt-3 space-y-2">
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                            Reactions Breakdown
+                          </p>
+                          <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                            {Object.entries(sentimentTarget.reactions).map(([reaction, count]) => (
+                              <div key={reaction} className="flex justify-between">
+                                <span className="capitalize">{reaction}</span>
+                                <span>{count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
