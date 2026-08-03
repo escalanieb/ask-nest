@@ -6,6 +6,13 @@ export interface Sentiment {
   mixed: string;
   risk_level: string;
   total_comments: number;
+  report_id?: string;
+  reaction_tone?: string;
+  signal_alignment?: string;
+  reaction_summary?: string;
+  dominant_reaction?: string;
+  dominant_reaction_percentage?: number;
+  reaction_data_consistent?: boolean;
 }
 
 export interface NewsItem {
