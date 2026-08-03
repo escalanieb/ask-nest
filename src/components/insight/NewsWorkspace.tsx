@@ -167,10 +167,9 @@ const columnHelper = createColumnHelper<NewsItem>();
 type CreateSingleLinkPayload = {
   link: string;
   comment_count?: number | null;
-  source?: string;
 };
 type CreateBulkLinksPayload = {
-  links: Array<{ link: string; comment_count?: number | null; source?: string }>;
+  links: Array<{ link: string; comment_count?: number | null }>;
 };
 type FullNewsPayload = {
   title: string;
@@ -606,7 +605,6 @@ export default function NewsWorkspace() {
             return {
               url: normalized,
               commentCount,
-              source: entry.source.trim() || undefined,
             };
           } catch {
             return null;
@@ -615,7 +613,6 @@ export default function NewsWorkspace() {
         .filter((entry) => entry !== null) as Array<{
         url: string;
         commentCount: number | null;
-        source?: string;
       }>;
 
       if (validEntries.length === 0) {
@@ -628,13 +625,11 @@ export default function NewsWorkspace() {
           ? {
               link: validEntries[0].url,
               comment_count: validEntries[0].commentCount,
-              source: validEntries[0].source,
             }
           : {
               links: validEntries.map((e) => ({
                 link: e.url,
                 comment_count: e.commentCount,
-                source: e.source,
               })),
             };
 
@@ -1049,22 +1044,6 @@ export default function NewsWorkspace() {
                             <Trash className="size-4" />
                           </Button>
                         </div>
-                        <Input
-                          type="text"
-                          placeholder="Source — optional (e.g. Facebook, Twitter, Reuters)"
-                          value={entry.source}
-                          onChange={(e) =>
-                            setForm((current) => ({
-                              ...current,
-                              linkEntries: current.linkEntries.map((item) =>
-                                item.id === entry.id
-                                  ? { ...item, source: e.target.value }
-                                  : item
-                              ),
-                            }))
-                          }
-                          className="rounded-xl bg-input/50 text-sm h-9"
-                        />
                       </div>
                     ))}
                   </div>
@@ -1454,6 +1433,10 @@ export default function NewsWorkspace() {
                           {
                             label: "Reaction count",
                             value: sentimentTarget.reaction_count !== null && sentimentTarget.reaction_count !== undefined ? String(sentimentTarget.reaction_count) : "-",
+                          },
+                          {
+                            label: "View count",
+                            value: sentimentTarget.view_count !== null && sentimentTarget.view_count !== undefined ? String(sentimentTarget.view_count) : "-",
                           },
                         ] as const
                       ).map(({ label, value }) => (
