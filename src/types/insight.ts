@@ -19,6 +19,7 @@ export interface NewsItem {
   reco_action: string;
   comment_count?: number | null;
   reaction_count?: number | null;
+  view_count?: number | null;
   reactions?: {
     like?: number;
     love?: number;
