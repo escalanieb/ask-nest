@@ -10,9 +10,10 @@ export interface AuthUser {
 
 interface AuthState {
   token: string | null;
+  talaToken: string | null;
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
-  loginWithTala: (data: { token: string; user: AuthUser }) => void;
+  loginWithTala: (data: { token: string; tala_token?: string; user: AuthUser }) => void;
   logout: () => Promise<void>;
   isAuthenticated: () => boolean;
   isAdmin: () => boolean;
@@ -24,6 +25,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       token: null,
+      talaToken: null,
       user: null,
 
       login: async (email: string, password: string) => {
@@ -42,11 +44,11 @@ export const useAuthStore = create<AuthState>()(
         }
 
         const data = await res.json();
-        set({ token: data.token, user: data.user });
+        set({ token: data.token, talaToken: null, user: data.user });
       },
 
-      loginWithTala: (data: { token: string; user: AuthUser }) => {
-        set({ token: data.token, user: data.user });
+      loginWithTala: (data: { token: string; tala_token?: string; user: AuthUser }) => {
+        set({ token: data.token, talaToken: data.tala_token ?? null, user: data.user });
       },
 
       logout: async () => {
@@ -62,7 +64,7 @@ export const useAuthStore = create<AuthState>()(
             /* ignore network errors on logout */
           });
         }
-        set({ token: null, user: null });
+        set({ token: null, talaToken: null, user: null });
       },
 
       isAuthenticated: () => Boolean(get().token && get().user),
@@ -70,7 +72,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "commsdash-auth",
-      partialize: (state) => ({ token: state.token, user: state.user }),
+      partialize: (state) => ({ token: state.token, talaToken: state.talaToken, user: state.user }),
     },
   ),
 );

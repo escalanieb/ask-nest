@@ -32,7 +32,7 @@ function getParentTalaToken(): string | null {
     const raw = localStorage.getItem("commsdash-auth");
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return parsed?.state?.token ?? null;
+    return parsed?.state?.talaToken ?? null;
   } catch {
     return null;
   }
