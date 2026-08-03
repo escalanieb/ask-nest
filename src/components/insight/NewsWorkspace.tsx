@@ -328,6 +328,7 @@ export default function NewsWorkspace() {
   const [sentimentTarget, setSentimentTarget] = useState<NewsItem | null>(null);
   const [form, setForm] = useState<NewsFormState>(emptyFormState);
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [showAdvancedReport, setShowAdvancedReport] = useState(false);
   const deferredSearch = useDeferredValue(search.trim());
 
   const handleSearchChange = useCallback(
@@ -437,6 +438,7 @@ export default function NewsWorkspace() {
 
   const openDetailsDialog = useCallback((item: NewsItem) => {
     setSentimentTarget(item);
+    setShowAdvancedReport(false);
   }, []);
 
   const openEditorFromDetails = useCallback(
@@ -1410,6 +1412,86 @@ export default function NewsWorkspace() {
                         ))}
                       </div>
                     </div>
+
+                    {sentimentTarget.sentiment && (
+                      <div className="pt-2">
+                        <Button
+                          variant="outline"
+                          type="button"
+                          onClick={() => setShowAdvancedReport(!showAdvancedReport)}
+                          className="w-full rounded-2xl flex items-center justify-between px-4 py-2 border-border/70 hover:bg-muted/50 transition-colors"
+                        >
+                          <span className="font-semibold text-sm">
+                            {showAdvancedReport ? "Hide Analysis Report" : "Show Analysis Report"}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {showAdvancedReport ? "▲" : "▼"}
+                          </span>
+                        </Button>
+
+                        {showAdvancedReport && (
+                          <div
+                            data-report-id={sentimentTarget.sentiment.report_id}
+                            className="mt-4 rounded-3xl border border-border/60 bg-card p-5 space-y-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300"
+                          >
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                              {sentimentTarget.sentiment.reaction_tone && (
+                                <div className="space-y-1">
+                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Reaction Tone</p>
+                                  <Badge className="rounded-full font-medium capitalize">
+                                    {sentimentTarget.sentiment.reaction_tone}
+                                  </Badge>
+                                </div>
+                              )}
+                              {sentimentTarget.sentiment.signal_alignment && (
+                                <div className="space-y-1">
+                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Signal Alignment</p>
+                                  <Badge variant="secondary" className="rounded-full font-medium capitalize">
+                                    {sentimentTarget.sentiment.signal_alignment}
+                                  </Badge>
+                                </div>
+                              )}
+                              {sentimentTarget.sentiment.dominant_reaction && (
+                                <div className="space-y-1">
+                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Dominant Reaction</p>
+                                  <span className="text-sm font-semibold capitalize text-foreground">
+                                    {sentimentTarget.sentiment.dominant_reaction} 
+                                    {sentimentTarget.sentiment.dominant_reaction_percentage !== undefined && (
+                                      <span className="ml-1 text-xs text-muted-foreground">({sentimentTarget.sentiment.dominant_reaction_percentage}%)</span>
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                              {sentimentTarget.sentiment.reaction_data_consistent !== undefined && (
+                                <div className="space-y-1 col-span-2 sm:col-span-1">
+                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Data Consistent</p>
+                                  <span className="text-sm font-semibold flex items-center gap-1.5">
+                                    {sentimentTarget.sentiment.reaction_data_consistent ? (
+                                      <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                                        <CheckCircle2 className="size-3.5" /> Consistent
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400">
+                                        <AlertTriangle className="size-3.5" /> Inconsistent
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {sentimentTarget.sentiment.reaction_summary && (
+                              <div className="space-y-1.5 rounded-2xl bg-muted/30 p-3.5 border border-border/40">
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Reaction Summary</p>
+                                <p className="text-xs text-muted-foreground leading-relaxed italic">
+                                  "{sentimentTarget.sentiment.reaction_summary}"
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-3 rounded-3xl border border-border/70 bg-muted/30 p-4">
