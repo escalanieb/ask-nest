@@ -870,7 +870,7 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
 // ---------------------------------------------------------------------------
 // TIPAS Events Layer Component
 // ---------------------------------------------------------------------------
-function TipasEventsLayer() {
+function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
   const showTipasEvents = useFilterStore((s) => s.showTipasEvents);
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
 
@@ -893,13 +893,26 @@ function TipasEventsLayer() {
         if (!evt.psgc_code) return null;
         let pos = centroidMap.get(evt.psgc_code);
 
-        // Fallback: search for a province prefix match if exact city code isn't in centroidMap
+        // Fallback: search for a province/region prefix match in centroidMap
         if (!pos) {
-          const prefix = evt.psgc_code.substring(0, 4);
+          const provPrefix = evt.psgc_code.substring(0, 4);
+          const regPrefix = evt.psgc_code.substring(0, 2);
+
+          // Try province prefix
           for (const [key, value] of centroidMap.entries()) {
-            if (key.startsWith(prefix)) {
+            if (key.startsWith(provPrefix)) {
               pos = value;
               break;
+            }
+          }
+
+          // Try region prefix
+          if (!pos) {
+            for (const [key, value] of centroidMap.entries()) {
+              if (key.startsWith(regPrefix)) {
+                pos = value;
+                break;
+              }
             }
           }
         }
@@ -1413,7 +1426,7 @@ export default function MapCanvas() {
         <VolcanoLayer />
         <TyphoonLayer />
         <FloodLayer />
-        <TipasEventsLayer />
+        <TipasEventsLayer geoVersion={geoVersion} />
         <MapInstanceCapture />
       </MapContainer>
 
