@@ -1350,7 +1350,12 @@ export default function MapCanvas() {
     // Store centroid for dot rendering (all levels).
     // Use true polygon centroid (average of all vertices) instead of bounding-box
     // center — bounding-box midpoints can fall outside irregular polygons (e.g. Taguig).
-    const geomCoords = feature.geometry?.coordinates;
+    const geom = feature.geometry;
+    // Only Polygon and MultiPolygon have a .coordinates array (GeometryCollection does not)
+    const geomCoords =
+      geom?.type === "Polygon" || geom?.type === "MultiPolygon"
+        ? geom.coordinates
+        : null;
     if (geomCoords) {
       // Flatten all [lng, lat] pairs from Polygon or MultiPolygon geometries
       const flatCoords: [number, number][] = [];
@@ -1373,7 +1378,7 @@ export default function MapCanvas() {
         });
       }
     } else {
-      // Fallback to bounding box if no geometry coords available
+      // Fallback to bounding box if geometry type is not Polygon/MultiPolygon
       const bounds = (layer as L.Polygon).getBounds?.();
       if (bounds) {
         const c = bounds.getCenter();
