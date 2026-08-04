@@ -255,7 +255,7 @@ export default function DatasetRecordsPanel() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.map((row, idx) => (
+              {(rows as any[]).map((row, idx) => (
                 <tr key={row.id} className="hover:bg-red-50 transition-colors">
                   <td className="px-3 py-2 text-slate-400 tabular-nums">{idx + 1}</td>
                   {columns.length > 0 ? (

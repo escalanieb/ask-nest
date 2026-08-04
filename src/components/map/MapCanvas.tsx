@@ -1002,7 +1002,6 @@ export default function MapCanvas() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const showTipasEvents = useFilterStore((s) => s.showTipasEvents);
   const showTipasAttendees = useFilterStore((s) => s.showTipasAttendees);
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
 
