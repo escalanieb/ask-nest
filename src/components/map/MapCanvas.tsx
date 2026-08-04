@@ -1040,6 +1040,8 @@ export default function MapCanvas() {
   const activeRegion = useFilterStore((s) => s.activeRegion);
   const activeProvince = useFilterStore((s) => s.activeProvince);
   const activeCityMuni = useFilterStore((s) => s.activeCityMuni);
+  // Bumped after every addData() so the choropleth style effect reruns immediately
+  const [geoVersion, setGeoVersion] = useState(0);
 
   // Sync active dropdown selection to selectedLocation (which sets lat/lng for map flying)
   useEffect(() => {
@@ -1074,8 +1076,6 @@ export default function MapCanvas() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [loadKey, setLoadKey] = useState(0);
-  // Bumped after every addData() so the choropleth style effect reruns immediately
-  const [geoVersion, setGeoVersion] = useState(0);
 
   // Draggable popup position (set when a choropleth area is clicked)
   const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
