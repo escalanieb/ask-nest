@@ -1347,11 +1347,38 @@ export default function MapCanvas() {
     const regionRaw = props.ADM1_PCODE ?? "";
     const regionCode = regionRaw.startsWith("PH") ? regionRaw.slice(2) : regionRaw;
 
-    // Store centroid for dot rendering (all levels)
-    const bounds = (layer as L.Polygon).getBounds?.();
-    if (bounds) {
-      const c = bounds.getCenter();
-      centroidMap.set(psgcCode, { lat: c.lat, lng: c.lng });
+    // Store centroid for dot rendering (all levels).
+    // Use true polygon centroid (average of all vertices) instead of bounding-box
+    // center — bounding-box midpoints can fall outside irregular polygons (e.g. Taguig).
+    const geomCoords = feature.geometry?.coordinates;
+    if (geomCoords) {
+      // Flatten all [lng, lat] pairs from Polygon or MultiPolygon geometries
+      const flatCoords: [number, number][] = [];
+      const flatRings = (rings: unknown): void => {
+        if (!Array.isArray(rings)) return;
+        if (typeof rings[0] === "number") {
+          // It's a single coordinate pair [lng, lat]
+          flatCoords.push(rings as [number, number]);
+        } else {
+          for (const child of rings as unknown[]) flatRings(child);
+        }
+      };
+      flatRings(geomCoords);
+      if (flatCoords.length > 0) {
+        let sumLat = 0, sumLng = 0;
+        for (const [lng, lat] of flatCoords) { sumLat += lat; sumLng += lng; }
+        centroidMap.set(psgcCode, {
+          lat: sumLat / flatCoords.length,
+          lng: sumLng / flatCoords.length,
+        });
+      }
+    } else {
+      // Fallback to bounding box if no geometry coords available
+      const bounds = (layer as L.Polygon).getBounds?.();
+      if (bounds) {
+        const c = bounds.getCenter();
+        centroidMap.set(psgcCode, { lat: c.lat, lng: c.lng });
+      }
     }
 
     const path = layer as L.Path;
