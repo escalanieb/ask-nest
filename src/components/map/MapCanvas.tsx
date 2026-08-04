@@ -875,7 +875,7 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
 
   const { data: events = [] } = useQuery({
-    queryKey: ["tipas-events"],
+    queryKey: ["tipas-events", geoVersion],
     queryFn: fetchTipasEvents,
     enabled: showTipasEvents,
     staleTime: 1000 * 60 * 5,
