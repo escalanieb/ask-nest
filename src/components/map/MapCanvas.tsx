@@ -867,9 +867,6 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
   return choroplethStyle(psgcCode, m, mv);
 }
 
-// ---------------------------------------------------------------------------
-// TIPAS Events Layer Component
-// ---------------------------------------------------------------------------
 function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
   const showTipasEvents = useFilterStore((s) => s.showTipasEvents);
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
@@ -887,16 +884,24 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
     ? events.filter((e) => e.id === selectedTipasEventId)
     : events;
 
+  // Group events by their resolved psgc_code to handle multiple events in one location
+  const groupedEvents: Record<string, typeof events> = {};
+  for (const evt of filteredEvents) {
+    if (evt.psgc_code) {
+      groupedEvents[evt.psgc_code] ??= [];
+      groupedEvents[evt.psgc_code].push(evt);
+    }
+  }
+
   return (
     <>
-      {filteredEvents.map((evt) => {
-        if (!evt.psgc_code) return null;
-        let pos = centroidMap.get(evt.psgc_code);
+      {Object.entries(groupedEvents).map(([psgcCode, cityEvents]) => {
+        let pos = centroidMap.get(psgcCode);
 
         // Fallback: search for a province/region prefix match in centroidMap
         if (!pos) {
-          const provPrefix = evt.psgc_code.substring(0, 4);
-          const regPrefix = evt.psgc_code.substring(0, 2);
+          const provPrefix = psgcCode.substring(0, 4);
+          const regPrefix = psgcCode.substring(0, 2);
 
           // Try province prefix
           for (const [key, value] of centroidMap.entries()) {
@@ -919,58 +924,74 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
 
         if (!pos) return null;
 
+        const count = cityEvents.length;
+
+        // Custom icon displaying the number of events if > 1
         const icon = L.divIcon({
-          html: `<div style="width:26px;height:26px;position:relative;display:flex;align-items:center;justify-content:center;overflow:visible">
+          html: `<div style="width:28px;height:28px;position:relative;display:flex;align-items:center;justify-content:center;overflow:visible">
             <div class="disaster-marker__ring" style="position:absolute;inset:-4px;border-radius:50%;background:#ef4444;opacity:0.35;animation-duration:2.5s;"></div>
-            <div style="position:relative;width:26px;height:26px;border-radius:50%;background:#ef4444;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(239,68,68,0.5),0 1px 3px rgba(0,0,0,0.22);border:2px solid #fff;">
-              <span style="font-size:10px;line-height:1;font-weight:bold;color:#fff">📅</span>
+            <div style="position:relative;width:28px;height:28px;border-radius:50%;background:#ef4444;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(239,68,68,0.5),0 1px 3px rgba(0,0,0,0.22);border:2px solid #fff;">
+              <span style="font-size:11px;line-height:1;font-weight:bold;color:#fff">${count > 1 ? count : "📅"}</span>
             </div>
           </div>`,
           className: "",
-          iconSize: [26, 26],
-          iconAnchor: [13, 13],
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
         });
 
         return (
           <Marker
-            key={evt.id}
+            key={psgcCode}
             position={[pos.lat, pos.lng]}
             icon={icon}
           >
-            <Popup maxWidth={280}>
-              <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", padding: "2px" }}>
-                <strong style={{ fontSize: "13px", display: "block", marginBottom: "4px", color: "#1e293b" }}>{evt.name}</strong>
-                {evt.description && (
-                  <p style={{ fontSize: "11px", color: "#64748b", margin: "0 0 8px", lineHeight: "1.4" }}>{evt.description}</p>
-                )}
-                <div style={{ fontSize: "11px", color: "#334155", borderTop: "1px solid #f1f5f9", paddingTop: "6px" }} className="space-y-1">
-                  <p>📍 held in: <span className="font-semibold text-slate-700">{evt.location ?? "Unknown"}</span></p>
-                  <p>📅 Date: <span className="font-medium">{new Date(evt.start_time).toLocaleDateString()}</span></p>
-                  <p>👥 Attendees Registered: <span className="font-bold text-red-600">{evt.registered_count}</span></p>
-                  <p>✅ Attendees Checked-in: <span className="font-bold text-green-600">{evt.checked_in_count}</span></p>
-                </div>
-                <div style={{ marginTop: "10px" }}>
-                  <button
-                    onClick={() => {
-                      useFilterStore.getState().setSelectedTipasEventId(evt.id);
-                      useFilterStore.getState().setShowTipasAttendees(true);
-                      useWorkspaceStore.getState().updateWidget("recordsPanel", { visible: true });
-                    }}
-                    style={{
-                      width: "100%",
-                      textAlign: "center",
-                      borderRadius: "6px",
-                      background: "#ef4444",
-                      color: "#fff",
-                      fontSize: "10px",
-                      fontWeight: 600,
-                      padding: "5px 8px",
-                      cursor: "pointer",
-                      border: "none"
-                    }}
-                  >
-                    View Attendees Distribution
-                  </button>
+            <Popup maxWidth={320}>
+              <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", padding: "2px" }} className="w-full">
+                <strong style={{ fontSize: "14px", display: "block", marginBottom: "6px", color: "#1e293b" }} className="border-b border-slate-100 pb-1.5">
+                  {count > 1 ? `📍 ${cityEvents[0].location} (${count} Events)` : cityEvents[0].name}
+                </strong>
+                
+                <div style={{ maxHeight: "220px", overflowY: "auto" }} className="space-y-4 divide-y divide-slate-100 pr-1 scrollbar-thin">
+                  {cityEvents.map((evt, idx) => (
+                    <div key={evt.id} style={{ paddingTop: idx > 0 ? "10px" : "0" }} className="first:pt-0">
+                      {count > 1 && (
+                        <span style={{ fontSize: "12px", fontWeight: 750, color: "#ef4444", display: "block", marginBottom: "4px" }}>
+                          {evt.name}
+                        </span>
+                      )}
+                      {evt.description && (
+                        <p style={{ fontSize: "11px", color: "#64748b", margin: "0 0 6px", lineHeight: "1.4" }}>{evt.description}</p>
+                      )}
+                      <div style={{ fontSize: "11px", color: "#334155" }} className="space-y-1">
+                        <p>📍 held in: <span className="font-semibold text-slate-700">{evt.location ?? "Unknown"}</span></p>
+                        <p>📅 Date: <span className="font-medium">{new Date(evt.start_time).toLocaleDateString()}</span></p>
+                        <p>👥 Registered: <span className="font-bold text-red-600">{evt.registered_count}</span> | ✅ Checked-in: <span className="font-bold text-green-600">{evt.checked_in_count}</span></p>
+                      </div>
+                      <div style={{ marginTop: "8px" }}>
+                        <button
+                          onClick={() => {
+                            useFilterStore.getState().setSelectedTipasEventId(evt.id);
+                            useFilterStore.getState().setShowTipasAttendees(true);
+                            useWorkspaceStore.getState().updateWidget("recordsPanel", { visible: true });
+                          }}
+                          style={{
+                            width: "100%",
+                            textAlign: "center",
+                            borderRadius: "5px",
+                            background: "#ef4444",
+                            color: "#fff",
+                            fontSize: "10px",
+                            fontWeight: 600,
+                            padding: "4px 8px",
+                            cursor: "pointer",
+                            border: "none"
+                          }}
+                        >
+                          View Attendees Distribution
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </Popup>
@@ -981,13 +1002,71 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Leaflet Map Pan/Zoom Controller
+// ---------------------------------------------------------------------------
+import { useMap } from "react-leaflet";
+
+function MapPanZoomController() {
+  const map = useMap();
+  const selectedLocation = useMapStore((s) => s.selectedLocation);
+
+  useEffect(() => {
+    if (selectedLocation?.lat && selectedLocation?.lng) {
+      // Zoom levels: 8 for Region, 9 for Province, 11 for City/Municity
+      const zoomLevel =
+        selectedLocation.type === "Region"
+          ? 8
+          : selectedLocation.type === "Province"
+            ? 9
+            : 11;
+      map.setView([selectedLocation.lat, selectedLocation.lng], zoomLevel, {
+        animate: true,
+        duration: 1.2,
+      });
+    }
+  }, [selectedLocation, map]);
+
+  return null;
+}
+
 export default function MapCanvas() {
   const selectedLocation = useMapStore((s) => s.selectedLocation);
+  const setSelectedLocation = useMapStore((s) => s.setSelectedLocation);
   const mapAreaLevel = useMapStore((s) => s.mapAreaLevel);
   const showChoropleth = useMapStore((s) => s.showChoropleth);
   const showDots = useMapStore((s) => s.showDots);
   const showNumbers = useMapStore((s) => s.showNumbers);
   const activeRegion = useFilterStore((s) => s.activeRegion);
+  const activeProvince = useFilterStore((s) => s.activeProvince);
+  const activeCityMuni = useFilterStore((s) => s.activeCityMuni);
+
+  // Sync active dropdown selection to selectedLocation (which sets lat/lng for map flying)
+  useEffect(() => {
+    const targetCode =
+      mapAreaLevel === "municity"
+        ? activeCityMuni
+        : mapAreaLevel === "province"
+          ? activeProvince
+          : activeRegion;
+
+    if (!targetCode) {
+      setSelectedLocation(null);
+      return;
+    }
+
+    const pos = centroidMap.get(targetCode);
+    if (pos) {
+      setSelectedLocation({
+        psgcCode: targetCode,
+        name: "Selected Location",
+        type: mapAreaLevel === "region" ? "Region" : mapAreaLevel === "province" ? "Province" : "City/Municipality",
+        lat: pos.lat,
+        lng: pos.lng,
+      });
+    }
+  }, [activeCityMuni, activeProvince, activeRegion, mapAreaLevel, geoVersion, setSelectedLocation]);
+
   const activeLayerDatasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
   const choroplethSelection = useDatasetLayerStore((s) => s.choroplethSelection);
   const setChoroplethSelection = useDatasetLayerStore((s) => s.setChoroplethSelection);
@@ -1427,6 +1506,7 @@ export default function MapCanvas() {
         <TyphoonLayer />
         <FloodLayer />
         <TipasEventsLayer geoVersion={geoVersion} />
+        <MapPanZoomController />
         <MapInstanceCapture />
       </MapContainer>
 
