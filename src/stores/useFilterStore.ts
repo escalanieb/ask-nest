@@ -11,6 +11,13 @@ interface FilterState {
   setActiveCityMuni: (c: string | null) => void;
   activeProvince: string | null;
   setActiveProvince: (p: string | null) => void;
+  // TIPAS Integration Layer Filters
+  showTipasEvents: boolean;
+  setShowTipasEvents: (v: boolean) => void;
+  showTipasAttendees: boolean;
+  setShowTipasAttendees: (v: boolean) => void;
+  selectedTipasEventId: number | null;
+  setSelectedTipasEventId: (id: number | null) => void;
   resetFilters: () => void;
 }
 
@@ -25,6 +32,12 @@ export const useFilterStore = create<FilterState>((set) => ({
   setActiveCityMuni: (c) => set({ activeCityMuni: c }),
   activeProvince: null,
   setActiveProvince: (p) => set({ activeProvince: p, activeCityMuni: null }),
+  showTipasEvents: false,
+  setShowTipasEvents: (v) => set({ showTipasEvents: v }),
+  showTipasAttendees: false,
+  setShowTipasAttendees: (v) => set({ showTipasAttendees: v }),
+  selectedTipasEventId: null,
+  setSelectedTipasEventId: (id) => set({ selectedTipasEventId: id }),
   resetFilters: () =>
     set({
       searchQuery: "",
@@ -32,5 +45,8 @@ export const useFilterStore = create<FilterState>((set) => ({
       activeStatus: null,
       activeCityMuni: null,
       activeProvince: null,
+      showTipasEvents: false,
+      showTipasAttendees: false,
+      selectedTipasEventId: null,
     }),
 }));

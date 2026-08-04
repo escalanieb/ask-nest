@@ -18,10 +18,12 @@ import { useFilterStore } from "../../stores/useFilterStore";
 import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
 import type { ChoroplethSelection } from "../../stores/useDatasetLayerStore";
 import { useDisasterStore } from "../../stores/useDisasterStore";
+import { useWorkspaceStore } from "../../stores/useWorkspaceStore";
 import { fetchDatasetLayer } from "../../services/api/datasetApi";
 import type { LayerDataPoint, LayerResponse } from "../../services/api/datasetApi";
 import { disasterApi } from "../../services/api/disasterApi";
 import type { DisasterEvent } from "../../services/api/disasterApi";
+import { fetchTipasEvents, fetchTipasAttendeesDistribution, type TipasDistributionPoint } from "../../services/api/tipasApi";
 import { queryClient } from "../../lib/queryClient";
 import NestLogo from "../NestLogo";
 
@@ -781,6 +783,51 @@ function choroplethStyle(
 // Used in mouse-event handlers to avoid stale-closure bugs.
 // ---------------------------------------------------------------------------
 function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
+  const showTipasAttendees = useFilterStore.getState().showTipasAttendees;
+  const level = useMapStore.getState().mapAreaLevel;
+
+  if (showTipasAttendees) {
+    const selectedEventId = useFilterStore.getState().selectedTipasEventId;
+    const distribution = queryClient.getQueryData<TipasDistributionPoint[]>([
+      "tipas-attendees-distribution",
+      selectedEventId,
+    ]);
+    if (distribution?.length) {
+      const tipasMap = new Map(distribution.map((d) => [d.psgc_code, d.count]));
+      const tipasMaxVal = Math.max(1, ...distribution.map((d) => d.count));
+      
+      const prefix =
+        level === "region"
+          ? psgcCode.substring(0, 2)
+          : level === "province"
+            ? psgcCode.substring(0, 4)
+            : psgcCode;
+      
+      let count = 0;
+      for (const [key, val] of tipasMap.entries()) {
+        if (key.startsWith(prefix)) count += val;
+      }
+      
+      if (count === 0) {
+        return {
+          ...defaultStyle,
+          fillColor: CHOROPLETH_COLORS[0],
+          fillOpacity: 0.5,
+        };
+      }
+      
+      const ratio = count / tipasMaxVal;
+      const idx = Math.min(Math.floor(ratio * CHOROPLETH_COLORS.length), CHOROPLETH_COLORS.length - 1);
+      return {
+        color: "#ef4444",
+        weight: 1,
+        fillColor: CHOROPLETH_COLORS[idx],
+        fillOpacity: 0.65,
+      };
+    }
+    return defaultStyle;
+  }
+
   const layerId = useDatasetLayerStore.getState().activeLayerDatasetId;
   const showChoropleth = useMapStore.getState().showChoropleth;
   if (!layerId || !showChoropleth) return defaultStyle;
@@ -788,7 +835,6 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
   const cached = queryClient.getQueryData<LayerResponse>(["layer", layerId]);
   if (!cached?.layer_data.length) return defaultStyle;
 
-  const level = useMapStore.getState().mapAreaLevel;
   const m = new Map<string, LayerDataPoint>();
 
   if (level === "municity") {
@@ -819,6 +865,107 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
 
   const mv = Math.max(...cached.layer_data.map((p) => p.display_value), 1);
   return choroplethStyle(psgcCode, m, mv);
+}
+
+// ---------------------------------------------------------------------------
+// TIPAS Events Layer Component
+// ---------------------------------------------------------------------------
+function TipasEventsLayer() {
+  const showTipasEvents = useFilterStore((s) => s.showTipasEvents);
+  const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
+
+  const { data: events = [] } = useQuery({
+    queryKey: ["tipas-events"],
+    queryFn: fetchTipasEvents,
+    enabled: showTipasEvents,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  if (!showTipasEvents) return null;
+
+  const filteredEvents = selectedTipasEventId
+    ? events.filter((e) => e.id === selectedTipasEventId)
+    : events;
+
+  return (
+    <>
+      {filteredEvents.map((evt) => {
+        if (!evt.psgc_code) return null;
+        let pos = centroidMap.get(evt.psgc_code);
+
+        // Fallback: search for a province prefix match if exact city code isn't in centroidMap
+        if (!pos) {
+          const prefix = evt.psgc_code.substring(0, 4);
+          for (const [key, value] of centroidMap.entries()) {
+            if (key.startsWith(prefix)) {
+              pos = value;
+              break;
+            }
+          }
+        }
+
+        if (!pos) return null;
+
+        const icon = L.divIcon({
+          html: `<div style="width:26px;height:26px;position:relative;display:flex;align-items:center;justify-content:center;overflow:visible">
+            <div class="disaster-marker__ring" style="position:absolute;inset:-4px;border-radius:50%;background:#ef4444;opacity:0.35;animation-duration:2.5s;"></div>
+            <div style="position:relative;width:26px;height:26px;border-radius:50%;background:#ef4444;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(239,68,68,0.5),0 1px 3px rgba(0,0,0,0.22);border:2px solid #fff;">
+              <span style="font-size:10px;line-height:1;font-weight:bold;color:#fff">📅</span>
+            </div>
+          </div>`,
+          className: "",
+          iconSize: [26, 26],
+          iconAnchor: [13, 13],
+        });
+
+        return (
+          <Marker
+            key={evt.id}
+            position={[pos.lat, pos.lng]}
+            icon={icon}
+          >
+            <Popup maxWidth={280}>
+              <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", padding: "2px" }}>
+                <strong style={{ fontSize: "13px", display: "block", marginBottom: "4px", color: "#1e293b" }}>{evt.name}</strong>
+                {evt.description && (
+                  <p style={{ fontSize: "11px", color: "#64748b", margin: "0 0 8px", lineHeight: "1.4" }}>{evt.description}</p>
+                )}
+                <div style={{ fontSize: "11px", color: "#334155", borderTop: "1px solid #f1f5f9", paddingTop: "6px" }} className="space-y-1">
+                  <p>📍 held in: <span className="font-semibold text-slate-700">{evt.location ?? "Unknown"}</span></p>
+                  <p>📅 Date: <span className="font-medium">{new Date(evt.start_time).toLocaleDateString()}</span></p>
+                  <p>👥 Attendees Registered: <span className="font-bold text-red-600">{evt.registered_count}</span></p>
+                  <p>✅ Attendees Checked-in: <span className="font-bold text-green-600">{evt.checked_in_count}</span></p>
+                </div>
+                <div style={{ marginTop: "10px" }}>
+                  <button
+                    onClick={() => {
+                      useFilterStore.getState().setSelectedTipasEventId(evt.id);
+                      useFilterStore.getState().setShowTipasAttendees(true);
+                      useWorkspaceStore.getState().updateWidget("recordsPanel", { visible: true });
+                    }}
+                    style={{
+                      width: "100%",
+                      textAlign: "center",
+                      borderRadius: "6px",
+                      background: "#ef4444",
+                      color: "#fff",
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      padding: "5px 8px",
+                      cursor: "pointer",
+                      border: "none"
+                    }}
+                  >
+                    View Attendees Distribution
+                  </button>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
+    </>
+  );
 }
 
 export default function MapCanvas() {
@@ -854,6 +1001,21 @@ export default function MapCanvas() {
     enabled: !!activeLayerDatasetId,
     staleTime: 1000 * 60 * 5,
   });
+
+  const showTipasEvents = useFilterStore((s) => s.showTipasEvents);
+  const showTipasAttendees = useFilterStore((s) => s.showTipasAttendees);
+  const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
+
+  // Fetch TIPAS distribution data
+  const { data: tipasDistribution = [] } = useQuery({
+    queryKey: ["tipas-attendees-distribution", selectedTipasEventId],
+    queryFn: () => fetchTipasAttendeesDistribution(selectedTipasEventId ?? undefined),
+    enabled: showTipasAttendees,
+    staleTime: 1000 * 30,
+  });
+
+  const tipasMap = new Map(tipasDistribution.map((d) => [d.psgc_code, d.count]));
+  const tipasMaxVal = Math.max(1, ...tipasDistribution.map((d) => d.count));
 
   // Build a PSGC → point map aggregated for the current map level.
   // Municity data (9-digit) is rolled up to province (prefix 4 digits + 00000)
@@ -925,7 +1087,7 @@ export default function MapCanvas() {
     }
   }, [choroplethSelection]);
 
-  // Re-apply styles when selectedLocation or layer data changes
+  // Re-apply styles when selectedLocation, layer data, or TIPAS distribution changes
   useEffect(() => {
     if (!geoJsonRef.current) return;
     const lm = layerMap();
@@ -940,13 +1102,44 @@ export default function MapCanvas() {
             ? (props?.ADM2_PCODE ?? "")
             : (props?.ADM3_PCODE ?? props?.ADM2_PCODE ?? "");
       const code = rawCode.startsWith("PH") ? rawCode.slice(2) : rawCode;
-      l.setStyle(
-        code === selectedLocation?.psgcCode
-          ? selectedStyle
-          : activeLayerDatasetId && showChoropleth
-            ? choroplethStyle(code, lm, maxVal)
-            : defaultStyle,
-      );
+      
+      let styleToApply = defaultStyle;
+      if (code === selectedLocation?.psgcCode) {
+        styleToApply = selectedStyle;
+      } else if (showTipasAttendees) {
+        // Calculate counts based on map level prefix
+        const prefix =
+          mapAreaLevel === "region"
+            ? code.substring(0, 2)
+            : mapAreaLevel === "province"
+              ? code.substring(0, 4)
+              : code;
+        let count = 0;
+        for (const [key, val] of tipasMap.entries()) {
+          if (key.startsWith(prefix)) count += val;
+        }
+        
+        if (count === 0) {
+          styleToApply = {
+            ...defaultStyle,
+            fillColor: CHOROPLETH_COLORS[0],
+            fillOpacity: 0.5,
+          };
+        } else {
+          const ratio = count / tipasMaxVal;
+          const idx = Math.min(Math.floor(ratio * CHOROPLETH_COLORS.length), CHOROPLETH_COLORS.length - 1);
+          styleToApply = {
+            color: "#ef4444",
+            weight: 1,
+            fillColor: CHOROPLETH_COLORS[idx],
+            fillOpacity: 0.65,
+          };
+        }
+      } else if (activeLayerDatasetId && showChoropleth) {
+        styleToApply = choroplethStyle(code, lm, maxVal);
+      }
+      
+      l.setStyle(styleToApply);
     });
   }, [
     selectedLocation,
@@ -957,6 +1150,8 @@ export default function MapCanvas() {
     maxVal,
     layerMap,
     geoVersion,
+    showTipasAttendees,
+    tipasDistribution,
   ]);
 
   // Load GeoJSON whenever level or (for municity) activeRegion changes
@@ -1061,13 +1256,11 @@ export default function MapCanvas() {
     const regionRaw = props.ADM1_PCODE ?? "";
     const regionCode = regionRaw.startsWith("PH") ? regionRaw.slice(2) : regionRaw;
 
-    // Store centroid for dot rendering (municity level only)
-    if (level === "municity") {
-      const bounds = (layer as L.Polygon).getBounds?.();
-      if (bounds) {
-        const c = bounds.getCenter();
-        centroidMap.set(psgcCode, { lat: c.lat, lng: c.lng });
-      }
+    // Store centroid for dot rendering (all levels)
+    const bounds = (layer as L.Polygon).getBounds?.();
+    if (bounds) {
+      const c = bounds.getCenter();
+      centroidMap.set(psgcCode, { lat: c.lat, lng: c.lng });
     }
 
     const path = layer as L.Path;
@@ -1107,7 +1300,44 @@ export default function MapCanvas() {
 
       // Store selection for the draggable choropleth popup + dot marker
       const dsId = useDatasetLayerStore.getState().activeLayerDatasetId;
-      if (dsId) {
+      const tipasActive = useFilterStore.getState().showTipasAttendees;
+
+      if (tipasActive) {
+        const distribution = queryClient.getQueryData<TipasDistributionPoint[]>([
+          "tipas-attendees-distribution",
+          useFilterStore.getState().selectedTipasEventId,
+        ]) ?? [];
+
+        const prefix =
+          level === "region"
+            ? psgcCode.substring(0, 2)
+            : level === "province"
+              ? psgcCode.substring(0, 4)
+              : psgcCode; // municity: exact match
+
+        let count = 0;
+        for (const pt of distribution) {
+          if (pt.psgc_code.startsWith(prefix)) {
+            count += pt.count;
+          }
+        }
+
+        useDatasetLayerStore.getState().setChoroplethSelection({
+          psgcCode,
+          prefix,
+          name,
+          lat: center.lat,
+          lng: center.lng,
+          count,
+          tooltip: {
+            "TIPAS Attendees": {
+              "Total": count
+            }
+          },
+          x: e.containerPoint.x,
+          y: e.containerPoint.y,
+        } satisfies ChoroplethSelection);
+      } else if (dsId) {
         const cached = queryClient.getQueryData<LayerResponse>(["layer", dsId]);
         // Aggregate all records whose psgc_code starts with the area prefix
         const prefix =
@@ -1184,6 +1414,7 @@ export default function MapCanvas() {
         <VolcanoLayer />
         <TyphoonLayer />
         <FloodLayer />
+        <TipasEventsLayer />
         <MapInstanceCapture />
       </MapContainer>
 
