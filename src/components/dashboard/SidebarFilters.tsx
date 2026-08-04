@@ -14,6 +14,7 @@ import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
 import { useDisasterStore } from "../../stores/useDisasterStore";
 import { useElectionCountdown } from "../../hooks/useElectionCountdown";
 import { useVideoStore, type VideoPlatform } from "../../stores/useVideoStore";
+import { fetchTipasEvents } from "../../services/api/tipasApi";
 
 // ---------------------------------------------------------------------------
 // Accordion section wrapper
@@ -1213,6 +1214,124 @@ function DisasterLayers() {
 }
 
 // ---------------------------------------------------------------------------
+// TIPAS Layer Switcher
+// ---------------------------------------------------------------------------
+function TipasLayerSwitcher() {
+  const {
+    showTipasEvents,
+    setShowTipasEvents,
+    showTipasAttendees,
+    setShowTipasAttendees,
+    selectedTipasEventId,
+    setSelectedTipasEventId,
+  } = useFilterStore();
+
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ["tipas-events"],
+    queryFn: fetchTipasEvents,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  return (
+    <AccordionSection title="TIPAS Integration" defaultOpen={true}>
+      <div className="space-y-3 pt-1">
+        {/* Toggle Events */}
+        <button
+          onClick={() => setShowTipasEvents(!showTipasEvents)}
+          className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition-all ${
+            showTipasEvents
+              ? "border-red-300 bg-red-600 text-white animate-pulse-soft"
+              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <div className="min-w-0">
+            <span className="block text-[11px] font-semibold text-left">TIPAS Events Map</span>
+            <span className={`text-[9px] ${showTipasEvents ? "text-red-200" : "text-slate-400"}`}>
+              Show events held by city/municipality
+            </span>
+          </div>
+          {showTipasEvents && (
+            <svg
+              className="ml-2 h-3.5 w-3.5 shrink-0 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </button>
+
+        {/* Toggle Attendees Distribution */}
+        <button
+          onClick={() => setShowTipasAttendees(!showTipasAttendees)}
+          className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition-all ${
+            showTipasAttendees
+              ? "border-red-300 bg-red-600 text-white animate-pulse-soft"
+              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <div className="min-w-0">
+            <span className="block text-[11px] font-semibold text-left">Attendees Distribution Map</span>
+            <span className={`text-[9px] ${showTipasAttendees ? "text-red-200" : "text-slate-400"}`}>
+              Show density/count of attendees by city
+            </span>
+          </div>
+          {showTipasAttendees && (
+            <svg
+              className="ml-2 h-3.5 w-3.5 shrink-0 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </button>
+
+        {/* Event Filter Selector (only active if either layer is active) */}
+        {(showTipasEvents || showTipasAttendees) && (
+          <div className="space-y-1 bg-slate-50 border border-slate-100 rounded-lg p-2.5">
+            <label className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
+              Filter by Event
+            </label>
+            <div className="relative border-b border-slate-200">
+              <select
+                value={selectedTipasEventId ?? ""}
+                onChange={(e) => setSelectedTipasEventId(e.target.value ? Number(e.target.value) : null)}
+                className="w-full appearance-none bg-transparent py-1.5 pl-0 pr-6 text-[11px] text-slate-700 font-semibold outline-none cursor-pointer"
+              >
+                <option value="">All Events</option>
+                {isLoading ? (
+                  <option disabled>Loading events…</option>
+                ) : (
+                  events.map((evt) => (
+                    <option key={evt.id} value={evt.id}>
+                      {evt.name} ({evt.registered_count} registered)
+                    </option>
+                  ))
+                )}
+              </select>
+              <svg
+                className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        )}
+      </div>
+    </AccordionSection>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 export default function SidebarFilters() {
@@ -1223,6 +1342,7 @@ export default function SidebarFilters() {
       <RssFeedSettings />
       <VideoLinkManager />
       <DatasetLayerSwitcher />
+      <TipasLayerSwitcher />
       <MapDisplayToggles />
       <DisasterLayers />
       <MapAreaToggle />
