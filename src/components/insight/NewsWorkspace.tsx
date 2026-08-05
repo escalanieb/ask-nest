@@ -394,12 +394,37 @@ export default function NewsWorkspace() {
   const deleteMutation = useMutation({
     mutationFn: async (id: number) =>
       insightFetch<{ message: string }>(`/news/${id}`, "DELETE"),
+    onMutate: async (id: number) => {
+      // Cancel in-flight refetches so they don't overwrite our optimistic removal
+      await queryClient.cancelQueries({ queryKey: ["insight-news"] });
+      // Snapshot all cached pages for rollback on error
+      const previousData = queryClient.getQueriesData<PaginatedNewsResponse>({
+        queryKey: ["insight-news"],
+      });
+      // Immediately remove from every cached page — item disappears instantly
+      queryClient.setQueriesData<PaginatedNewsResponse>(
+        { queryKey: ["insight-news"] },
+        (old) => {
+          if (!old) return old;
+          return { ...old, data: old.data.filter((item) => item.id !== id) };
+        }
+      );
+      // Close dialog right away
+      setDeleteTarget(null);
+      return { previousData };
+    },
     onSuccess: async () => {
       toast.success("News item deleted successfully");
-      setDeleteTarget(null);
+      // Refetch to sync server-side pagination totals
       await queryClient.invalidateQueries({ queryKey: ["insight-news"] });
     },
-    onError: (error: InsightApiError) => {
+    onError: (error: InsightApiError, _id, context) => {
+      // Rollback: restore item in cache so it reappears if deletion failed
+      if (context?.previousData) {
+        for (const [queryKey, data] of context.previousData) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
       toast.error(error.message || "Failed to delete news item");
     },
   });
