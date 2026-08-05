@@ -1,9 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import {
-  Check,
-  Clipboard,
-  ClipboardCheck,
-} from "lucide-react";
+import { Check, Clipboard, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -85,26 +81,24 @@ function reactionBreakdownLines(news: NewsItem): string {
 function buildExportText(
   news: NewsItem,
   includeRecoAction: boolean,
-  includeAnalysisReport: boolean
+  includeAnalysisReport: boolean,
 ): string {
   const sentiment = news.sentiment;
   const totalComments =
-    news.actual_facebook_comment_count ??
-    (sentiment?.total_comments ?? news.comment_count ?? 0);
+    news.actual_facebook_comment_count ?? sentiment?.total_comments ?? news.comment_count ?? 0;
   const scrapedComments =
-    news.scrape_comment_count ??
-    (sentiment?.analyzed_comments ?? news.comment_count ?? 0);
-  const samplingApplied = news.sampling_applied ?? (scrapedComments < totalComments);
+    news.scrape_comment_count ?? sentiment?.analyzed_comments ?? news.comment_count ?? 0;
+  const samplingApplied = news.sampling_applied ?? scrapedComments < totalComments;
 
   const positive = stripPercent(sentiment?.positive);
   const negative = stripPercent(sentiment?.negative);
-  const neutral  = stripPercent(sentiment?.neutral);
+  const neutral = stripPercent(sentiment?.neutral);
 
   const lines: string[] = [];
 
   // ── Header ──────────────────────────────────────────
   const title = news.title?.trim() || "Untitled";
-  lines.push(`Livestream: ${title}`);
+  lines.push(`${title}`);
   lines.push(news.link ?? "");
   lines.push("");
 
@@ -115,7 +109,7 @@ function buildExportText(
   // ── Sampling note ───────────────────────────────────
   if (samplingApplied) {
     lines.push(
-      `From a Random Sampling of *${scrapedComments}* Comments out of ${totalComments}, with 95% Confidence Rate +/- of 3% margin of error:`
+      `From a Random Sampling of *${scrapedComments}* Comments out of ${totalComments}, with 95% Confidence Rate +/- of 3% margin of error:`,
     );
   } else {
     lines.push(`From all ${totalComments} Comments:`);
@@ -152,21 +146,20 @@ function buildExportText(
   if (includeAnalysisReport && sentiment) {
     const reportLines: string[] = [];
 
-    if (sentiment.risk_level)
-      reportLines.push(`Risk Level: ${sentiment.risk_level}`);
+    if (sentiment.risk_level) reportLines.push(`Risk Level: ${sentiment.risk_level}`);
     if (sentiment.reaction_tone)
       reportLines.push(
-        `Reaction Tone: ${sentiment.reaction_tone.charAt(0).toUpperCase() + sentiment.reaction_tone.slice(1)}`
+        `Reaction Tone: ${sentiment.reaction_tone.charAt(0).toUpperCase() + sentiment.reaction_tone.slice(1)}`,
       );
     if (sentiment.signal_alignment)
       reportLines.push(
-        `Signal Alignment: ${sentiment.signal_alignment.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}`
+        `Signal Alignment: ${sentiment.signal_alignment.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}`,
       );
     if (sentiment.dominant_reaction)
       reportLines.push(
         `Dominant Reaction: ${REACTION_EMOJI[sentiment.dominant_reaction] ?? ""} ${
           REACTION_LABEL[sentiment.dominant_reaction] ?? sentiment.dominant_reaction
-        }${sentiment.dominant_reaction_percentage ? ` (${sentiment.dominant_reaction_percentage}%)` : ""}`
+        }${sentiment.dominant_reaction_percentage ? ` (${sentiment.dominant_reaction_percentage}%)` : ""}`,
       );
     if (sentiment.reaction_summary) {
       reportLines.push("");
@@ -297,9 +290,7 @@ export function ExportDialog({ news, onClose }: ExportDialogProps) {
               size="sm"
               onClick={handleCopy}
               className={`gap-1.5 transition-all ${
-                copied
-                  ? "bg-emerald-600 hover:bg-emerald-600 text-white"
-                  : ""
+                copied ? "bg-emerald-600 hover:bg-emerald-600 text-white" : ""
               }`}
             >
               {copied ? (
@@ -320,3 +311,4 @@ export function ExportDialog({ news, onClose }: ExportDialogProps) {
     </Dialog>
   );
 }
+
