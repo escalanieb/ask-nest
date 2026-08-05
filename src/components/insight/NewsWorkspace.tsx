@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clipboard,
   ExternalLink,
   Loader2,
   PenLine,
@@ -36,6 +37,7 @@ import { toast } from "sonner";
 
 import { insightFetch, type InsightApiError } from "@/services/insightApi";
 import type { NewsItem, PaginatedNewsResponse, Sentiment } from "@/types/insight";
+import { ExportDialog } from "@/components/insight/ExportDialog";
 
 import {
   AlertDialog,
@@ -326,6 +328,7 @@ export default function NewsWorkspace() {
   const [editingItem, setEditingItem] = useState<NewsItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<NewsItem | null>(null);
   const [sentimentTarget, setSentimentTarget] = useState<NewsItem | null>(null);
+  const [exportTarget, setExportTarget] = useState<NewsItem | null>(null);
   const [form, setForm] = useState<NewsFormState>(emptyFormState);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [showAdvancedReport, setShowAdvancedReport] = useState(false);
@@ -441,6 +444,10 @@ export default function NewsWorkspace() {
     setShowAdvancedReport(false);
   }, []);
 
+  const openExportDialog = useCallback((item: NewsItem) => {
+    setExportTarget(item);
+  }, []);
+
   const openEditorFromDetails = useCallback(
     (item: NewsItem) => {
       setSentimentTarget(null);
@@ -551,11 +558,20 @@ export default function NewsWorkspace() {
               <ArrowUpRight className="size-4" />
               Details
             </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="rounded-full text-muted-foreground hover:text-foreground"
+              title="Quick Export"
+              onClick={() => openExportDialog(row.original)}
+            >
+              <Clipboard className="size-4" />
+            </Button>
           </div>
         ),
       }),
     ],
-    [openDetailsDialog]
+    [openDetailsDialog, openExportDialog]
   );
 
   const table = useReactTable({
@@ -1613,6 +1629,12 @@ export default function NewsWorkspace() {
           )}
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Quick Export Dialog ── */}
+      <ExportDialog
+        news={exportTarget}
+        onClose={() => setExportTarget(null)}
+      />
     </div>
   );
 }
