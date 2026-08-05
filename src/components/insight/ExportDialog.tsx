@@ -88,8 +88,14 @@ function buildExportText(
   includeAnalysisReport: boolean
 ): string {
   const sentiment = news.sentiment;
-  const totalComments = sentiment?.total_comments ?? news.comment_count ?? 0;
-  const scrapedComments = news.comment_count ?? 0;
+  const totalComments =
+    news.actual_facebook_comment_count ??
+    (sentiment?.total_comments ?? news.comment_count ?? 0);
+  const scrapedComments =
+    news.scrape_comment_count ??
+    (sentiment?.analyzed_comments ?? news.comment_count ?? 0);
+  const samplingApplied = news.sampling_applied ?? (scrapedComments < totalComments);
+
   const positive = stripPercent(sentiment?.positive);
   const negative = stripPercent(sentiment?.negative);
   const neutral  = stripPercent(sentiment?.neutral);
@@ -107,9 +113,13 @@ function buildExportText(
   lines.push("");
 
   // ── Sampling note ───────────────────────────────────
-  lines.push(
-    `From a Random Sampling of *${scrapedComments}* Comments out of ${totalComments}, with 95% Confidence Rate +/- of 3% margin of error:`
-  );
+  if (samplingApplied) {
+    lines.push(
+      `From a Random Sampling of *${scrapedComments}* Comments out of ${totalComments}, with 95% Confidence Rate +/- of 3% margin of error:`
+    );
+  } else {
+    lines.push(`From all ${totalComments} Comments:`);
+  }
   lines.push("");
 
   // ── Sentiment percentages ───────────────────────────

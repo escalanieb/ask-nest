@@ -6,6 +6,7 @@ export interface Sentiment {
   mixed: string;
   risk_level: string;
   total_comments: number;
+  analyzed_comments?: number;
   report_id?: string;
   reaction_tone?: string;
   signal_alignment?: string;
@@ -27,6 +28,9 @@ export interface NewsItem {
   comment_count?: number | null;
   reaction_count?: number | null;
   view_count?: number | null;
+  actual_facebook_comment_count?: number | null;
+  scrape_comment_count?: number | null;
+  sampling_applied?: boolean | null;
   reactions?: {
     like?: number;
     love?: number;
