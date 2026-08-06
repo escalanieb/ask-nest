@@ -31,6 +31,10 @@ export interface NewsItem {
   actual_facebook_comment_count?: number | null;
   scrape_comment_count?: number | null;
   sampling_applied?: boolean | null;
+  source_type?: string | null;
+  like_count?: number | null;
+  like_count_only?: boolean | null;
+  share_count?: number | null;
   reactions?: {
     like?: number;
     love?: number;

@@ -62,6 +62,15 @@ function formatDatetime(iso: string): string {
 }
 
 function reactionBreakdownLines(news: NewsItem): string {
+  if (news.source_type === "reels" || news.like_count_only) {
+    const lines: string[] = [];
+    lines.push(`👍 Like – ${(news.like_count ?? 0).toLocaleString()}`);
+    if ((news.share_count ?? 0) > 0) {
+      lines.push(`↪️ Share – ${(news.share_count ?? 0).toLocaleString()}`);
+    }
+    return lines.join("\n");
+  }
+
   const reactions = news.reactions;
   const total = news.reaction_count ?? 0;
   if (!reactions || total === 0) return "No reaction data available.";
