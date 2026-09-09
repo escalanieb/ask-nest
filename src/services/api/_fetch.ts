@@ -32,10 +32,10 @@ async function tryRefresh(): Promise<string | null> {
   }
 }
 
-export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+export async function apiRequest(path: string, options?: RequestInit): Promise<Response> {
   const extraHeaders = options?.headers as Record<string, string> | undefined;
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  let res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: buildHeaders(extraHeaders),
   });
@@ -44,7 +44,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   if (res.status === 401) {
     const newToken = await tryRefresh();
     if (newToken) {
-      const retryRes = await fetch(`${BASE_URL}${path}`, {
+      res = await fetch(`${BASE_URL}${path}`, {
         ...options,
         headers: {
           Accept: "application/json",
@@ -52,17 +52,22 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
           ...extraHeaders,
         },
       });
-      if (!retryRes.ok) {
-        const body = await retryRes.text();
-        throw new Error(`API error ${retryRes.status}: ${body}`);
+      if (res.status === 401) {
+        useAuthStore.setState({ token: null, user: null });
+        throw new Error("Session expired. Please log in again.");
       }
-      if (retryRes.status === 204) return undefined as T;
-      return retryRes.json() as Promise<T>;
+      return res;
     }
     // Refresh failed — clear session so the login screen shows
     useAuthStore.setState({ token: null, user: null });
     throw new Error("Session expired. Please log in again.");
   }
+
+  return res;
+}
+
+export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await apiRequest(path, options);
 
   if (!res.ok) {
     const body = await res.text();

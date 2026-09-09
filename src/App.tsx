@@ -13,6 +13,7 @@ const DatasetFormPage = lazy(() => import("./pages/datasets/DatasetFormPage"));
 const DatasetUploadPage = lazy(() => import("./pages/datasets/DatasetUploadPage"));
 const DatasetRecordsPage = lazy(() => import("./pages/datasets/DatasetRecordsPage"));
 const InsightPage = lazy(() => import("./pages/insight/InsightPage"));
+const AscPage = lazy(() => import("./pages/asc/AscPage"));
 
 const BOOT_MS = 1800;
 
@@ -93,6 +94,9 @@ export default function App() {
 
               {/* INSIGHT newsroom — any authenticated user */}
               <Route path="/insight" element={<InsightPage />} />
+
+              {/* ASC AI assistant — any authenticated user */}
+              <Route path="/asc" element={<AscPage />} />
             </Route>
 
             {/* Fallback */}

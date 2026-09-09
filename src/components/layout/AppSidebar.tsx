@@ -58,6 +58,22 @@ const InsightIcon = () => (
   </svg>
 );
 
+const AscGptIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-5 w-5"
+  >
+    <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h5" />
+    <path d="m18 2 .55 1.45L20 4l-1.45.55L18 6l-.55-1.45L16 4l1.45-.55z" />
+    <path d="m20.5 8 .4 1.1 1.1.4-1.1.4-.4 1.1-.4-1.1-1.1-.4 1.1-.4z" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -77,6 +93,7 @@ const LogoutIcon = () => (
 const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "Map Dashboard", icon: <MapIcon />, end: true },
   { to: "/insight", label: "INSIGHT", icon: <InsightIcon /> },
+  { to: "/asc", label: "ASC GPT", icon: <AscGptIcon /> },
   {
     to: "/datasets",
     label: "Datasets",

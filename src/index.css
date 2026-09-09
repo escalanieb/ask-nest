@@ -84,6 +84,122 @@
   }
 }
 
+/* ── ASC GPT chat animations ───────────────────────────────────────── */
+@keyframes asc-dot-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes asc-msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes asc-cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.asc-stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  vertical-align: -0.12em;
+  background: #dc2626;
+  animation: asc-cursor-blink 0.8s steps(1) infinite;
+}
+
+.asc-markdown > :first-child {
+  margin-top: 0;
+}
+.asc-markdown > :last-child {
+  margin-bottom: 0;
+}
+.asc-markdown p,
+.asc-markdown ul,
+.asc-markdown ol,
+.asc-markdown table,
+.asc-markdown pre,
+.asc-markdown blockquote {
+  margin: 0.5rem 0;
+}
+.asc-markdown ul,
+.asc-markdown ol {
+  padding-left: 1.25rem;
+}
+.asc-markdown ul {
+  list-style: disc;
+}
+.asc-markdown ol {
+  list-style: decimal;
+}
+.asc-markdown h1,
+.asc-markdown h2,
+.asc-markdown h3 {
+  margin: 0.75rem 0 0.35rem;
+  font-weight: 700;
+  color: #334155;
+}
+.asc-markdown h1 {
+  font-size: 1rem;
+}
+.asc-markdown h2 {
+  font-size: 0.9rem;
+}
+.asc-markdown h3 {
+  font-size: 0.82rem;
+}
+.asc-markdown code {
+  border-radius: 0.25rem;
+  background: #f1f5f9;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.92em;
+}
+.asc-markdown pre {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: #0f172a;
+  padding: 0.75rem;
+  color: #e2e8f0;
+}
+.asc-markdown pre code {
+  background: transparent;
+  padding: 0;
+}
+.asc-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.asc-markdown th,
+.asc-markdown td {
+  border: 1px solid #e2e8f0;
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .asc-stream-cursor,
+  [class*="asc-dot-pulse"],
+  [class*="asc-msg-in"] {
+    animation: none !important;
+  }
+}
+
 *,
 *::before,
 *::after {
