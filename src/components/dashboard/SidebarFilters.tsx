@@ -1,3 +1,4 @@
+import { canUseWidget } from "../../lib/teamAccess";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -276,7 +277,7 @@ function RssFeedSettings() {
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              <span className="block truncate text-[11px] font-semibold">{feed.name}</span>
+              <span className="block truncate text-[11px] font-semibold">{feed.name}{feed.is_shared ? " · Shared" : ""}</span>
               {feed.category && (
                 <span
                   className={`text-[9px] ${
@@ -287,7 +288,7 @@ function RssFeedSettings() {
                 </span>
               )}
             </button>
-            {isAdmin && (
+            {isAdmin && feed.can_manage && (
               <button
                 onClick={() => {
                   if (confirm(`Remove "${feed.name}"?`)) deleteMutation.mutate(feed.id);
@@ -608,13 +609,14 @@ const WIDGETS = [
 ] as const;
 
 function WidgetToggles() {
+  const capabilities = useAuthStore((s) => s.user?.capabilities);
   const widgets = useWorkspaceStore((s) => s.widgets);
   const toggleWidget = useWorkspaceStore((s) => s.toggleWidget);
 
   return (
     <AccordionSection title="Panels">
       <div className="flex flex-wrap gap-2 pt-1">
-        {WIDGETS.map(({ id, label, icon }) => {
+        {WIDGETS.filter(({ id }) => canUseWidget(id.startsWith("rss") ? "rss" : id.startsWith("analytics") ? "analytics" : id.startsWith("records") ? "records" : "", capabilities)).map(({ id, label, icon }) => {
           const active = widgets[id]?.visible ?? false;
           return (
             <button
@@ -1347,14 +1349,15 @@ function TipasLayerSwitcher() {
 // Main export
 // ---------------------------------------------------------------------------
 export default function SidebarFilters() {
+  const capabilities = useAuthStore((s) => s.user?.capabilities);
   const canUseTipas = useAuthStore((s) => s.user?.capabilities?.includes("tipas.use"));
   return (
     <>
       <ElectionCountdown />
       <WidgetToggles />
-      <RssFeedSettings />
+      {capabilities?.includes("rss.use") && <RssFeedSettings />}
       <VideoLinkManager />
-      <DatasetLayerSwitcher />
+      {capabilities?.includes("datasets.use") && <DatasetLayerSwitcher />}
       {canUseTipas && <TipasLayerSwitcher />}
       <MapDisplayToggles />
       <DisasterLayers />

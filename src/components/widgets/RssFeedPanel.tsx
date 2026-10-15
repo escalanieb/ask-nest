@@ -42,6 +42,8 @@ export default function RssFeedPanel() {
     staleTime: 1000 * 60 * 5,
   });
 
+  const effectiveFeedId = activeFeedId ?? allFeeds.find((feed) => feed.active && feed.is_shared)?.id ?? allFeeds.find((feed) => feed.active)?.id ?? null;
+
   // Single mode: fetch active feed
   const {
     data: singleFeedResult,
@@ -49,9 +51,9 @@ export default function RssFeedPanel() {
     isError: singleError,
     refetch: refetchSingle,
   } = useQuery({
-    queryKey: ["rss-items", activeFeedId],
-    queryFn: () => rssFeedApi.fetch(activeFeedId!),
-    enabled: !!activeFeedId && !multipleMode,
+    queryKey: ["rss-items", effectiveFeedId],
+    queryFn: () => rssFeedApi.fetch(effectiveFeedId!),
+    enabled: !!effectiveFeedId && !multipleMode,
     staleTime: 1000 * 60 * 5,
     refetchInterval: 1000 * 60 * 5,
   });
@@ -80,7 +82,7 @@ export default function RssFeedPanel() {
         {/* Control bar: feed selector + toggle */}
         <div className="flex shrink-0 items-center gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2">
           <select
-            value={activeFeedId ?? ""}
+            value={effectiveFeedId ?? ""}
             onChange={(e) => setActiveFeedId(e.target.value ? Number(e.target.value) : null)}
             className="flex-1 rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 focus:outline-none"
           >

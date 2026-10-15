@@ -1,3 +1,4 @@
+import { accessContext } from "./teamAccess";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useAscStore } from "../stores/useAscStore";
 import { useMapStore } from "../stores/useMapStore";
@@ -11,7 +12,7 @@ import { changeSession } from "./session";
 
 function key(state: ReturnType<typeof useAuthStore.getState>) {
   return state.token && state.user
-    ? `${state.user.id}:${state.user.team?.id ?? "unverified"}`
+    ? accessContext(state.user)
     : "anonymous";
 }
 

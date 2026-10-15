@@ -111,7 +111,9 @@ export default function AppSidebar() {
   const visible = NAV_ITEMS.filter(
     (item) =>
       (!item.adminOnly || isAdmin()) &&
-      (item.to !== "/insight" || capabilities?.includes("insight.use")),
+      (item.to !== "/insight" || capabilities?.includes("insight.use")) &&
+      (item.to !== "/asc" || capabilities?.includes("ai.use")) &&
+      (item.to !== "/datasets" || capabilities?.includes("datasets.use")),
   );
 
   return (

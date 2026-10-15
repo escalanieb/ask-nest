@@ -6,6 +6,8 @@ export interface RssFeed {
   url: string;
   category: string;
   active: boolean;
+  is_shared: boolean;
+  can_manage: boolean;
 }
 
 export interface RssItem {

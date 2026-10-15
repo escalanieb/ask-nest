@@ -1,3 +1,5 @@
+import { useAuthStore } from "../stores/useAuthStore";
+import { canUseWidget } from "../lib/teamAccess";
 import { lazy, Suspense, useState, useRef } from "react";
 import CommandBar from "../components/dashboard/CommandBar";
 import SidebarFilters from "../components/dashboard/SidebarFilters";
@@ -65,7 +67,8 @@ export default function Dashboard() {
   const panelOrder = useWorkspaceStore((s) => s.panelOrder);
   const reorderPanels = useWorkspaceStore((s) => s.reorderPanels);
 
-  const visiblePanels = panelOrder.filter((id) => widgets[id]?.visible);
+  const capabilities = useAuthStore((s) => s.user?.capabilities);
+  const visiblePanels = panelOrder.filter((id) => widgets[id]?.visible && canUseWidget(resolveType(widgets[id]), capabilities));
 
   // Drag-to-reorder state
   const dragIdx = useRef<number | null>(null);

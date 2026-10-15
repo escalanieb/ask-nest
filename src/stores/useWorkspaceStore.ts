@@ -39,7 +39,7 @@ const defaultWidgets: Record<string, WidgetLayout> = {
     y: 20,
     width: 420,
     height: 520,
-    visible: false,
+    visible: true,
   },
   recordsPanel: {
     id: "recordsPanel",

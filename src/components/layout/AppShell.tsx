@@ -1,3 +1,4 @@
+import { accessContext } from "../../lib/teamAccess";
 import { useEffect, useState } from "react";
 import TeamAccent from "./TeamAccent";
 import { Navigate, Outlet } from "react-router-dom";
@@ -14,7 +15,7 @@ export default function AppShell() {
 
   const hydrated = useAuthStore((s) => s.hydrated);
   const hydrate = useAuthStore((s) => s.hydrate);
-  const identity = useAuthStore((s) => `${s.user?.id}:${s.user?.team?.id}`);
+  const identity = useAuthStore((s) => accessContext(s.user));
   const [error, setError] = useState("");
   useEffect(() => {
     if (!token) return;
@@ -58,7 +59,7 @@ export default function AppShell() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      <TeamAccent />
+      <TeamAccent key={identity} />
       <AppSidebar />
       <div key={identity} className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Outlet />

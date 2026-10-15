@@ -18,8 +18,8 @@ const AscPage = lazy(() => import("./pages/asc/AscPage"));
 const BOOT_MS = 1800;
 
 // Guard: redirect to / if not admin (used nested inside AppShell)
-function RequireInsight() {
-  const allowed = useAuthStore((s) => s.user?.capabilities?.includes("insight.use"));
+function RequireFeature({ capability }: { capability: string }) {
+  const allowed = useAuthStore((s) => s.user?.capabilities?.includes(capability));
   return allowed ? <Outlet /> : <Navigate to="/" replace />;
 }
 
@@ -87,23 +87,27 @@ export default function App() {
             <Route element={<AppShell />}>
               <Route path="/" element={<Dashboard />} />
               {/* Dataset admin — admin only */}
-              <Route element={<RequireAdmin />}>
-                <Route path="/datasets" element={<DatasetListPage />} />
-                <Route path="/datasets/new" element={<DatasetFormPage />} />
-                <Route path="/datasets/:id/edit" element={<DatasetFormPage />} />
-                <Route path="/datasets/:id/upload" element={<DatasetUploadPage />} />
+              <Route element={<RequireFeature capability="datasets.use" />}>
+                <Route element={<RequireAdmin />}>
+                  <Route path="/datasets" element={<DatasetListPage />} />
+                  <Route path="/datasets/new" element={<DatasetFormPage />} />
+                  <Route path="/datasets/:id/edit" element={<DatasetFormPage />} />
+                  <Route path="/datasets/:id/upload" element={<DatasetUploadPage />} />
+                </Route>
+
+                {/* Records — any authenticated user with dataset access */}
+                <Route path="/datasets/:id/records" element={<DatasetRecordsPage />} />
               </Route>
 
-              {/* Records — any authenticated user */}
-              <Route path="/datasets/:id/records" element={<DatasetRecordsPage />} />
-
               {/* INSIGHT newsroom — any authenticated user */}
-              <Route element={<RequireInsight />}>
+              <Route element={<RequireFeature capability="insight.use" />}>
                 <Route path="/insight" element={<InsightPage />} />
               </Route>
 
               {/* ASC AI assistant — any authenticated user */}
-              <Route path="/asc" element={<AscPage />} />
+              <Route element={<RequireFeature capability="ai.use" />}>
+                <Route path="/asc" element={<AscPage />} />
+              </Route>
             </Route>
 
             {/* Fallback */}

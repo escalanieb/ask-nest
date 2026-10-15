@@ -1,3 +1,4 @@
+import { capabilityForPath } from "../../lib/teamAccess";
 import { useAuthStore } from "../../stores/useAuthStore";
 
 import { sessionFetch, sessionGeneration, assertSession } from "../../lib/session";
@@ -39,11 +40,9 @@ async function tryRefresh(): Promise<string | null> {
 
 export async function apiRequest(path: string, options?: RequestInit): Promise<Response> {
   const expected = sessionGeneration();
-  if (
-    path.startsWith("/tipas/") &&
-    !useAuthStore.getState().user?.capabilities?.includes("tipas.use")
-  )
-    throw new Error("TIPAS is available to communications only.");
+  const capability = capabilityForPath(path);
+  if (capability && !useAuthStore.getState().user?.capabilities?.includes(capability))
+    throw new Error("This feature is not enabled for your team.");
   const extraHeaders = options?.headers as Record<string, string> | undefined;
 
   let res = await sessionFetch(`${BASE_URL}${path}`, {

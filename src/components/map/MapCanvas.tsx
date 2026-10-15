@@ -1109,7 +1109,9 @@ export default function MapCanvas() {
     }
   }, [activeCityMuni, activeProvince, activeRegion, mapAreaLevel, geoVersion, setSelectedLocation]);
 
-  const activeLayerDatasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
+  const canUseDatasets = useAuthStore((s) => !!s.user?.capabilities?.includes("datasets.use"));
+  const selectedDatasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
+  const activeLayerDatasetId = canUseDatasets ? selectedDatasetId : null;
   const choroplethSelection = useDatasetLayerStore((s) => s.choroplethSelection);
   const setChoroplethSelection = useDatasetLayerStore((s) => s.setChoroplethSelection);
   const geoJsonRef = useRef<L.GeoJSON | null>(null);

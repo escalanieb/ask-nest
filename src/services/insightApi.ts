@@ -49,7 +49,7 @@ export async function insightFetch<T>(
   options?: { responseType?: "json" | "blob" },
 ): Promise<T> {
   if (!useAuthStore.getState().user?.capabilities?.includes("insight.use"))
-    throw new Error("INSIGHT is available to communications only.");
+    throw new Error("INSIGHT is not enabled for your team.");
   const expected = sessionGeneration();
   const headers: HeadersInit = {
     Accept: options?.responseType === "blob" ? "*/*" : "application/json",
