@@ -4,7 +4,7 @@ import {
   fetchDatasets,
   activateDataset,
   deactivateDataset,
-  getTemplateUrl,
+  downloadDatasetTemplate,
 } from "../../services/api/datasetApi";
 import type { Dataset } from "../../services/api/datasetApi";
 
@@ -27,6 +27,8 @@ export default function DatasetListPage() {
     queryKey: ["datasets"],
     queryFn: () => fetchDatasets(),
   });
+
+  const template = useMutation({ mutationFn: downloadDatasetTemplate });
 
   const activate = useMutation({
     mutationFn: (id: number) => activateDataset(id),
@@ -52,6 +54,7 @@ export default function DatasetListPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {template.isError && <p role="alert" className="p-4 text-red-700">{template.error.message}</p>}
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-4">
         <Link to="/" className="text-slate-400 hover:text-slate-700 transition-colors">
@@ -73,7 +76,7 @@ export default function DatasetListPage() {
         </div>
         <Link
           to="/datasets/new"
-          className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-team px-4 py-2 text-sm font-semibold text-white hover:bg-team-strong transition-colors"
         >
           <svg
             className="h-4 w-4"
@@ -139,7 +142,7 @@ export default function DatasetListPage() {
             </p>
             <Link
               to="/datasets/new"
-              className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-team px-4 py-2 text-sm font-semibold text-white hover:bg-team-strong transition-colors"
             >
               Create Dataset
             </Link>
@@ -192,14 +195,14 @@ export default function DatasetListPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href={getTemplateUrl(ds.id)}
-                      download
+                    <button
+                      onClick={() => template.mutate(ds.id)}
+                      disabled={template.isPending}
                       className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                       title="Download Excel template"
                     >
                       Template
-                    </a>
+                    </button>
                     <button
                       onClick={() => navigate(`/datasets/${ds.id}/records`)}
                       className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"

@@ -203,7 +203,7 @@ export default function DisasterPanel() {
   return (
     <div className="flex h-full flex-col overflow-hidden bg-white">
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-red-700 bg-red-600 px-3 py-2">
+      <div className="flex shrink-0 items-center justify-between border-b border-team bg-team px-3 py-2">
         <span className="text-[11px] font-bold uppercase tracking-wider text-white">
           Disaster Events
         </span>

@@ -1,3 +1,4 @@
+import { useAuthStore } from "../../stores/useAuthStore";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
@@ -11,7 +12,9 @@ const MAX_COLUMNS = 3;
 export default function DatasetRecordsPanel() {
   const activeLayerDatasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
   const choroplethSelection = useDatasetLayerStore((s) => s.choroplethSelection);
-  const showTipasAttendees = useFilterStore((s) => s.showTipasAttendees);
+  const canUseTipas = useAuthStore((s) => !!s.user?.capabilities?.includes("tipas.use"));
+  const tipasAttendeesSelected = useFilterStore((s) => s.showTipasAttendees);
+  const showTipasAttendees = canUseTipas && tipasAttendeesSelected;
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
 
   const psgcPrefix = choroplethSelection?.prefix;
@@ -64,7 +67,10 @@ export default function DatasetRecordsPanel() {
           />
         </svg>
         <p className="font-semibold text-slate-500">No Event Selected</p>
-        <p className="text-[10px] text-slate-400">Please select an event in the TIPAS Integration sidebar to see the attendee list for this area.</p>
+        <p className="text-[10px] text-slate-400">
+          Please select an event in the TIPAS Integration sidebar to see the attendee list for this
+          area.
+        </p>
       </div>
     );
   }
@@ -90,7 +96,7 @@ export default function DatasetRecordsPanel() {
     );
   }
 
-  const isLoading = showTipasAttendees ? tipasLoading : (dsLoading || recLoading);
+  const isLoading = showTipasAttendees ? tipasLoading : dsLoading || recLoading;
   const total = showTipasAttendees ? (tipasRecords?.total ?? 0) : (records?.total ?? 0);
   const rows = showTipasAttendees ? (tipasRecords?.data ?? []) : (records?.data ?? []);
   const title = showTipasAttendees ? "TIPAS Event Attendees" : (dataset?.name ?? "Loading…");
@@ -110,15 +116,15 @@ export default function DatasetRecordsPanel() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Sub-header: dataset + area context */}
-      <div className="shrink-0 border-b border-slate-100 bg-red-50 px-3 py-2">
+      <div className="shrink-0 border-b border-slate-100 bg-team-soft px-3 py-2">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-red-700 truncate">{title}</p>
+            <p className="text-[10px] font-bold text-team truncate">{title}</p>
             <p className="text-[9px] text-slate-500 truncate">{areaLabel}</p>
           </div>
-          <div className="shrink-0 rounded-md bg-red-600 px-2 py-1 flex items-center gap-1">
+          <div className="shrink-0 rounded-md bg-team px-2 py-1 flex items-center gap-1">
             <svg
-              className="h-3 w-3 text-red-200"
+              className="h-3 w-3 text-team"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -201,7 +207,7 @@ export default function DatasetRecordsPanel() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {(rows as TipasAttendee[]).map((row, idx) => (
-                <tr key={row.id} className="hover:bg-red-50 transition-colors">
+                <tr key={row.id} className="hover:bg-team-soft transition-colors">
                   <td className="px-3 py-2 text-slate-400 tabular-nums">
                     {(page - 1) * perPage + idx + 1}
                   </td>
@@ -256,7 +262,7 @@ export default function DatasetRecordsPanel() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {(rows as any[]).map((row, idx) => (
-                <tr key={row.id} className="hover:bg-red-50 transition-colors">
+                <tr key={row.id} className="hover:bg-team-soft transition-colors">
                   <td className="px-3 py-2 text-slate-400 tabular-nums">{idx + 1}</td>
                   {columns.length > 0 ? (
                     columns.map((col) => (

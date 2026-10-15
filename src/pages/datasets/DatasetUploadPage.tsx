@@ -1,3 +1,7 @@
+import { useMapStore } from "../../stores/useMapStore";
+import { useFilterStore } from "../../stores/useFilterStore";
+import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
+import { useAuthStore } from "../../stores/useAuthStore";
 import { useState, useRef } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +24,8 @@ export default function DatasetUploadPage() {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const teamName = useAuthStore((state) => state.user?.team?.name);
+  const [pendingConflicts, setPendingConflicts] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [preview, setPreview] = useState<UploadPreview | null>(null);
   const [activeTab, setActiveTab] = useState<PreviewTab>("new");
@@ -38,6 +44,8 @@ export default function DatasetUploadPage() {
     mutationFn: (file: File) => uploadDatasetFile(datasetId, file),
     onSuccess: (data) => {
       setPreview(data);
+      setPendingConflicts(data.stats.conflicts);
+      commit.reset();
       qc.invalidateQueries({ queryKey: ["batches", datasetId] });
     },
   });
@@ -46,13 +54,14 @@ export default function DatasetUploadPage() {
     mutationFn: (batchId: number) => commitBatch(batchId),
     onSuccess: () => {
       setPreview(null);
-      qc.invalidateQueries({ queryKey: ["batches", datasetId] });
+      useDatasetLayerStore.getState().setChoroplethSelection(null);
+      qc.invalidateQueries();
     },
   });
 
   const rollback = useMutation({
     mutationFn: (batchId: number) => rollbackBatch(batchId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["batches", datasetId] }),
+    onSuccess: () => { useDatasetLayerStore.getState().setChoroplethSelection(null); qc.invalidateQueries(); },
   });
 
   const resolve = useMutation({
@@ -69,6 +78,7 @@ export default function DatasetUploadPage() {
   });
 
   function handleFile(file: File) {
+    if (upload.isPending || commit.isPending) return;
     if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
       alert("Only .xlsx, .xls, or .csv files are supported.");
       return;
@@ -91,7 +101,7 @@ export default function DatasetUploadPage() {
     ? {
         new: preview.stats.new,
         updates: preview.stats.updates,
-        conflicts: preview.stats.conflicts,
+        conflicts: pendingConflicts,
         rejected: preview.stats.rejected,
       }
     : null;
@@ -113,7 +123,7 @@ export default function DatasetUploadPage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-slate-800">Upload Records</h1>
-          <p className="text-xs text-slate-400">{dataset?.name ?? "Loading…"}</p>
+          <p className="text-xs text-slate-400">{dataset?.name ?? "Loading…"} · {teamName}</p>
         </div>
         <button
           onClick={() => navigate(`/datasets/${id}/records`)}
@@ -124,6 +134,21 @@ export default function DatasetUploadPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+        {commit.isSuccess && !preview && (
+          <div role="status" className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+            Import committed. Your team's map data is ready.
+            <button className="ml-3 underline font-semibold" onClick={() => {
+              useDatasetLayerStore.getState().setActiveLayer(datasetId, dataset?.psgc_level);
+              useFilterStore.getState().resetFilters();
+              useMapStore.getState().setMapAreaLevel("region");
+              useMapStore.getState().setShowChoropleth(true);
+              navigate("/");
+            }}>View on map</button>
+          </div>
+        )}
+        {[commit, rollback, resolve].filter((mutation) => mutation.isError).map((mutation, index) => (
+          <p key={index} role="alert" className="text-sm text-red-700">{mutation.error?.message}</p>
+        ))}
         {/* Pending batch notice */}
         {!preview && pendingBatch && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-start gap-4">
@@ -269,8 +294,8 @@ export default function DatasetUploadPage() {
                 </button>
                 <button
                   onClick={() => commit.mutate(preview.batch_id)}
-                  disabled={commit.isPending || preview.stats.conflicts > 0}
-                  title={preview.stats.conflicts > 0 ? "Resolve all conflicts first" : undefined}
+                  disabled={commit.isPending || resolve.isPending || pendingConflicts > 0}
+                  title={pendingConflicts > 0 ? "Resolve all conflicts first" : undefined}
                   className="rounded-lg bg-green-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {commit.isPending ? "Committing…" : "Commit"}
@@ -318,6 +343,7 @@ export default function DatasetUploadPage() {
                   isConflict={activeTab === "conflicts"}
                   batchId={preview.batch_id}
                   onResolve={resolve.mutate}
+                  isResolving={resolve.isPending}
                 />
               )}
             </div>
@@ -361,9 +387,11 @@ function DataTable({
   isConflict,
   batchId,
   onResolve,
+  isResolving,
 }: {
   rows: Record<string, unknown>[];
   isConflict: boolean;
+  isResolving: boolean;
   batchId: number;
   onResolve: (args: {
     batchId: number;
@@ -422,6 +450,7 @@ function DataTable({
                 <td className="py-2">
                   <div className="flex gap-1">
                     <button
+                      disabled={isResolving}
                       onClick={() =>
                         onResolve({
                           batchId,
@@ -434,6 +463,7 @@ function DataTable({
                       Keep
                     </button>
                     <button
+                      disabled={isResolving}
                       onClick={() =>
                         onResolve({
                           batchId,

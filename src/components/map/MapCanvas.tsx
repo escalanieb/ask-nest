@@ -1,3 +1,5 @@
+import { buildDatasetLayer } from "../../lib/datasetLayer";
+import { useAuthStore } from "../../stores/useAuthStore";
 import { useEffect, useRef, useState, useCallback, type JSX } from "react";
 import {
   MapContainer,
@@ -23,7 +25,11 @@ import { fetchDatasetLayer } from "../../services/api/datasetApi";
 import type { LayerDataPoint, LayerResponse } from "../../services/api/datasetApi";
 import { disasterApi } from "../../services/api/disasterApi";
 import type { DisasterEvent } from "../../services/api/disasterApi";
-import { fetchTipasEvents, fetchTipasAttendeesDistribution, type TipasDistributionPoint } from "../../services/api/tipasApi";
+import {
+  fetchTipasEvents,
+  fetchTipasAttendeesDistribution,
+  type TipasDistributionPoint,
+} from "../../services/api/tipasApi";
 import { queryClient } from "../../lib/queryClient";
 import NestLogo from "../NestLogo";
 
@@ -783,7 +789,9 @@ function choroplethStyle(
 // Used in mouse-event handlers to avoid stale-closure bugs.
 // ---------------------------------------------------------------------------
 function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
-  const showTipasAttendees = useFilterStore.getState().showTipasAttendees;
+  const showTipasAttendees =
+    useAuthStore.getState().user?.capabilities?.includes("tipas.use") &&
+    useFilterStore.getState().showTipasAttendees;
   const level = useMapStore.getState().mapAreaLevel;
 
   if (showTipasAttendees) {
@@ -795,19 +803,19 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
     if (distribution?.length) {
       const tipasMap = new Map(distribution.map((d) => [d.psgc_code, d.count]));
       const tipasMaxVal = Math.max(1, ...distribution.map((d) => d.count));
-      
+
       const prefix =
         level === "region"
           ? psgcCode.substring(0, 2)
           : level === "province"
             ? psgcCode.substring(0, 4)
             : psgcCode;
-      
+
       let count = 0;
       for (const [key, val] of tipasMap.entries()) {
         if (key.startsWith(prefix)) count += val;
       }
-      
+
       if (count === 0) {
         return {
           ...defaultStyle,
@@ -815,9 +823,12 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
           fillOpacity: 0.5,
         };
       }
-      
+
       const ratio = count / tipasMaxVal;
-      const idx = Math.min(Math.floor(ratio * CHOROPLETH_COLORS.length), CHOROPLETH_COLORS.length - 1);
+      const idx = Math.min(
+        Math.floor(ratio * CHOROPLETH_COLORS.length),
+        CHOROPLETH_COLORS.length - 1,
+      );
       return {
         color: "#ef4444",
         weight: 1,
@@ -835,40 +846,15 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
   const cached = queryClient.getQueryData<LayerResponse>(["layer", layerId]);
   if (!cached?.layer_data.length) return defaultStyle;
 
-  const m = new Map<string, LayerDataPoint>();
-
-  if (level === "municity") {
-    for (const pt of cached.layer_data) m.set(pt.psgc_code, pt);
-  } else if (level === "province") {
-    for (const pt of cached.layer_data) {
-      const provCode = pt.psgc_code.substring(0, 4) + "00000";
-      const existing = m.get(provCode);
-      if (existing) {
-        existing.count += pt.count;
-        existing.display_value += pt.display_value;
-      } else {
-        m.set(provCode, { ...pt, psgc_code: provCode });
-      }
-    }
-  } else {
-    for (const pt of cached.layer_data) {
-      const regCode = pt.psgc_code.substring(0, 2) + "0000000";
-      const existing = m.get(regCode);
-      if (existing) {
-        existing.count += pt.count;
-        existing.display_value += pt.display_value;
-      } else {
-        m.set(regCode, { ...pt, psgc_code: regCode });
-      }
-    }
-  }
-
-  const mv = Math.max(...cached.layer_data.map((p) => p.display_value), 1);
+  const m = buildDatasetLayer(cached, level);
+  const mv = Math.max(...Array.from(m.values(), (point) => point.display_value), 1);
   return choroplethStyle(psgcCode, m, mv);
 }
 
 function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
-  const showTipasEvents = useFilterStore((s) => s.showTipasEvents);
+  const canUseTipas = useAuthStore((s) => !!s.user?.capabilities?.includes("tipas.use"));
+  const tipasEventsSelected = useFilterStore((s) => s.showTipasEvents);
+  const showTipasEvents = canUseTipas && tipasEventsSelected;
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
 
   const { data: events = [] } = useQuery({
@@ -940,39 +926,92 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
         });
 
         return (
-          <Marker
-            key={psgcCode}
-            position={[pos.lat, pos.lng]}
-            icon={icon}
-          >
+          <Marker key={psgcCode} position={[pos.lat, pos.lng]} icon={icon}>
             <Popup maxWidth={320}>
-              <div style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", padding: "2px" }} className="w-full">
-                <strong style={{ fontSize: "14px", display: "block", marginBottom: "6px", color: "#1e293b" }} className="border-b border-slate-100 pb-1.5">
-                  {count > 1 ? `📍 ${cityEvents[0].location} (${count} Events)` : cityEvents[0].name}
+              <div
+                style={{
+                  fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+                  padding: "2px",
+                }}
+                className="w-full"
+              >
+                <strong
+                  style={{
+                    fontSize: "14px",
+                    display: "block",
+                    marginBottom: "6px",
+                    color: "#1e293b",
+                  }}
+                  className="border-b border-slate-100 pb-1.5"
+                >
+                  {count > 1
+                    ? `📍 ${cityEvents[0].location} (${count} Events)`
+                    : cityEvents[0].name}
                 </strong>
-                
-                <div style={{ maxHeight: "220px", overflowY: "auto" }} className="space-y-4 divide-y divide-slate-100 pr-1 scrollbar-thin">
+
+                <div
+                  style={{ maxHeight: "220px", overflowY: "auto" }}
+                  className="space-y-4 divide-y divide-slate-100 pr-1 scrollbar-thin"
+                >
                   {cityEvents.map((evt, idx) => (
-                    <div key={evt.id} style={{ paddingTop: idx > 0 ? "10px" : "0" }} className="first:pt-0">
+                    <div
+                      key={evt.id}
+                      style={{ paddingTop: idx > 0 ? "10px" : "0" }}
+                      className="first:pt-0"
+                    >
                       {count > 1 && (
-                        <span style={{ fontSize: "12px", fontWeight: 750, color: "#ef4444", display: "block", marginBottom: "4px" }}>
+                        <span
+                          style={{
+                            fontSize: "12px",
+                            fontWeight: 750,
+                            color: "#ef4444",
+                            display: "block",
+                            marginBottom: "4px",
+                          }}
+                        >
                           {evt.name}
                         </span>
                       )}
                       {evt.description && (
-                        <p style={{ fontSize: "11px", color: "#64748b", margin: "0 0 6px", lineHeight: "1.4" }}>{evt.description}</p>
+                        <p
+                          style={{
+                            fontSize: "11px",
+                            color: "#64748b",
+                            margin: "0 0 6px",
+                            lineHeight: "1.4",
+                          }}
+                        >
+                          {evt.description}
+                        </p>
                       )}
                       <div style={{ fontSize: "11px", color: "#334155" }} className="space-y-1">
-                        <p>📍 held in: <span className="font-semibold text-slate-700">{evt.location ?? "Unknown"}</span></p>
-                        <p>📅 Date: <span className="font-medium">{new Date(evt.start_time).toLocaleDateString()}</span></p>
-                        <p>👥 Registered: <span className="font-bold text-red-600">{evt.registered_count}</span> | ✅ Checked-in: <span className="font-bold text-green-600">{evt.checked_in_count}</span></p>
+                        <p>
+                          📍 held in:{" "}
+                          <span className="font-semibold text-slate-700">
+                            {evt.location ?? "Unknown"}
+                          </span>
+                        </p>
+                        <p>
+                          📅 Date:{" "}
+                          <span className="font-medium">
+                            {new Date(evt.start_time).toLocaleDateString()}
+                          </span>
+                        </p>
+                        <p>
+                          👥 Registered:{" "}
+                          <span className="font-bold text-red-600">{evt.registered_count}</span> |
+                          ✅ Checked-in:{" "}
+                          <span className="font-bold text-green-600">{evt.checked_in_count}</span>
+                        </p>
                       </div>
                       <div style={{ marginTop: "8px" }}>
                         <button
                           onClick={() => {
                             useFilterStore.getState().setSelectedTipasEventId(evt.id);
                             useFilterStore.getState().setShowTipasAttendees(true);
-                            useWorkspaceStore.getState().updateWidget("recordsPanel", { visible: true });
+                            useWorkspaceStore
+                              .getState()
+                              .updateWidget("recordsPanel", { visible: true });
                           }}
                           style={{
                             width: "100%",
@@ -984,7 +1023,7 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
                             fontWeight: 600,
                             padding: "4px 8px",
                             cursor: "pointer",
-                            border: "none"
+                            border: "none",
                           }}
                         >
                           View Attendees Distribution
@@ -1015,11 +1054,7 @@ function MapPanZoomController() {
     if (selectedLocation?.lat && selectedLocation?.lng) {
       // Zoom levels: 8 for Region, 9 for Province, 11 for City/Municity
       const zoomLevel =
-        selectedLocation.type === "Region"
-          ? 8
-          : selectedLocation.type === "Province"
-            ? 9
-            : 11;
+        selectedLocation.type === "Region" ? 8 : selectedLocation.type === "Province" ? 9 : 11;
       map.setView([selectedLocation.lat, selectedLocation.lng], zoomLevel, {
         animate: true,
         duration: 1.2,
@@ -1062,7 +1097,12 @@ export default function MapCanvas() {
       setSelectedLocation({
         psgcCode: targetCode,
         name: "Selected Location",
-        type: mapAreaLevel === "region" ? "Region" : mapAreaLevel === "province" ? "Province" : "City/Municipality",
+        type:
+          mapAreaLevel === "region"
+            ? "Region"
+            : mapAreaLevel === "province"
+              ? "Province"
+              : "City/Municipality",
         lat: pos.lat,
         lng: pos.lng,
       });
@@ -1094,7 +1134,9 @@ export default function MapCanvas() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const showTipasAttendees = useFilterStore((s) => s.showTipasAttendees);
+  const canUseTipas = useAuthStore((s) => !!s.user?.capabilities?.includes("tipas.use"));
+  const tipasAttendeesSelected = useFilterStore((s) => s.showTipasAttendees);
+  const showTipasAttendees = canUseTipas && tipasAttendeesSelected;
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
 
   // Fetch TIPAS distribution data
@@ -1108,45 +1150,11 @@ export default function MapCanvas() {
   const tipasMap = new Map(tipasDistribution.map((d) => [d.psgc_code, d.count]));
   const tipasMaxVal = Math.max(1, ...tipasDistribution.map((d) => d.count));
 
-  // Build a PSGC → point map aggregated for the current map level.
-  // Municity data (9-digit) is rolled up to province (prefix 4 digits + 00000)
-  // or region (prefix 2 digits + 0000000) depending on mapAreaLevel.
   const layerMap = useCallback((): Map<string, LayerDataPoint> => {
-    const m = new Map<string, LayerDataPoint>();
-    if (!layerData) return m;
-
-    if (mapAreaLevel === "municity") {
-      // Direct: psgc_code matches the GeoJSON ADM3 code
-      for (const pt of layerData.layer_data) m.set(pt.psgc_code, pt);
-    } else if (mapAreaLevel === "province") {
-      // Roll up: derive province code = first 4 digits + "00000"
-      for (const pt of layerData.layer_data) {
-        const provCode = pt.psgc_code.substring(0, 4) + "00000";
-        const existing = m.get(provCode);
-        if (existing) {
-          existing.count += pt.count;
-          existing.display_value += pt.display_value;
-        } else {
-          m.set(provCode, { ...pt, psgc_code: provCode });
-        }
-      }
-    } else {
-      // Region: derive region code = first 2 digits + "0000000"
-      for (const pt of layerData.layer_data) {
-        const regCode = pt.psgc_code.substring(0, 2) + "0000000";
-        const existing = m.get(regCode);
-        if (existing) {
-          existing.count += pt.count;
-          existing.display_value += pt.display_value;
-        } else {
-          m.set(regCode, { ...pt, psgc_code: regCode });
-        }
-      }
-    }
-    return m;
+    return layerData ? buildDatasetLayer(layerData, mapAreaLevel) : new Map();
   }, [layerData, mapAreaLevel]);
 
-  const maxVal = layerData ? Math.max(...layerData.layer_data.map((p) => p.display_value), 1) : 1;
+  const maxVal = Math.max(...Array.from(layerMap().values(), (point) => point.display_value), 1);
 
   // When layer data loads, auto-derive dominant region and set it so the
   // correct GeoJSON tiles (municity/province) load automatically.
@@ -1193,7 +1201,7 @@ export default function MapCanvas() {
             ? (props?.ADM2_PCODE ?? "")
             : (props?.ADM3_PCODE ?? props?.ADM2_PCODE ?? "");
       const code = rawCode.startsWith("PH") ? rawCode.slice(2) : rawCode;
-      
+
       let styleToApply = defaultStyle;
       if (code === selectedLocation?.psgcCode) {
         styleToApply = selectedStyle;
@@ -1209,7 +1217,7 @@ export default function MapCanvas() {
         for (const [key, val] of tipasMap.entries()) {
           if (key.startsWith(prefix)) count += val;
         }
-        
+
         if (count === 0) {
           styleToApply = {
             ...defaultStyle,
@@ -1218,7 +1226,10 @@ export default function MapCanvas() {
           };
         } else {
           const ratio = count / tipasMaxVal;
-          const idx = Math.min(Math.floor(ratio * CHOROPLETH_COLORS.length), CHOROPLETH_COLORS.length - 1);
+          const idx = Math.min(
+            Math.floor(ratio * CHOROPLETH_COLORS.length),
+            CHOROPLETH_COLORS.length - 1,
+          );
           styleToApply = {
             color: "#ef4444",
             weight: 1,
@@ -1229,7 +1240,7 @@ export default function MapCanvas() {
       } else if (activeLayerDatasetId && showChoropleth) {
         styleToApply = choroplethStyle(code, lm, maxVal);
       }
-      
+
       l.setStyle(styleToApply);
     });
   }, [
@@ -1353,9 +1364,7 @@ export default function MapCanvas() {
     const geom = feature.geometry;
     // Only Polygon and MultiPolygon have a .coordinates array (GeometryCollection does not)
     const geomCoords =
-      geom?.type === "Polygon" || geom?.type === "MultiPolygon"
-        ? geom.coordinates
-        : null;
+      geom?.type === "Polygon" || geom?.type === "MultiPolygon" ? geom.coordinates : null;
     if (geomCoords) {
       // Flatten all [lng, lat] pairs from Polygon or MultiPolygon geometries
       const flatCoords: [number, number][] = [];
@@ -1370,8 +1379,12 @@ export default function MapCanvas() {
       };
       flatRings(geomCoords);
       if (flatCoords.length > 0) {
-        let sumLat = 0, sumLng = 0;
-        for (const [lng, lat] of flatCoords) { sumLat += lat; sumLng += lng; }
+        let sumLat = 0,
+          sumLng = 0;
+        for (const [lng, lat] of flatCoords) {
+          sumLat += lat;
+          sumLng += lng;
+        }
         centroidMap.set(psgcCode, {
           lat: sumLat / flatCoords.length,
           lng: sumLng / flatCoords.length,
@@ -1423,20 +1436,23 @@ export default function MapCanvas() {
 
       // Store selection for the draggable choropleth popup + dot marker
       const dsId = useDatasetLayerStore.getState().activeLayerDatasetId;
-      const tipasActive = useFilterStore.getState().showTipasAttendees;
+      const tipasActive =
+        useAuthStore.getState().user?.capabilities?.includes("tipas.use") &&
+        useFilterStore.getState().showTipasAttendees;
 
       if (tipasActive) {
-        const distribution = queryClient.getQueryData<TipasDistributionPoint[]>([
-          "tipas-attendees-distribution",
-          useFilterStore.getState().selectedTipasEventId,
-        ]) ?? [];
+        const distribution =
+          queryClient.getQueryData<TipasDistributionPoint[]>([
+            "tipas-attendees-distribution",
+            useFilterStore.getState().selectedTipasEventId,
+          ]) ?? [];
 
         const prefix =
           level === "region"
             ? psgcCode.substring(0, 2)
             : level === "province"
               ? psgcCode.substring(0, 4)
-              : psgcCode; // municity: exact match
+              : psgcCode.substring(0, 6); // Include barangays within the city.
 
         let count = 0;
         for (const pt of distribution) {
@@ -1454,8 +1470,8 @@ export default function MapCanvas() {
           count,
           tooltip: {
             "TIPAS Attendees": {
-              "Total": count
-            }
+              Total: count,
+            },
           },
           x: e.containerPoint.x,
           y: e.containerPoint.y,
@@ -1468,7 +1484,7 @@ export default function MapCanvas() {
             ? psgcCode.substring(0, 2)
             : level === "province"
               ? psgcCode.substring(0, 4)
-              : psgcCode; // municity: exact match
+              : psgcCode.substring(0, 6); // Include barangays within the city.
         const matching = (cached?.layer_data ?? []).filter((p) => p.psgc_code.startsWith(prefix));
         const aggCount = matching.reduce((s, p) => s + p.count, 0);
         // Merge tooltip breakdowns across matching areas
@@ -1553,7 +1569,7 @@ export default function MapCanvas() {
               {[0, 1, 2].map((i) => (
                 <span
                   key={i}
-                  className="h-1.5 w-1.5 rounded-full bg-red-500"
+                  className="h-1.5 w-1.5 rounded-full bg-team"
                   style={{
                     animation: `nest-pulse-soft 1.1s ease-in-out ${i * 0.18}s infinite`,
                   }}
@@ -1614,7 +1630,7 @@ export default function MapCanvas() {
             <div className="flex shrink-0 items-center gap-2">
               <button
                 onClick={() => setLoadKey((k) => k + 1)}
-                className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-red-700 transition-colors"
+                className="rounded-lg bg-team px-2.5 py-1 text-[11px] font-medium text-white hover:bg-team-strong transition-colors"
               >
                 Retry
               </button>
@@ -1680,9 +1696,9 @@ export default function MapCanvas() {
               }}
             >
               {/* Drag handle / header */}
-              <div className="flex items-center gap-2 bg-red-600 px-4 py-3 cursor-grab active:cursor-grabbing">
+              <div className="flex items-center gap-2 bg-team px-4 py-3 cursor-grab active:cursor-grabbing">
                 <svg
-                  className="h-3.5 w-3.5 text-red-300 shrink-0"
+                  className="h-3.5 w-3.5 text-team shrink-0"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -1699,12 +1715,12 @@ export default function MapCanvas() {
                     {choroplethSelection.name}
                   </p>
                   {layerData && (
-                    <p className="text-[9px] text-red-200 truncate">{layerData.dataset.name}</p>
+                    <p className="text-[9px] text-team truncate">{layerData.dataset.name}</p>
                   )}
                 </div>
                 <button
                   onClick={() => setChoroplethSelection(null)}
-                  className="shrink-0 rounded-full p-1 text-red-200 hover:bg-red-500 hover:text-white transition-colors"
+                  className="shrink-0 rounded-full p-1 text-team hover:bg-team-soft0 hover:text-white transition-colors"
                 >
                   <svg
                     className="h-3.5 w-3.5"
@@ -1724,7 +1740,7 @@ export default function MapCanvas() {
                   <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
                     Total Records
                   </span>
-                  <span className="text-2xl font-bold text-red-600 tabular-nums">
+                  <span className="text-2xl font-bold text-team tabular-nums">
                     {count.toLocaleString()}
                   </span>
                 </div>
@@ -1735,7 +1751,7 @@ export default function MapCanvas() {
                 <div className="px-4 pb-3">
                   <Link
                     to={`/datasets/${activeLayerDatasetId}/records`}
-                    className="flex items-center justify-center gap-1.5 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors"
+                    className="flex items-center justify-center gap-1.5 rounded-lg bg-team-soft border border-team px-3 py-2 text-xs font-semibold text-team hover:bg-team-soft transition-colors"
                   >
                     View all records
                     <svg

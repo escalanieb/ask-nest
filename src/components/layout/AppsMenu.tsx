@@ -1,3 +1,4 @@
+import { useAuthStore } from "../../stores/useAuthStore";
 import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import TalaIcon from "../../assets/app_icons/tala.svg?react";
@@ -94,6 +95,12 @@ const APP_LINKS: AppLink[] = [
 // ── Component ─────────────────────────────────────────────────────────────
 
 export default function AppsMenu() {
+  const capabilities = useAuthStore((s) => s.user?.capabilities);
+  const links = APP_LINKS.filter(
+    (link) =>
+      (link.label !== "Insight" || capabilities?.includes("insight.use")) &&
+      (link.label !== "TIPAS" || capabilities?.includes("tipas.use")),
+  );
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -153,7 +160,7 @@ export default function AppsMenu() {
 
           {/* Link list */}
           <ul className="py-1">
-            {APP_LINKS.map((link) => (
+            {links.map((link) => (
               <li key={link.href}>
                 {link.internal ? (
                   <NavLink

@@ -107,7 +107,7 @@ export default function DatasetRecordsPage() {
         </div>
         <Link
           to={`/datasets/${id}/upload`}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+          className="rounded-lg bg-team px-4 py-2 text-sm font-semibold text-white hover:bg-team-strong transition-colors"
         >
           Upload
         </Link>

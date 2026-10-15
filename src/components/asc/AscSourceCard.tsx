@@ -33,7 +33,7 @@ export default function AscSourceCard({ source }: { source: AscSource }) {
               href={source.url}
               target="_blank"
               rel="noreferrer"
-              className="mt-1.5 flex min-w-0 items-center gap-1 text-[10px] text-red-600 hover:text-red-700 hover:underline"
+              className="mt-1.5 flex min-w-0 items-center gap-1 text-[10px] text-team hover:text-team hover:underline"
             >
               <span className="truncate">{source.url}</span>
               <ExternalLink aria-hidden="true" className="size-3 shrink-0" />

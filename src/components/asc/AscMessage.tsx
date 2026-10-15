@@ -31,12 +31,7 @@ export default function AscMessage({ message, streaming = false }: Props) {
                 remarkPlugins={[remarkGfm]}
                 components={{
                   a: ({ children, ...props }) => (
-                    <a
-                      {...props}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-red-600 underline"
-                    >
+                    <a {...props} target="_blank" rel="noreferrer" className="text-team underline">
                       {children}
                     </a>
                   ),

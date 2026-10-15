@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { TalaLoginButton } from "@tala/sso-react";
 import { useAuthStore } from "../stores/useAuthStore";
 import NestLogo from "../components/NestLogo";
+import { sessionFetch } from "../lib/session";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
 
@@ -29,7 +30,7 @@ export default function Login() {
   }
 
   function handleTalaSuccess(code: string, state: string) {
-    fetch(`${API_BASE}/auth/tala/callback?code=${code}&state=${state}`, {
+    sessionFetch(`${API_BASE}/auth/tala/callback?code=${code}&state=${state}`, {
       headers: { Accept: "application/json" },
     })
       .then((res) => res.json())
@@ -93,7 +94,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+            className="w-full py-2 rounded-lg bg-team hover:bg-team-strong text-white text-sm font-semibold transition-colors disabled:opacity-50"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>

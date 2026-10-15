@@ -40,6 +40,15 @@ export async function streamAscMessage(
 
   if (!response.ok) {
     const body = await response.text();
+    if ([403, 503].includes(response.status)) {
+      let message: string | undefined;
+      try {
+        message = (JSON.parse(body) as { message?: string }).message;
+      } catch {
+        /* Non-JSON errors use the fallback below. */
+      }
+      if (message) throw new Error(message);
+    }
     throw new Error(`API error ${response.status}: ${body}`);
   }
 

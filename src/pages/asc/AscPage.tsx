@@ -41,8 +41,8 @@ export default function AscPage() {
                 <PanelLeftOpen className="size-4" />
               </button>
             )}
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-red-500/10">
-              <Sparkles className="size-4 text-red-600" />
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-team-soft">
+              <Sparkles className="size-4 text-team" />
             </div>
             <div className="min-w-0">
               <h1 className="truncate text-sm font-semibold leading-none text-[#374151]">
@@ -58,7 +58,7 @@ export default function AscPage() {
       </header>
 
       {error && (
-        <div className="flex shrink-0 items-center justify-between border-b border-red-200 bg-red-50 px-5 py-2 text-[10px] text-red-700">
+        <div className="flex shrink-0 items-center justify-between border-b border-team bg-team-soft px-5 py-2 text-[10px] text-team">
           <span className="truncate">{error}</span>
           <button type="button" onClick={clearError} className="ml-3 font-semibold hover:underline">
             Dismiss

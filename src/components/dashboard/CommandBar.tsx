@@ -19,14 +19,14 @@ export default function CommandBar() {
 
       {/* Selected location breadcrumb */}
       {selectedLocation && (
-        <div className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5">
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
-          <span className="max-w-[160px] truncate text-xs font-medium text-red-700">
+        <div className="flex items-center gap-1.5 rounded-lg border border-team bg-team-soft px-3 py-1.5">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-team" />
+          <span className="max-w-[160px] truncate text-xs font-medium text-team">
             {selectedLocation.name}
           </span>
           <button
             onClick={() => useMapStore.getState().setSelectedLocation(null)}
-            className="ml-1 shrink-0 text-red-400 hover:text-red-600 transition-colors"
+            className="ml-1 shrink-0 text-team hover:text-team transition-colors"
           >
             <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
               <path
@@ -68,14 +68,11 @@ export default function CommandBar() {
       {/* User badge */}
       {user && (
         <div
-          className={`shrink-0 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider ${
-            user.role === "admin"
-              ? "border-rose-200 bg-rose-50 text-rose-700"
-              : "border-slate-200 bg-slate-100 text-slate-500"
-          }`}
+          className="flex min-w-0 items-center gap-1.5 rounded-lg border border-team bg-team-soft px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-team"
+          title={`${user.name} · ${user.team?.name ?? "Team unavailable"}`}
         >
           <svg
-            className="h-3 w-3"
+            className="h-3 w-3 shrink-0"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -87,7 +84,7 @@ export default function CommandBar() {
               d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
             />
           </svg>
-          {user.name} · {user.role}
+          <span className="truncate">{user.name} · {user.team?.name ?? "Team unavailable"}</span>
         </div>
       )}
     </header>

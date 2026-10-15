@@ -230,7 +230,7 @@ export default function DatasetFormPage() {
                     className={`flex items-center justify-center h-8 w-8 rounded-full border-2 text-xs font-bold transition-all
                       ${
                         isCurrent
-                          ? "border-red-600 bg-red-600 text-white shadow-md shadow-red-200"
+                          ? "border-team bg-team text-white shadow-md shadow-team-soft"
                           : isDone
                             ? "border-green-500 bg-green-500 text-white"
                             : isReachable
@@ -254,7 +254,7 @@ export default function DatasetFormPage() {
                   </span>
                   <span
                     className={`text-[10px] font-semibold hidden sm:block whitespace-nowrap ${
-                      isCurrent ? "text-red-600" : isDone ? "text-green-600" : "text-slate-400"
+                      isCurrent ? "text-team" : isDone ? "text-green-600" : "text-slate-400"
                     }`}
                   >
                     {step.label}
@@ -343,7 +343,7 @@ export default function DatasetFormPage() {
                 <label className="flex items-start gap-3 cursor-pointer rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 hover:bg-slate-100 transition-colors">
                   <input
                     type="checkbox"
-                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-red-600 flex-shrink-0"
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-team flex-shrink-0"
                     checked={allowDuplicates}
                     onChange={(e) => setAllowDuplicates(e.target.checked)}
                   />
@@ -371,7 +371,7 @@ export default function DatasetFormPage() {
                 <button
                   type="button"
                   onClick={() => setFields((p) => [...p, emptyField()])}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-team hover:text-team"
                 >
                   <svg
                     className="h-3.5 w-3.5"
@@ -521,7 +521,7 @@ export default function DatasetFormPage() {
                         key={key}
                         className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium cursor-pointer transition-colors select-none ${
                           matchKeys.includes(key)
-                            ? "border-red-300 bg-red-50 text-red-700"
+                            ? "border-team bg-team-soft text-team"
                             : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                         }`}
                       >
@@ -710,7 +710,7 @@ export default function DatasetFormPage() {
                       {matchKeys.map((k) => (
                         <span
                           key={k}
-                          className="rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700"
+                          className="rounded-full border border-team bg-team-soft px-2.5 py-0.5 text-xs font-medium text-team"
                         >
                           {k}
                         </span>
@@ -783,7 +783,7 @@ export default function DatasetFormPage() {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors"
+                  className="flex items-center gap-2 rounded-lg bg-team px-5 py-2.5 text-sm font-semibold text-white hover:bg-team-strong transition-colors"
                 >
                   Next
                   <svg
@@ -801,7 +801,7 @@ export default function DatasetFormPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={save.isPending}
-                  className="rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-60"
+                  className="rounded-lg bg-team px-6 py-2.5 text-sm font-semibold text-white hover:bg-team-strong transition-colors disabled:opacity-60"
                 >
                   {save.isPending ? "Saving…" : isEdit ? "Save Changes" : "Create Dataset"}
                 </button>

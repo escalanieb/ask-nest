@@ -87,7 +87,7 @@ export default function AnalyticsPanel() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {data && (
-            <div className="rounded-md bg-red-600 px-2 py-1 flex items-center gap-1">
+            <div className="rounded-md bg-team px-2 py-1 flex items-center gap-1">
               <span className="text-white font-bold text-[11px] tabular-nums">
                 {data.total_records.toLocaleString()}
               </span>

@@ -7,6 +7,8 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --team-accent: #475569;
+  --team-on-accent: #ffffff;
   --background: #f0f8ff;
   --foreground: #374151;
   --card: #ffffff;
@@ -30,6 +32,10 @@
 }
 
 @theme inline {
+  --color-team: var(--team-accent);
+  --color-team-foreground: var(--team-on-accent);
+  --color-team-strong: color-mix(in srgb, var(--team-accent), black 15%);
+  --color-team-soft: color-mix(in srgb, var(--team-accent) 10%, white);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -120,7 +126,7 @@
   width: 2px;
   height: 1em;
   vertical-align: -0.12em;
-  background: #dc2626;
+  background: var(--team-accent);
   animation: asc-cursor-blink 0.8s steps(1) infinite;
 }
 
@@ -297,8 +303,8 @@ body,
     box-shadow 0.15s;
 }
 .input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgb(99 102 241 / 0.15);
+  border-color: var(--team-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--team-accent) 15%, transparent);
 }
 .input:disabled {
   background: #f8fafc;

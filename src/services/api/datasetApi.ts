@@ -1,6 +1,6 @@
-import { apiFetch } from "./_fetch";
+import { apiFetch, apiRequest } from "./_fetch";
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
+import { sessionGeneration, assertSession } from "../../lib/session";
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -209,14 +209,18 @@ export async function activateDataset(id: number): Promise<Dataset> {
   });
 }
 
-export function getTemplateUrl(id: number): string {
-  const token =
-    (
-      JSON.parse(localStorage.getItem("auth-store") ?? "{}") as {
-        state?: { token?: string };
-      }
-    ).state?.token ?? "";
-  return `${BASE_URL}/datasets/${id}/template?token=${encodeURIComponent(token)}`;
+export async function downloadDatasetTemplate(id: number): Promise<void> {
+  const generation = sessionGeneration();
+  const response = await apiRequest(`/datasets/${id}/template`);
+  if (!response.ok) throw new Error("Could not download the template. Please retry.");
+  const blob = await response.blob();
+  assertSession(generation);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `dataset-${id}-template.xlsx`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ---------------------------------------------------------------------------
@@ -257,8 +261,8 @@ export async function resolveConflict(
   conflictId: number,
   resolution: Exclude<ConflictResolution, "pending">,
   mergedData?: Record<string, unknown>,
-): Promise<BatchConflict> {
-  return apiFetch<BatchConflict>(`/batches/${batchId}/conflicts/${conflictId}`, {
+): Promise<{ message: string; pending_conflicts: number }> {
+  return apiFetch<{ message: string; pending_conflicts: number }>(`/batches/${batchId}/conflicts/${conflictId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ resolution, merged_data: mergedData }),

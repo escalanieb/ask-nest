@@ -38,7 +38,7 @@ export default function AscChatInput({ onSend, onStop, isStreaming, isLoading }:
       onSubmit={submit}
       className="border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur"
     >
-      <div className="mx-auto flex max-w-4xl items-end gap-2 rounded-2xl border border-slate-300 bg-white p-2 shadow-sm focus-within:border-red-400 focus-within:ring-2 focus-within:ring-red-100">
+      <div className="mx-auto flex max-w-4xl items-end gap-2 rounded-2xl border border-slate-300 bg-white p-2 shadow-sm focus-within:border-team focus-within:ring-2 focus-within:ring-team-soft">
         <textarea
           ref={textareaRef}
           value={value}
@@ -55,7 +55,7 @@ export default function AscChatInput({ onSend, onStop, isStreaming, isLoading }:
           onClick={isStreaming ? onStop : undefined}
           disabled={!isStreaming && (!value.trim() || isLoading)}
           aria-label={isStreaming ? "Stop response" : "Send message"}
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-team text-team-foreground transition-colors hover:bg-team-strong disabled:cursor-not-allowed disabled:bg-slate-300"
         >
           {isStreaming ? (
             <Square className="size-3.5 fill-current" />

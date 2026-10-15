@@ -87,11 +87,11 @@ function ElectionCountdown() {
   const { months, weeks, days, hours, minutes, seconds, isPast } = useElectionCountdown();
 
   return (
-    <div className="shrink-0 border-b border-slate-200 bg-gradient-to-br from-red-700 via-red-600 to-rose-600 px-5 py-5">
+    <div className="shrink-0 border-b border-slate-200 bg-gradient-to-br from-team-strong via-team to-team px-5 py-5">
       {/* Header row */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-red-200 mb-0.5">
+          <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-team-foreground/80 mb-0.5">
             Countdown to
           </p>
           <h2 className="text-base font-bold text-white leading-tight">PH Elections 2028</h2>
@@ -119,7 +119,7 @@ function ElectionCountdown() {
                 <span className="text-3xl font-bold tabular-nums text-white leading-none">
                   {pad(v)}
                 </span>
-                <span className="mt-1 text-[9px] font-semibold uppercase tracking-widest text-red-200">
+                <span className="mt-1 text-[9px] font-semibold uppercase tracking-widest text-team-foreground/80">
                   {l}
                 </span>
               </div>
@@ -140,7 +140,7 @@ function ElectionCountdown() {
                 <span className="text-lg font-bold tabular-nums text-white/90 leading-none">
                   {pad(v)}
                 </span>
-                <span className="mt-0.5 text-[8px] font-semibold uppercase tracking-widest text-red-300">
+                <span className="mt-0.5 text-[8px] font-semibold uppercase tracking-widest text-team-foreground/80">
                   {l}
                 </span>
               </div>
@@ -188,7 +188,7 @@ function MapAreaToggle() {
                 i > 0 ? "border-l border-slate-200" : ""
               } ${
                 mapAreaLevel === id
-                  ? "bg-red-600 text-white"
+                  ? "bg-team text-white"
                   : "bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -272,7 +272,7 @@ function RssFeedSettings() {
               onClick={() => setActiveFeedId(feed.id)}
               className={`flex min-w-0 flex-1 flex-col rounded-lg px-2.5 py-1.5 text-left transition-all ${
                 activeFeedId === feed.id
-                  ? "bg-red-600 text-white"
+                  ? "bg-team text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
@@ -280,7 +280,7 @@ function RssFeedSettings() {
               {feed.category && (
                 <span
                   className={`text-[9px] ${
-                    activeFeedId === feed.id ? "text-red-200" : "text-slate-400"
+                    activeFeedId === feed.id ? "text-team-foreground/80" : "text-slate-400"
                   }`}
                 >
                   {feed.category}
@@ -304,7 +304,7 @@ function RssFeedSettings() {
         {isAdmin && !showAdd && (
           <button
             onClick={() => setShowAdd(true)}
-            className="mt-1 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200 py-1.5 text-[10px] text-slate-400 transition-colors hover:border-red-300 hover:text-red-500"
+            className="mt-1 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200 py-1.5 text-[10px] text-slate-400 transition-colors hover:border-team hover:text-team"
           >
             + Add Feed
           </button>
@@ -319,20 +319,20 @@ function RssFeedSettings() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Name"
-              className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[11px] outline-none focus:border-red-400"
+              className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[11px] outline-none focus:border-team"
             />
             <input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com/feed"
               type="url"
-              className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[11px] outline-none focus:border-red-400"
+              className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[11px] outline-none focus:border-team"
             />
             <input
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               placeholder="Category"
-              className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[11px] outline-none focus:border-red-400"
+              className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[11px] outline-none focus:border-team"
             />
             {addError && <p className="text-[9px] text-red-500">{addError}</p>}
             <div className="flex gap-1.5">
@@ -355,7 +355,7 @@ function RssFeedSettings() {
                   addMutation.mutate();
                 }}
                 disabled={addMutation.isPending}
-                className="flex-1 rounded bg-red-600 py-1 text-[10px] font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                className="flex-1 rounded bg-team py-1 text-[10px] font-semibold text-white hover:bg-team-strong disabled:opacity-50"
               >
                 {addMutation.isPending ? "Saving…" : "Save"}
               </button>
@@ -457,7 +457,7 @@ function VideoLinkManager() {
         {!showAdd && (
           <button
             onClick={() => setShowAdd(true)}
-            className="mt-1 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200 py-1.5 text-[10px] text-slate-400 transition-colors hover:border-red-300 hover:text-red-500"
+            className="mt-1 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-slate-200 py-1.5 text-[10px] text-slate-400 transition-colors hover:border-team hover:text-team"
           >
             + Save Link
           </button>
@@ -472,14 +472,14 @@ function VideoLinkManager() {
               value={linkName}
               onChange={(e) => setLinkName(e.target.value)}
               placeholder="Name (e.g. CNN Live)"
-              className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[11px] outline-none focus:border-red-400"
+              className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-[11px] outline-none focus:border-team"
             />
             <textarea
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
               placeholder={"Paste <iframe> embed code\n(YouTube or Facebook)"}
               rows={3}
-              className="w-full resize-none rounded border border-slate-200 bg-white px-2 py-1 font-mono text-[10px] outline-none focus:border-red-400"
+              className="w-full resize-none rounded border border-slate-200 bg-white px-2 py-1 font-mono text-[10px] outline-none focus:border-team"
             />
             {addError && <p className="text-[9px] text-red-500">{addError}</p>}
             <div className="flex gap-1.5">
@@ -494,7 +494,7 @@ function VideoLinkManager() {
               </button>
               <button
                 onClick={handleSave}
-                className="flex-1 rounded bg-red-600 py-1 text-[10px] font-semibold text-white hover:bg-red-700"
+                className="flex-1 rounded bg-team py-1 text-[10px] font-semibold text-white hover:bg-team-strong"
               >
                 Save
               </button>
@@ -622,7 +622,7 @@ function WidgetToggles() {
               onClick={() => toggleWidget(id)}
               className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${
                 active
-                  ? "border-red-300 bg-red-600 text-white hover:bg-red-700"
+                  ? "border-team bg-team text-white hover:bg-team-strong"
                   : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800"
               }`}
             >
@@ -660,7 +660,7 @@ function FilterSelect({
     <div className="space-y-0.5">
       <label
         className={`text-[9px] font-bold uppercase tracking-[0.18em] transition-colors ${
-          hasValue ? "text-red-500" : "text-slate-400"
+          hasValue ? "text-team" : "text-slate-400"
         }`}
       >
         {label}
@@ -670,7 +670,7 @@ function FilterSelect({
           disabled
             ? "border-slate-100 opacity-50"
             : hasValue
-              ? "border-red-400"
+              ? "border-team"
               : "border-slate-200 hover:border-slate-400"
         }`}
       >
@@ -679,7 +679,7 @@ function FilterSelect({
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           className={`w-full appearance-none bg-transparent py-1.5 pl-0 pr-6 text-[11px] outline-none cursor-pointer disabled:cursor-not-allowed transition-colors ${
-            hasValue ? "text-red-700 font-bold" : "text-slate-600"
+            hasValue ? "text-team font-bold" : "text-slate-600"
           }`}
         >
           {children}
@@ -687,7 +687,7 @@ function FilterSelect({
         {/* Chevron */}
         <svg
           className={`pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 h-3 w-3 transition-colors ${
-            hasValue ? "text-red-400" : "text-slate-400"
+            hasValue ? "text-team" : "text-slate-400"
           }`}
           fill="none"
           viewBox="0 0 24 24"
@@ -782,7 +782,7 @@ function Filters() {
               setSelectedLocation(null);
               setRegionSearch("");
             }}
-            className="text-[9px] font-bold uppercase tracking-[0.15em] text-red-500 hover:text-red-700 transition-colors"
+            className="text-[9px] font-bold uppercase tracking-[0.15em] text-team hover:text-team transition-colors"
           >
             Clear
           </button>
@@ -802,12 +802,12 @@ function Filters() {
               value={regionSearch}
               onChange={(e) => setRegionSearch(e.target.value)}
               placeholder="Search region…"
-              className="w-full rounded border border-slate-200 bg-white px-2 py-1 pr-6 text-[11px] outline-none focus:border-red-400 placeholder:text-slate-300"
+              className="w-full rounded border border-slate-200 bg-white px-2 py-1 pr-6 text-[11px] outline-none focus:border-team placeholder:text-slate-300"
             />
             {regionSearch && (
               <button
                 onClick={() => setRegionSearch("")}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-red-400"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-team"
               >
                 ×
               </button>
@@ -815,14 +815,14 @@ function Filters() {
           </div>
           <div
             className={`relative border-b transition-colors ${
-              activeRegion ? "border-red-400" : "border-slate-200 hover:border-slate-400"
+              activeRegion ? "border-team" : "border-slate-200 hover:border-slate-400"
             }`}
           >
             <select
               value={activeRegion ?? ""}
               onChange={(e) => handleRegionChange(e.target.value)}
               className={`w-full appearance-none bg-transparent py-1.5 pl-0 pr-6 text-[11px] outline-none cursor-pointer transition-colors ${
-                activeRegion ? "text-red-700 font-bold" : "text-slate-600"
+                activeRegion ? "text-team font-bold" : "text-slate-600"
               }`}
             >
               <option value="">All Regions</option>
@@ -838,7 +838,7 @@ function Filters() {
             </select>
             <svg
               className={`pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 h-3 w-3 transition-colors ${
-                activeRegion ? "text-red-400" : "text-slate-400"
+                activeRegion ? "text-team" : "text-slate-400"
               }`}
               fill="none"
               viewBox="0 0 24 24"
@@ -935,7 +935,7 @@ function MapDisplayToggles() {
             onClick={toggle}
             className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${
               value
-                ? "border-red-300 bg-red-600 text-white hover:bg-red-700"
+                ? "border-team bg-team text-white hover:bg-team-strong"
                 : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
             }`}
           >
@@ -985,7 +985,7 @@ function DatasetLayerSwitcher() {
               e.stopPropagation();
               handleClearAll();
             }}
-            className="text-[9px] font-bold uppercase tracking-[0.15em] text-red-500 hover:text-red-700 transition-colors"
+            className="text-[9px] font-bold uppercase tracking-[0.15em] text-team hover:text-team transition-colors"
           >
             Clear
           </button>
@@ -1015,13 +1015,15 @@ function DatasetLayerSwitcher() {
               }}
               className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition-all ${
                 checked
-                  ? "border-red-300 bg-red-600 text-white"
+                  ? "border-team bg-team text-white"
                   : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
               <div className="min-w-0">
                 <span className="block truncate text-[11px] font-semibold">{ds.name}</span>
-                <span className={`text-[9px] ${checked ? "text-red-200" : "text-slate-400"}`}>
+                <span
+                  className={`text-[9px] ${checked ? "text-team-foreground/80" : "text-slate-400"}`}
+                >
                   {ds.entity_type} · {ds.psgc_level}
                 </span>
               </div>
@@ -1130,7 +1132,7 @@ function DisasterLayers() {
       <div className="mb-2 pt-1">
         <button
           onClick={() => toggleWidget("disasterPanel")}
-          className="flex w-full items-center justify-between rounded-lg border border-red-200 bg-red-600 px-2.5 py-2 text-left text-[11px] font-semibold text-white hover:bg-red-700 transition-colors"
+          className="flex w-full items-center justify-between rounded-lg border border-team bg-team px-2.5 py-2 text-left text-[11px] font-semibold text-white hover:bg-team-strong transition-colors"
         >
           <div className="flex items-center gap-1.5">
             <svg
@@ -1168,13 +1170,15 @@ function DisasterLayers() {
                 !live
                   ? "cursor-not-allowed border-slate-100 bg-slate-50 opacity-50"
                   : value
-                    ? "border-red-300 bg-red-600 text-white hover:bg-red-700"
+                    ? "border-team bg-team text-white hover:bg-team-strong"
                     : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
               <div className="min-w-0">
                 <span className="block text-[11px] font-semibold">{label}</span>
-                <span className={`text-[9px] ${value && live ? "text-red-200" : "text-slate-400"}`}>
+                <span
+                  className={`text-[9px] ${value && live ? "text-team-foreground/80" : "text-slate-400"}`}
+                >
                   {sublabel}
                 </span>
               </div>
@@ -1187,7 +1191,7 @@ function DisasterLayers() {
                 {live && count != null && count > 0 && (
                   <span
                     className={`rounded-full px-1.5 py-0.5 text-[8px] font-bold ${
-                      value ? "bg-white/20 text-white" : "bg-red-100 text-red-600"
+                      value ? "bg-white/20 text-white" : "bg-team-soft text-team"
                     }`}
                   >
                     {count}
@@ -1240,13 +1244,15 @@ function TipasLayerSwitcher() {
           onClick={() => setShowTipasEvents(!showTipasEvents)}
           className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition-all ${
             showTipasEvents
-              ? "border-red-300 bg-red-600 text-white animate-pulse-soft"
+              ? "border-team bg-team text-white animate-pulse-soft"
               : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
           }`}
         >
           <div className="min-w-0">
             <span className="block text-[11px] font-semibold text-left">TIPAS Events Map</span>
-            <span className={`text-[9px] ${showTipasEvents ? "text-red-200" : "text-slate-400"}`}>
+            <span
+              className={`text-[9px] ${showTipasEvents ? "text-team-foreground/80" : "text-slate-400"}`}
+            >
               Show events held by city/municipality
             </span>
           </div>
@@ -1268,13 +1274,17 @@ function TipasLayerSwitcher() {
           onClick={() => setShowTipasAttendees(!showTipasAttendees)}
           className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition-all ${
             showTipasAttendees
-              ? "border-red-300 bg-red-600 text-white animate-pulse-soft"
+              ? "border-team bg-team text-white animate-pulse-soft"
               : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
           }`}
         >
           <div className="min-w-0">
-            <span className="block text-[11px] font-semibold text-left">Attendees Distribution Map</span>
-            <span className={`text-[9px] ${showTipasAttendees ? "text-red-200" : "text-slate-400"}`}>
+            <span className="block text-[11px] font-semibold text-left">
+              Attendees Distribution Map
+            </span>
+            <span
+              className={`text-[9px] ${showTipasAttendees ? "text-team-foreground/80" : "text-slate-400"}`}
+            >
               Show density/count of attendees by city
             </span>
           </div>
@@ -1300,7 +1310,9 @@ function TipasLayerSwitcher() {
             <div className="relative border-b border-slate-200">
               <select
                 value={selectedTipasEventId ?? ""}
-                onChange={(e) => setSelectedTipasEventId(e.target.value ? Number(e.target.value) : null)}
+                onChange={(e) =>
+                  setSelectedTipasEventId(e.target.value ? Number(e.target.value) : null)
+                }
                 className="w-full appearance-none bg-transparent py-1.5 pl-0 pr-6 text-[11px] text-slate-700 font-semibold outline-none cursor-pointer"
               >
                 <option value="">All Events</option>
@@ -1335,6 +1347,7 @@ function TipasLayerSwitcher() {
 // Main export
 // ---------------------------------------------------------------------------
 export default function SidebarFilters() {
+  const canUseTipas = useAuthStore((s) => s.user?.capabilities?.includes("tipas.use"));
   return (
     <>
       <ElectionCountdown />
@@ -1342,7 +1355,7 @@ export default function SidebarFilters() {
       <RssFeedSettings />
       <VideoLinkManager />
       <DatasetLayerSwitcher />
-      <TipasLayerSwitcher />
+      {canUseTipas && <TipasLayerSwitcher />}
       <MapDisplayToggles />
       <DisasterLayers />
       <MapAreaToggle />

@@ -107,7 +107,12 @@ export default function AppSidebar() {
   const logout = useAuthStore((s) => s.logout);
   const location = useLocation();
 
-  const visible = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin());
+  const capabilities = useAuthStore((s) => s.user?.capabilities);
+  const visible = NAV_ITEMS.filter(
+    (item) =>
+      (!item.adminOnly || isAdmin()) &&
+      (item.to !== "/insight" || capabilities?.includes("insight.use")),
+  );
 
   return (
     <nav className="flex h-screen w-14 shrink-0 flex-col items-center border-r border-slate-800 bg-slate-900 py-3 z-50">
@@ -134,7 +139,7 @@ export default function AppSidebar() {
               className={[
                 "group relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
                 isActive
-                  ? "bg-red-600 text-white"
+                  ? "bg-team text-team-foreground"
                   : "text-slate-400 hover:bg-slate-800 hover:text-white",
               ].join(" ")}
             >

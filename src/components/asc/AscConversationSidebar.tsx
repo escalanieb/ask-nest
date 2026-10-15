@@ -38,7 +38,7 @@ export default function AscConversationSidebar({
         <button
           type="button"
           onClick={onNew}
-          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-3 text-[11px] font-semibold text-white transition hover:bg-red-700"
+          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-team px-3 text-[11px] font-semibold text-team-foreground transition hover:bg-team-strong"
         >
           <Plus className="size-3.5" /> New Chat
         </button>
@@ -69,7 +69,7 @@ export default function AscConversationSidebar({
                 key={conversation.id}
                 className={`group relative rounded-lg border-l-2 transition ${
                   activeId === conversation.id
-                    ? "border-red-500 bg-slate-200/70"
+                    ? "border-team bg-slate-200/70"
                     : "border-transparent hover:bg-slate-100"
                 }`}
               >

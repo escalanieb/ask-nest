@@ -18,6 +18,11 @@ const AscPage = lazy(() => import("./pages/asc/AscPage"));
 const BOOT_MS = 1800;
 
 // Guard: redirect to / if not admin (used nested inside AppShell)
+function RequireInsight() {
+  const allowed = useAuthStore((s) => s.user?.capabilities?.includes("insight.use"));
+  return allowed ? <Outlet /> : <Navigate to="/" replace />;
+}
+
 function RequireAdmin() {
   const isAdmin = useAuthStore((s) => s.isAdmin);
   return isAdmin() ? <Outlet /> : <Navigate to="/" replace />;
@@ -93,7 +98,9 @@ export default function App() {
               <Route path="/datasets/:id/records" element={<DatasetRecordsPage />} />
 
               {/* INSIGHT newsroom — any authenticated user */}
-              <Route path="/insight" element={<InsightPage />} />
+              <Route element={<RequireInsight />}>
+                <Route path="/insight" element={<InsightPage />} />
+              </Route>
 
               {/* ASC AI assistant — any authenticated user */}
               <Route path="/asc" element={<AscPage />} />

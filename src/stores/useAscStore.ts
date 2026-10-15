@@ -1,3 +1,4 @@
+import { sessionGeneration, assertSession } from "../lib/session";
 import { create } from "zustand";
 import {
   deleteAscConversation,
@@ -44,6 +45,7 @@ export const useAscStore = create<AscState>()((set, get) => ({
   conversationsLoading: false,
 
   sendMessage: async (text) => {
+    const expected = sessionGeneration();
     const content = text.trim();
     if (!content || get().isStreaming) return;
 
@@ -63,6 +65,7 @@ export const useAscStore = create<AscState>()((set, get) => ({
     }));
 
     const updateAssistant = (update: (message: AscMessage) => AscMessage) => {
+      if (expected !== sessionGeneration()) return;
       set((state) => ({
         messages: state.messages.map((message) =>
           message.id === assistantId ? update(message) : message,
@@ -76,18 +79,22 @@ export const useAscStore = create<AscState>()((set, get) => ({
         get().conversationId,
         {
           onToken: (token) => {
-            set({ isLoading: false });
+            if (expected === sessionGeneration()) set({ isLoading: false });
             updateAssistant((message) => ({ ...message, content: message.content + token }));
           },
           onSources: (sources: AscSource[]) => {
             updateAssistant((message) => ({ ...message, sources }));
           },
-          onDone: (conversationId) => set({ conversationId }),
+          onDone: (conversationId) => {
+            if (expected === sessionGeneration()) set({ conversationId });
+          },
         },
         controller.signal,
       );
+      assertSession(expected);
       await get().loadConversations();
     } catch (error) {
+      if (expected !== sessionGeneration()) return;
       if (error instanceof DOMException && error.name === "AbortError") return;
       set({ error: errorMessage(error) });
       updateAssistant((message) =>
@@ -108,10 +115,12 @@ export const useAscStore = create<AscState>()((set, get) => ({
   },
 
   loadConversation: async (id) => {
+    const expected = sessionGeneration();
     get().cancelStream();
     set({ isLoading: true, error: null });
     try {
       const conversation = await getAscConversation(id);
+      assertSession(expected);
       set({
         conversationId: conversation.id,
         messages: conversation.messages.map((message) => ({
@@ -123,9 +132,10 @@ export const useAscStore = create<AscState>()((set, get) => ({
         })),
       });
     } catch (error) {
+      if (expected !== sessionGeneration()) return;
       set({ error: errorMessage(error) });
     } finally {
-      set({ isLoading: false });
+      if (expected === sessionGeneration()) set({ isLoading: false });
     }
   },
 
@@ -135,24 +145,31 @@ export const useAscStore = create<AscState>()((set, get) => ({
   },
 
   loadConversations: async () => {
+    const expected = sessionGeneration();
     set({ conversationsLoading: true });
     try {
-      set({ conversations: await getAscConversations() });
+      const conversations = await getAscConversations();
+      assertSession(expected);
+      set({ conversations });
     } catch (error) {
+      if (expected !== sessionGeneration()) return;
       set({ error: errorMessage(error) });
     } finally {
-      set({ conversationsLoading: false });
+      if (expected === sessionGeneration()) set({ conversationsLoading: false });
     }
   },
 
   deleteConversation: async (id) => {
+    const expected = sessionGeneration();
     try {
       await deleteAscConversation(id);
+      assertSession(expected);
       set((state) => ({
         conversations: state.conversations.filter((conversation) => conversation.id !== id),
         ...(state.conversationId === id ? { conversationId: null, messages: [] } : {}),
       }));
     } catch (error) {
+      if (expected !== sessionGeneration()) return;
       set({ error: errorMessage(error) });
     }
   },

@@ -1,3 +1,4 @@
+import { sessionFetch, sessionQueryHash } from "../../lib/session";
 import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster, toast } from "sonner";
@@ -16,7 +17,7 @@ const INSIGHT_API_BASE = import.meta.env.VITE_INSIGHT_API_URL ?? "http://127.0.0
 // Dedicated QueryClient for INSIGHT — isolated from ask-nest's cache
 const insightQueryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 30_000, retry: 1 },
+    queries: { queryKeyHashFn: sessionQueryHash, staleTime: 30_000, retry: 1 },
   },
 });
 
@@ -25,6 +26,11 @@ interface InsightUser {
   name: string;
   email: string;
 }
+
+window.addEventListener("ask-nest-session-reset", () => {
+  void insightQueryClient.cancelQueries();
+  insightQueryClient.clear();
+});
 
 // ── Helper to find parent TALA token ──────────────────────────────────────────
 function getParentTalaToken(): string | null {
@@ -43,7 +49,7 @@ function getParentTalaToken(): string | null {
 function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => Boolean(getParentTalaToken()));
   const [error, setError] = useState("");
 
   // Attempt auto-login using parent token on mount
@@ -51,8 +57,7 @@ function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) 
     const parentToken = getParentTalaToken();
     if (!parentToken) return;
 
-    setLoading(true);
-    fetch(`${INSIGHT_API_BASE}/auth/tala/token`, {
+    sessionFetch(`${INSIGHT_API_BASE}/auth/tala/token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -61,6 +66,10 @@ function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) 
       body: JSON.stringify({ tala_token: parentToken }),
     })
       .then((res) => {
+        if (res.status === 403) {
+          window.dispatchEvent(new Event("insight-access-denied"));
+          throw new Error("INSIGHT is available to communications only.");
+        }
         if (!res.ok) throw new Error();
         return res.json();
       })
@@ -81,11 +90,10 @@ function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) 
     setError("");
     setLoading(true);
     try {
-      const res = await insightFetch<{ success: boolean; data: { token: string; user: InsightUser } }>(
-        "/auth/login",
-        "POST",
-        { email, password }
-      );
+      const res = await insightFetch<{
+        success: boolean;
+        data: { token: string; user: InsightUser };
+      }>("/auth/login", "POST", { email, password });
       setInsightToken(res.data.token);
       toast.success(`Welcome, ${res.data.user.name}`);
       onAuthenticated();
@@ -100,7 +108,7 @@ function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) 
   function handleTalaSuccess(code: string, state: string) {
     setError("");
     setLoading(true);
-    fetch(`${INSIGHT_API_BASE}/auth/tala/callback?code=${code}&state=${state}`, {
+    sessionFetch(`${INSIGHT_API_BASE}/auth/tala/callback?code=${code}&state=${state}`, {
       headers: { Accept: "application/json" },
     })
       .then((res) => {
@@ -118,7 +126,9 @@ function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) 
           setError(json?.error ?? "TALA callback returned invalid data.");
         }
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Network error during TALA login."))
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "Network error during TALA login."),
+      )
       .finally(() => setLoading(false));
   }
 
@@ -154,9 +164,7 @@ function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) 
             </div>
             <div>
               <h2 className="text-base font-semibold text-[#374151]">INSIGHT Newsroom</h2>
-              <p className="mt-0.5 text-xs text-[#6b7280]">
-                Access require authentication
-              </p>
+              <p className="mt-0.5 text-xs text-[#6b7280]">Access require authentication</p>
             </div>
           </div>
 
@@ -224,9 +232,7 @@ function InsightLoginGate({ onAuthenticated }: { onAuthenticated: () => void }) 
           </form>
         </div>
 
-        <p className="mt-4 text-center text-xs text-[#6b7280]">
-          Authorized personnel only.
-        </p>
+        <p className="mt-4 text-center text-xs text-[#6b7280]">Authorized personnel only.</p>
       </div>
     </div>
   );
@@ -238,11 +244,30 @@ export default function InsightPage() {
   // Track whether we currently have a valid INSIGHT token
   const [hasToken, setHasToken] = useState(() => Boolean(getInsightToken()));
 
+  const [denied, setDenied] = useState(false);
+  useEffect(() => {
+    const onDenied = () => {
+      clearInsightToken();
+      insightQueryClient.clear();
+      setHasToken(false);
+      setDenied(true);
+    };
+    window.addEventListener("insight-access-denied", onDenied);
+    return () => window.removeEventListener("insight-access-denied", onDenied);
+  }, []);
+
   function handleLogout() {
     clearInsightToken();
     setHasToken(false);
     insightQueryClient.clear();
   }
+
+  if (denied)
+    return (
+      <div className="p-8 text-sm">
+        INSIGHT access is restricted to verified communications members.
+      </div>
+    );
 
   return (
     <QueryClientProvider client={insightQueryClient}>

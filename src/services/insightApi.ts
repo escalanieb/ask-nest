@@ -1,3 +1,5 @@
+import { sessionFetch, assertSession, sessionGeneration } from "../lib/session";
+import { useAuthStore } from "../stores/useAuthStore";
 /**
  * insightApi.ts
  *
@@ -44,8 +46,11 @@ export async function insightFetch<T>(
   url: string,
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" = "GET",
   body?: Record<string, unknown> | FormData,
-  options?: { responseType?: "json" | "blob" }
+  options?: { responseType?: "json" | "blob" },
 ): Promise<T> {
+  if (!useAuthStore.getState().user?.capabilities?.includes("insight.use"))
+    throw new Error("INSIGHT is available to communications only.");
+  const expected = sessionGeneration();
   const headers: HeadersInit = {
     Accept: options?.responseType === "blob" ? "*/*" : "application/json",
   };
@@ -67,13 +72,15 @@ export async function insightFetch<T>(
     }
   }
 
-  const res = await fetch(`${getBaseUrl()}${url}`, config);
+  const res = await sessionFetch(`${getBaseUrl()}${url}`, config);
 
+  if ([401, 403].includes(res.status)) {
+    clearInsightToken();
+    window.dispatchEvent(new Event("insight-access-denied"));
+  }
   if (!res.ok) {
     const errorBody = await readErrorResponse(res);
-    const error: InsightApiError = new Error(
-      errorBody.message || "An unknown API error occurred"
-    );
+    const error: InsightApiError = new Error(errorBody.message || "An unknown API error occurred");
     error.status = res.status;
     error.error = errorBody.error;
     error.errors = errorBody.errors;
@@ -86,9 +93,10 @@ export async function insightFetch<T>(
 
   const contentType = res.headers.get("content-type");
   if (contentType && contentType.includes("application/json")) {
-    return res.json();
+    const data = await res.json();
+    assertSession(expected);
+    return data;
   }
 
   return null as T;
 }
-

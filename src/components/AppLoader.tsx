@@ -51,7 +51,7 @@ export default function AppLoader() {
       {/* Bottom progress bar */}
       <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-slate-100 overflow-hidden">
         <div
-          className="h-full w-full origin-left bg-red-600"
+          className="h-full w-full origin-left bg-team"
           style={{
             animation: "nest-bar-fill 1.8s cubic-bezier(0.4,0,0.2,1) forwards",
           }}

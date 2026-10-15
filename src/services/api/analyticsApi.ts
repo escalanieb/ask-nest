@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
+import { apiFetch } from "./_fetch";
 
 export interface AnalyticsSummary {
   total: number;
@@ -9,9 +9,7 @@ export interface AnalyticsSummary {
 
 export async function fetchAnalyticsSummary(psgcCode?: string | null): Promise<AnalyticsSummary> {
   const qs = psgcCode ? `?psgc_code=${encodeURIComponent(psgcCode)}` : "";
-  const res = await fetch(`${BASE_URL}/analytics/summary${qs}`);
-  if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`);
-  return res.json() as Promise<AnalyticsSummary>;
+  return apiFetch<AnalyticsSummary>(`/analytics/summary${qs}`);
 }
 
 export interface DatasetCoverageItem {
@@ -29,7 +27,5 @@ export interface DatasetCoverage {
 
 export async function fetchDatasetCoverage(psgcPrefix?: string | null): Promise<DatasetCoverage> {
   const qs = psgcPrefix ? `?psgc_prefix=${encodeURIComponent(psgcPrefix)}` : "";
-  const res = await fetch(`${BASE_URL}/analytics/datasets${qs}`);
-  if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`);
-  return res.json() as Promise<DatasetCoverage>;
+  return apiFetch<DatasetCoverage>(`/analytics/datasets${qs}`);
 }
