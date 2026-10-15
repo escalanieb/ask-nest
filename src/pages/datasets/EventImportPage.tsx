@@ -79,7 +79,7 @@ function LocationMatch({
           className={control}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name or 9-digit code"
+          placeholder="Search name or 9/10-digit code"
         />
         <button
           type="button"
@@ -224,7 +224,7 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
   });
   const residence = columns.find((column) => column.role === "residence");
   const sourceLocation = inspection?.columns.find((column) => column.source === residence?.source);
-  const needsMatch = sourceLocation?.values.filter((value) => !/^\d{9}$/.test(value)) ?? [];
+  const needsMatch = sourceLocation?.values.filter((value) => !/^\d{9,10}$/.test(value)) ?? [];
   const unresolved = needsMatch.filter((value) => !locations[value]).length;
   const update = (index: number, patch: Partial<ImportColumn>) =>
     setColumns((current) =>
@@ -624,8 +624,9 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
         <section className="space-y-4 rounded-xl border bg-white p-5">
           <h2 className="text-lg font-semibold">Residence locations and event confirmation</h2>
           <p className="text-sm text-slate-600">
-            9-digit codes are verified against the geographic reference during preview. Match place
-            names explicitly; unresolved rows will be rejected, not plotted at a guessed location.
+            9-digit codes are verified during preview. Known 10-digit codes use the reference’s
+            published 9-digit correspondence. Match place names explicitly; unresolved rows will be
+            rejected, not plotted at a guessed location.
           </p>
           {sourceLocation?.has_more && (
             <p className="text-sm text-amber-800">

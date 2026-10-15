@@ -2,7 +2,7 @@ import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
 import { useFilterStore } from "../../stores/useFilterStore";
 import { geographicPrefix } from "../../lib/datasetQuery";
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchDataset,
@@ -28,7 +28,9 @@ export default function DatasetRecordsPage() {
   const allFilters = useDatasetLayerStore((s) => s.filtersByDataset);
   const filters = allFilters[datasetId] ?? {};
   const geo = useFilterStore();
-  const prefix = geographicPrefix(geo);
+  const [params] = useSearchParams();
+  const prefix = params.get("psgc_prefix") ?? geographicPrefix(geo);
+  const filterJSON = params.get("filters") ?? JSON.stringify(filters);
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -42,12 +44,17 @@ export default function DatasetRecordsPage() {
     queryFn: () => fetchDataset(datasetId),
   });
 
-  const recordsKey = ["records", datasetId, page, search, statusFilter, filters, prefix];
-  const { data: records, isLoading } = useQuery({
+  const recordsKey = ["records", datasetId, page, search, statusFilter, filterJSON, prefix];
+  const {
+    data: records,
+    isLoading,
+    isError: recordsError,
+    refetch: retryRecords,
+  } = useQuery({
     queryKey: recordsKey,
     queryFn: () =>
       fetchRecords(datasetId, {
-        filters: JSON.stringify(filters),
+        filters: filterJSON,
         ...(prefix ? { psgc_prefix: prefix } : {}),
         page: String(page),
         per_page: "25",
@@ -122,6 +129,14 @@ export default function DatasetRecordsPage() {
         </Link>
       </header>
 
+      {recordsError && (
+        <p role="alert" className="p-4 text-sm text-red-700">
+          Could not load matching records.{" "}
+          <button className="underline" onClick={() => retryRecords()}>
+            Retry
+          </button>
+        </p>
+      )}
       <div className="flex flex-1 overflow-hidden">
         {/* Records Table */}
         <div

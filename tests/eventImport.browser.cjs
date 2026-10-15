@@ -73,6 +73,7 @@ const preview = {
           ),
         user,
       );
+      let omitMappedRows = false;
       const calls = [];
       const errors = [];
       await context.route("**/*", async (route) => {
@@ -99,14 +100,14 @@ const preview = {
           else if (url.pathname.endsWith("/layer"))
             value = {
               dataset,
-              layer_data: [
-                { psgc_code: "012345001", count: 1, display_value: 1, tooltip: { Total: 1 } },
-              ],
+              layer_data: omitMappedRows
+                ? []
+                : [{ psgc_code: "012345001", count: 1, display_value: 1, tooltip: { Total: 1 } }],
               summary: {
                 total: 1,
                 unfiltered_total: 2,
-                mapped: 1,
-                unmapped: 0,
+                mapped: omitMappedRows ? 0 : 1,
+                unmapped: omitMappedRows ? 1 : 0,
                 areas: 1,
                 unique_participants: 1,
               },
@@ -214,10 +215,10 @@ const preview = {
       );
       await page.getByRole("button", { name: meta.name }).click();
       await page.locator(".leaflet-overlay-pane path.leaflet-interactive").first().waitFor();
-      await page.getByLabel("Youth", { exact: true }).check();
-      await page.waitForResponse(
-        (response) => response.url().includes("/layer?") && response.url().includes("Youth"),
-      );
+      await Promise.all([
+        page.waitForResponse((response) => response.url().includes("/layer?") && response.url().includes("Youth")),
+        page.getByLabel("Youth", {exact: true}).check(),
+      ]);
       if (team === "communications") {
         await page.getByRole("button", { name: "TIPAS", exact: true }).first().click();
         await page.getByRole("combobox", { name: /^Show/ }).selectOption("both");
@@ -242,6 +243,58 @@ const preview = {
         (await page.locator(".leaflet-overlay-pane path.leaflet-interactive").count()) >= 2,
         "Polygon and event venue both render",
       );
+      // Reproduce records that exist but have no map-ready location rows.
+      omitMappedRows = true;
+      await Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.url().includes("/layer?") &&
+            new URL(response.url()).searchParams.get("psgc_prefix") === "01",
+        ),
+        page
+          .locator(".leaflet-overlay-pane path.leaflet-interactive")
+          .first()
+          .dispatchEvent("click", { clientX: 200, clientY: 150 }),
+      ]);
+      const total = page.getByText("Total Records", { exact: true }).locator("..");
+      await total.getByText("1", { exact: true }).waitFor();
+      const recordsLink = page.getByRole("link", { name: "View all records" });
+      const target = new URL(await recordsLink.getAttribute("href"), base);
+      assert.equal(target.searchParams.get("psgc_prefix"), "01");
+      assert.deepEqual(JSON.parse(target.searchParams.get("filters")), {
+        sector: { values: ["Youth"] },
+      });
+      await Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.url().includes("/records?") && response.url().includes("per_page=25"),
+        ),
+        recordsLink.click(),
+      ]);
+      assert.ok(
+        calls.some(
+          (path) =>
+            path.includes("/records?") &&
+            new URL(path, base).searchParams.get("psgc_prefix") === "01",
+        ),
+      );
+      // A reload retains the exact area and dataset filters from the map link.
+      await page.reload();
+      await page.getByText("001", { exact: true }).first().waitFor();
+      const matchingRequests = calls.filter(
+        (path) =>
+          path.includes("/records?") && new URL(path, base).searchParams.get("per_page") === "25",
+      );
+      assert.ok(matchingRequests.length >= 2);
+      for (const path of matchingRequests) {
+        const params = new URL(path, base).searchParams;
+        assert.equal(params.get("psgc_prefix"), "01");
+        assert.equal(params.get("status"), "active");
+        assert.deepEqual(JSON.parse(params.get("filters")), { sector: { values: ["Youth"] } });
+      }
+      await page.goto(base + "/");
+      omitMappedRows = false;
+      await page.getByRole("button", { name: meta.name }).waitFor();
       await page.screenshot({
         path: require("node:path").join(process.env.TEMP, "ask-nest-" + team + "-sidebar.png"),
         fullPage: true,

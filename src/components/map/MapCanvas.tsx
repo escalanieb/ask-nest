@@ -23,7 +23,11 @@ import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
 import type { ChoroplethSelection } from "../../stores/useDatasetLayerStore";
 import { useDisasterStore } from "../../stores/useDisasterStore";
 import { useWorkspaceStore } from "../../stores/useWorkspaceStore";
-import { fetchDatasetLayer } from "../../services/api/datasetApi";
+import {
+  fetchDatasetLayer,
+  fetchMapPanelRecords,
+  filterQuery,
+} from "../../services/api/datasetApi";
 import type { LayerDataPoint, LayerResponse } from "../../services/api/datasetApi";
 import { disasterApi } from "../../services/api/disasterApi";
 import type { DisasterEvent } from "../../services/api/disasterApi";
@@ -1254,6 +1258,20 @@ export default function MapCanvas() {
 
   const maxVal = Math.max(...Array.from(layerMap().values(), (point) => point.display_value), 1);
 
+  // Counts include all matching active records, including locations the map cannot draw.
+  // Share the same query as the records panel to avoid a second request when it is open.
+  const areaPrefix = choroplethSelection?.prefix;
+  const {
+    data: areaRecords,
+    isError: areaCountError,
+    refetch: retryAreaCount,
+  } = useQuery({
+    queryKey: ["map-panel-records", activeLayerDatasetId, areaPrefix, 1, datasetFilters],
+    queryFn: () => fetchMapPanelRecords(activeLayerDatasetId!, areaPrefix, 1, datasetFilters),
+    enabled: !!activeLayerDatasetId && !!areaPrefix,
+    staleTime: 30_000,
+  });
+
   // Geography clicks may fetch a different subset after the popup opens.
   useEffect(() => {
     const selection = useDatasetLayerStore.getState().choroplethSelection;
@@ -1799,7 +1817,7 @@ export default function MapCanvas() {
       {choroplethSelection &&
         popupPos &&
         (() => {
-          const { count } = choroplethSelection;
+          const count = activeLayerDatasetId ? areaRecords?.total : choroplethSelection.count;
           return (
             <div
               className="absolute z-[900] w-72 rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 select-none overflow-hidden"
@@ -1876,7 +1894,13 @@ export default function MapCanvas() {
                     Total Records
                   </span>
                   <span className="text-2xl font-bold text-team tabular-nums">
-                    {count.toLocaleString()}
+                    {activeLayerDatasetId && areaCountError ? (
+                      <button className="text-xs underline" onClick={() => retryAreaCount()}>
+                        Retry count
+                      </button>
+                    ) : (
+                      (count?.toLocaleString() ?? "…")
+                    )}
                   </span>
                 </div>
               </div>
@@ -1885,7 +1909,7 @@ export default function MapCanvas() {
               {activeLayerDatasetId && (
                 <div className="px-4 pb-3">
                   <Link
-                    to={`/datasets/${activeLayerDatasetId}/records`}
+                    to={`/datasets/${activeLayerDatasetId}/records${filterQuery(datasetFilters, choroplethSelection.prefix)}`}
                     className="flex items-center justify-center gap-1.5 rounded-lg bg-team-soft border border-team px-3 py-2 text-xs font-semibold text-team hover:bg-team-soft transition-colors"
                   >
                     View all records
