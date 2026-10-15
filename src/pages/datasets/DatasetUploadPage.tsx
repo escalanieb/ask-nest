@@ -1,11 +1,15 @@
+import { useMapSourceStore } from "../../stores/useMapSourceStore";
 import { useMapStore } from "../../stores/useMapStore";
 import { useFilterStore } from "../../stores/useFilterStore";
 import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useState, useRef } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  fetchBatchPreview,
+  downloadDatasetFile,
+  downloadDatasetTemplate,
   fetchDataset,
   fetchBatches,
   uploadDatasetFile,
@@ -19,15 +23,24 @@ type PreviewTab = "new" | "updates" | "conflicts" | "rejected";
 
 export default function DatasetUploadPage() {
   const { id } = useParams<{ id: string }>();
+  return <DatasetUploadSession key={id} />;
+}
+
+function DatasetUploadSession() {
+  const { id } = useParams<{ id: string }>();
   const datasetId = Number(id);
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const location = useLocation();
+  const initialPreview = (location.state as { preview?: UploadPreview } | null)?.preview ?? null;
   const fileRef = useRef<HTMLInputElement>(null);
 
   const teamName = useAuthStore((state) => state.user?.team?.name);
-  const [pendingConflicts, setPendingConflicts] = useState(0);
+  const [pendingConflicts, setPendingConflicts] = useState(
+    initialPreview?.pending_conflicts ?? initialPreview?.stats.conflicts ?? 0,
+  );
   const [dragging, setDragging] = useState(false);
-  const [preview, setPreview] = useState<UploadPreview | null>(null);
+  const [preview, setPreview] = useState<UploadPreview | null>(initialPreview);
   const [activeTab, setActiveTab] = useState<PreviewTab>("new");
 
   const { data: dataset } = useQuery({
@@ -39,6 +52,12 @@ export default function DatasetUploadPage() {
     queryKey: ["batches", datasetId],
     queryFn: () => fetchBatches(datasetId),
   });
+
+  const download = useMutation({
+    mutationFn: (batchId: number) =>
+      downloadDatasetFile(`/batches/${batchId}/rejections`, "rejected-rows.csv"),
+  });
+  const template = useMutation({ mutationFn: () => downloadDatasetTemplate(datasetId) });
 
   const upload = useMutation({
     mutationFn: (file: File) => uploadDatasetFile(datasetId, file),
@@ -54,6 +73,7 @@ export default function DatasetUploadPage() {
     mutationFn: (batchId: number) => commitBatch(batchId),
     onSuccess: () => {
       setPreview(null);
+      navigate(location.pathname, { replace: true, state: null });
       useDatasetLayerStore.getState().setChoroplethSelection(null);
       qc.invalidateQueries();
     },
@@ -61,7 +81,12 @@ export default function DatasetUploadPage() {
 
   const rollback = useMutation({
     mutationFn: (batchId: number) => rollbackBatch(batchId),
-    onSuccess: () => { useDatasetLayerStore.getState().setChoroplethSelection(null); qc.invalidateQueries(); },
+    onSuccess: () => {
+      setPreview(null);
+      navigate(location.pathname, { replace: true, state: null });
+      useDatasetLayerStore.getState().setChoroplethSelection(null);
+      qc.invalidateQueries();
+    },
   });
 
   const resolve = useMutation({
@@ -74,7 +99,20 @@ export default function DatasetUploadPage() {
       conflictId: number;
       resolution: Exclude<ConflictResolution, "pending">;
     }) => resolveConflict(batchId, conflictId, resolution),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["batches", datasetId] }),
+    onSuccess: async (result, variables) => {
+      setPendingConflicts(result.pending_conflicts);
+      const refreshed = await fetchBatchPreview(variables.batchId);
+      setPreview(refreshed);
+      qc.invalidateQueries({ queryKey: ["batches", datasetId] });
+    },
+  });
+
+  const resume = useMutation({
+    mutationFn: fetchBatchPreview,
+    onSuccess: (data) => {
+      setPreview(data);
+      setPendingConflicts(data.pending_conflicts ?? data.stats.conflicts);
+    },
   });
 
   function handleFile(file: File) {
@@ -123,7 +161,9 @@ export default function DatasetUploadPage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-slate-800">Upload Records</h1>
-          <p className="text-xs text-slate-400">{dataset?.name ?? "Loading…"} · {teamName}</p>
+          <p className="text-xs text-slate-400">
+            {dataset?.name ?? "Loading…"} · {teamName}
+          </p>
         </div>
         <button
           onClick={() => navigate(`/datasets/${id}/records`)}
@@ -135,20 +175,39 @@ export default function DatasetUploadPage() {
 
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
         {commit.isSuccess && !preview && (
-          <div role="status" className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+          <div
+            role="status"
+            className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800"
+          >
             Import committed. Your team's map data is ready.
-            <button className="ml-3 underline font-semibold" onClick={() => {
-              useDatasetLayerStore.getState().setActiveLayer(datasetId, dataset?.psgc_level);
-              useFilterStore.getState().resetFilters();
-              useMapStore.getState().setMapAreaLevel("region");
-              useMapStore.getState().setShowChoropleth(true);
-              navigate("/");
-            }}>View on map</button>
+            <button
+              className="ml-3 underline font-semibold"
+              onClick={() => {
+                useMapSourceStore.getState().setSource("imported");
+                useDatasetLayerStore.getState().setDatasetFilters(datasetId, {});
+                useDatasetLayerStore.getState().setActiveLayer(datasetId, dataset?.psgc_level);
+                useFilterStore.getState().resetFilters();
+                useMapStore.getState().setMapAreaLevel("region");
+                useMapStore.getState().setShowChoropleth(true);
+                navigate("/");
+              }}
+            >
+              View on map
+            </button>
           </div>
         )}
-        {[commit, rollback, resolve].filter((mutation) => mutation.isError).map((mutation, index) => (
-          <p key={index} role="alert" className="text-sm text-red-700">{mutation.error?.message}</p>
-        ))}
+        {[commit, rollback, resolve, resume, download, template]
+          .filter((mutation) => mutation.isError)
+          .map((mutation, index) => (
+            <p key={index} role="alert" className="text-sm text-red-700">
+              {mutation.error?.message}
+            </p>
+          ))}
+        {preview && preview.stats.rejected > 0 && (
+          <button className="underline text-sm" onClick={() => download.mutate(preview.batch_id)}>
+            Download rejected rows
+          </button>
+        )}
         {/* Pending batch notice */}
         {!preview && pendingBatch && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-start gap-4">
@@ -178,6 +237,13 @@ export default function DatasetUploadPage() {
               )}
             </div>
             <button
+              className="underline"
+              disabled={resume.isPending}
+              onClick={() => resume.mutate(pendingBatch.id)}
+            >
+              Resume review
+            </button>
+            <button
               onClick={() => {
                 if (confirm("Discard this pending upload? This cannot be undone.")) {
                   rollback.mutate(pendingBatch.id);
@@ -191,8 +257,25 @@ export default function DatasetUploadPage() {
           </div>
         )}
 
+        {!dataset?.event_key && (
+          <button
+            className="underline text-sm"
+            disabled={template.isPending}
+            onClick={() => template.mutate()}
+          >
+            Download this dataset’s template
+          </button>
+        )}
         {/* Drop Zone */}
-        {!preview && (
+        {!preview && !pendingBatch && !loadingBatches && dataset?.event_key && (
+          <Link
+            className="block rounded-xl border p-6 font-semibold text-[var(--team-accent)]"
+            to={`/datasets/import?dataset=${datasetId}`}
+          >
+            Import attendees with saved column mapping →
+          </Link>
+        )}
+        {!preview && !pendingBatch && !loadingBatches && !dataset?.event_key && (
           <div
             onDragOver={(e) => {
               e.preventDefault();
@@ -287,14 +370,23 @@ export default function DatasetUploadPage() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setPreview(null)}
+                  disabled={commit.isPending || rollback.isPending || resolve.isPending}
+                  onClick={() => {
+                    if (confirm("Discard this preview? No records have been imported."))
+                      rollback.mutate(preview.batch_id);
+                  }}
                   className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 transition-colors"
                 >
-                  Cancel
+                  Discard preview
                 </button>
                 <button
                   onClick={() => commit.mutate(preview.batch_id)}
-                  disabled={commit.isPending || resolve.isPending || pendingConflicts > 0}
+                  disabled={
+                    commit.isPending ||
+                    rollback.isPending ||
+                    resolve.isPending ||
+                    pendingConflicts > 0
+                  }
                   title={pendingConflicts > 0 ? "Resolve all conflicts first" : undefined}
                   className="rounded-lg bg-green-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -303,6 +395,10 @@ export default function DatasetUploadPage() {
               </div>
             </div>
 
+            <p className="px-5 py-2 text-xs text-slate-500">
+              {preview.stats.skipped} unchanged rows skipped. {preview.stats.rejected} rejected rows
+              will be excluded. Resolve all pending conflicts before committing.
+            </p>
             {/* Stats Row */}
             <div className="grid grid-cols-4 divide-x divide-slate-100">
               {tabs.map((tab) => (
@@ -401,6 +497,7 @@ function DataTable({
 }) {
   if (rows.length === 0) return null;
 
+  const showReason = isConflict || rows.some((row) => row._reason != null);
   const allKeys = Array.from(
     new Set(
       rows.flatMap((r) => Object.keys(r).filter((k) => k !== "_conflict_id" && k !== "_reason")),
@@ -412,7 +509,7 @@ function DataTable({
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-slate-100">
-            {isConflict && (
+            {showReason && (
               <th className="py-2 pr-3 text-left text-slate-400 font-semibold">Reason</th>
             )}
             {allKeys.map((k) => (
@@ -429,9 +526,9 @@ function DataTable({
         <tbody className="divide-y divide-slate-50">
           {rows.map((row, i) => (
             <tr key={i} className="hover:bg-slate-50/50">
-              {isConflict && (
+              {showReason && (
                 <td
-                  className="py-2 pr-3 text-amber-600 whitespace-nowrap max-w-[160px] truncate"
+                  className="py-2 pr-3 text-amber-700 whitespace-normal min-w-[180px] max-w-[320px]"
                   title={String(row._reason ?? "")}
                 >
                   {String(row._reason ?? "—")}

@@ -1,3 +1,6 @@
+import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
+import { useFilterStore } from "../../stores/useFilterStore";
+import { geographicPrefix } from "../../lib/datasetQuery";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,10 +25,14 @@ export default function DatasetRecordsPage() {
   const { id } = useParams<{ id: string }>();
   const datasetId = Number(id);
   const qc = useQueryClient();
+  const allFilters = useDatasetLayerStore((s) => s.filtersByDataset);
+  const filters = allFilters[datasetId] ?? {};
+  const geo = useFilterStore();
+  const prefix = geographicPrefix(geo);
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("active");
   const [selectedRecord, setSelectedRecord] = useState<DatasetRecord | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState<Record<string, string>>({});
@@ -35,11 +42,13 @@ export default function DatasetRecordsPage() {
     queryFn: () => fetchDataset(datasetId),
   });
 
-  const recordsKey = ["records", datasetId, page, search, statusFilter];
+  const recordsKey = ["records", datasetId, page, search, statusFilter, filters, prefix];
   const { data: records, isLoading } = useQuery({
     queryKey: recordsKey,
     queryFn: () =>
       fetchRecords(datasetId, {
+        filters: JSON.stringify(filters),
+        ...(prefix ? { psgc_prefix: prefix } : {}),
         page: String(page),
         per_page: "25",
         ...(search ? { search } : {}),
@@ -122,6 +131,7 @@ export default function DatasetRecordsPage() {
           <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-slate-100 shrink-0">
             <input
               className="input flex-1 max-w-xs"
+              aria-label="Search records"
               placeholder="Search…"
               value={search}
               onChange={(e) => {
@@ -130,6 +140,7 @@ export default function DatasetRecordsPage() {
               }}
             />
             <select
+              aria-label="Record status"
               className="input w-36"
               value={statusFilter}
               onChange={(e) => {

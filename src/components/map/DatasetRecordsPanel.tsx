@@ -1,29 +1,49 @@
+import { useEffectiveMapSource } from "../../stores/useMapSourceStore";
+import { geographicPrefix } from "../../lib/datasetQuery";
 import { useAuthStore } from "../../stores/useAuthStore";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
-import { fetchDataset, fetchMapPanelRecords } from "../../services/api/datasetApi";
+import {
+  fetchDataset,
+  fetchMapPanelRecords,
+  type MapPanelRecord,
+} from "../../services/api/datasetApi";
 import { useFilterStore } from "../../stores/useFilterStore";
-import { fetchTipasEventAttendees, type TipasAttendee } from "../../services/api/tipasApi";
+import {
+  fetchTipasEvents,
+  fetchTipasEventAttendees,
+  type TipasAttendee,
+} from "../../services/api/tipasApi";
 
 // Reset pages whenever dataset layer or area level changes
 const MAX_COLUMNS = 3;
 
 export default function DatasetRecordsPanel() {
-  const activeLayerDatasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
+  const source = useEffectiveMapSource();
+  const selectedId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
+  const activeLayerDatasetId = source === "imported" ? selectedId : null;
+  const allFilters = useDatasetLayerStore((s) => s.filtersByDataset);
+  const filters = activeLayerDatasetId ? (allFilters[activeLayerDatasetId] ?? {}) : {};
+  const geoFilters = useFilterStore();
   const choroplethSelection = useDatasetLayerStore((s) => s.choroplethSelection);
   const canUseTipas = useAuthStore((s) => !!s.user?.capabilities?.includes("tipas.use"));
   const tipasAttendeesSelected = useFilterStore((s) => s.showTipasAttendees);
-  const showTipasAttendees = canUseTipas && tipasAttendeesSelected;
+  const showTipasAttendees = source === "tipas" && canUseTipas && tipasAttendeesSelected;
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
 
-  const psgcPrefix = choroplethSelection?.prefix;
-  const [page, setPage] = useState(1);
-
-  // Reset to page 1 whenever filters change
-  useEffect(() => {
-    setPage(1);
-  }, [activeLayerDatasetId, psgcPrefix, showTipasAttendees, selectedTipasEventId]);
+  const psgcPrefix = choroplethSelection?.prefix ?? geographicPrefix(geoFilters);
+  const context = JSON.stringify([
+    activeLayerDatasetId,
+    psgcPrefix,
+    showTipasAttendees,
+    selectedTipasEventId,
+    filters,
+  ]);
+  const [pagination, setPagination] = useState({ context, page: 1 });
+  const page = pagination.context === context ? pagination.page : 1;
+  const setPage = (next: number | ((previous: number) => number)) =>
+    setPagination({ context, page: typeof next === "function" ? next(page) : next });
 
   const { data: dataset, isLoading: dsLoading } = useQuery({
     queryKey: ["dataset", activeLayerDatasetId],
@@ -32,14 +52,24 @@ export default function DatasetRecordsPanel() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: records, isLoading: recLoading } = useQuery({
-    queryKey: ["map-panel-records", activeLayerDatasetId, psgcPrefix, page],
-    queryFn: () => fetchMapPanelRecords(activeLayerDatasetId!, psgcPrefix, page),
+  const {
+    data: records,
+    isLoading: recLoading,
+    isError: recError,
+    refetch: retryRecords,
+  } = useQuery({
+    queryKey: ["map-panel-records", activeLayerDatasetId, psgcPrefix, page, filters],
+    queryFn: () => fetchMapPanelRecords(activeLayerDatasetId!, psgcPrefix, page, filters),
     enabled: !!activeLayerDatasetId && !showTipasAttendees,
     staleTime: 1000 * 30,
   });
 
-  const { data: tipasRecords, isLoading: tipasLoading } = useQuery({
+  const {
+    data: tipasRecords,
+    isLoading: tipasLoading,
+    isError: tipasError,
+    refetch: retryTipas,
+  } = useQuery({
     queryKey: ["tipas-panel-attendees", selectedTipasEventId, psgcPrefix, page],
     queryFn: () =>
       fetchTipasEventAttendees(selectedTipasEventId!, {
@@ -48,6 +78,13 @@ export default function DatasetRecordsPanel() {
       }),
     enabled: showTipasAttendees && !!selectedTipasEventId,
     staleTime: 1000 * 30,
+  });
+
+  const { data: events = [] } = useQuery({
+    queryKey: ["tipas-events"],
+    queryFn: fetchTipasEvents,
+    enabled: source === "tipas" && !selectedTipasEventId,
+    staleTime: 300_000,
   });
 
   if (showTipasAttendees && !selectedTipasEventId) {
@@ -66,10 +103,20 @@ export default function DatasetRecordsPanel() {
             d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
           />
         </svg>
-        <p className="font-semibold text-slate-500">No Event Selected</p>
+        <p className="font-semibold text-slate-500">All TIPAS events</p>
+        <p>
+          {events.reduce((sum, event) => sum + event.registered_count, 0)} registered ·{" "}
+          {events.reduce((sum, event) => sum + event.checked_in_count, 0)} checked in across these
+          events
+        </p>
+        <button
+          className="underline font-semibold"
+          onClick={() => document.getElementById("tipas-map-event")?.focus()}
+        >
+          Choose an event to view attendee records
+        </button>
         <p className="text-[10px] text-slate-400">
-          Please select an event in the TIPAS Integration sidebar to see the attendee list for this
-          area.
+          Select one event under Map data → TIPAS to see the attendee list for this area.
         </p>
       </div>
     );
@@ -96,6 +143,16 @@ export default function DatasetRecordsPanel() {
     );
   }
 
+  if (showTipasAttendees ? tipasError : recError)
+    return (
+      <button
+        className="p-4 text-xs"
+        onClick={() => (showTipasAttendees ? retryTipas() : retryRecords())}
+      >
+        Could not load records. Retry
+      </button>
+    );
+
   const isLoading = showTipasAttendees ? tipasLoading : dsLoading || recLoading;
   const total = showTipasAttendees ? (tipasRecords?.total ?? 0) : (records?.total ?? 0);
   const rows = showTipasAttendees ? (tipasRecords?.data ?? []) : (records?.data ?? []);
@@ -105,10 +162,14 @@ export default function DatasetRecordsPanel() {
   const totalPages = Math.ceil(total / perPage);
 
   const fieldDefs = dataset?.field_definitions ?? [];
+  const preferredKeys = dataset?.layer_config.tooltip_fields?.map((field) => field.field) ?? [];
+  const displayFields = preferredKeys.length
+    ? fieldDefs.filter((field) => preferredKeys.includes(field.key))
+    : fieldDefs;
   const columns =
     !showTipasAttendees && fieldDefs.length > 0
       ? [
-          ...fieldDefs.filter((f) => f.type !== "url"),
+          ...displayFields.filter((f) => f.type !== "url"),
           ...fieldDefs.filter((f) => f.type === "url"),
         ].slice(0, MAX_COLUMNS)
       : [];
@@ -261,7 +322,7 @@ export default function DatasetRecordsPanel() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {(rows as any[]).map((row, idx) => (
+              {(rows as MapPanelRecord[]).map((row, idx) => (
                 <tr key={row.id} className="hover:bg-team-soft transition-colors">
                   <td className="px-3 py-2 text-slate-400 tabular-nums">{idx + 1}</td>
                   {columns.length > 0 ? (

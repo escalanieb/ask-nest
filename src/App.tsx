@@ -8,6 +8,7 @@ import { useAuthStore } from "./stores/useAuthStore";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Login = lazy(() => import("./pages/Login"));
 const TalaCallbackPage = lazy(() => import("./pages/TalaCallbackPage"));
+const EventImportPage = lazy(() => import("./pages/datasets/EventImportPage"));
 const DatasetListPage = lazy(() => import("./pages/datasets/DatasetListPage"));
 const DatasetFormPage = lazy(() => import("./pages/datasets/DatasetFormPage"));
 const DatasetUploadPage = lazy(() => import("./pages/datasets/DatasetUploadPage"));
@@ -90,6 +91,7 @@ export default function App() {
               <Route element={<RequireFeature capability="datasets.use" />}>
                 <Route element={<RequireAdmin />}>
                   <Route path="/datasets" element={<DatasetListPage />} />
+                  <Route path="/datasets/import" element={<EventImportPage />} />
                   <Route path="/datasets/new" element={<DatasetFormPage />} />
                   <Route path="/datasets/:id/edit" element={<DatasetFormPage />} />
                   <Route path="/datasets/:id/upload" element={<DatasetUploadPage />} />

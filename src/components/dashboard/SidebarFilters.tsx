@@ -1,3 +1,5 @@
+import DatasetFilterControls from "./DatasetFilterControls";
+import { useMapSourceStore, useEffectiveMapSource } from "../../stores/useMapSourceStore";
 import { canUseWidget } from "../../lib/teamAccess";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -48,6 +50,7 @@ function AccordionSection({
         }`}
       >
         <button
+          aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
           className="flex flex-1 items-center gap-2 text-left"
         >
@@ -178,7 +181,7 @@ function MapAreaToggle() {
   }
 
   return (
-    <AccordionSection title="Map Areas">
+    <AccordionSection title="Boundary level">
       <div className="space-y-2 pt-1">
         <div className="flex rounded-lg overflow-hidden border border-slate-200">
           {MAP_AREA_LEVELS.map(({ id, label }, i) => (
@@ -262,7 +265,7 @@ function RssFeedSettings() {
   });
 
   return (
-    <AccordionSection title="RSS Feeds" defaultOpen={false}>
+    <AccordionSection title="RSS sources" defaultOpen={false}>
       <div className="space-y-1 pt-1">
         {isLoading && <p className="py-1 text-[10px] text-slate-400">Loading feeds…</p>}
         {isError && <p className="py-1 text-[10px] text-red-400">Failed to load feeds.</p>}
@@ -277,7 +280,10 @@ function RssFeedSettings() {
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              <span className="block truncate text-[11px] font-semibold">{feed.name}{feed.is_shared ? " · Shared" : ""}</span>
+              <span className="block truncate text-[11px] font-semibold">
+                {feed.name}
+                {feed.is_shared ? " · Shared" : ""}
+              </span>
               {feed.category && (
                 <span
                   className={`text-[9px] ${
@@ -420,7 +426,7 @@ function VideoLinkManager() {
   }
 
   return (
-    <AccordionSection title="Video Links" defaultOpen={false}>
+    <AccordionSection title="Video sources" defaultOpen={false}>
       <div className="space-y-1 pt-1">
         {savedLinks.length === 0 && !showAdd && (
           <p className="py-1 text-[10px] text-slate-400">No saved links yet.</p>
@@ -616,7 +622,18 @@ function WidgetToggles() {
   return (
     <AccordionSection title="Panels">
       <div className="flex flex-wrap gap-2 pt-1">
-        {WIDGETS.filter(({ id }) => canUseWidget(id.startsWith("rss") ? "rss" : id.startsWith("analytics") ? "analytics" : id.startsWith("records") ? "records" : "", capabilities)).map(({ id, label, icon }) => {
+        {WIDGETS.filter(({ id }) =>
+          canUseWidget(
+            id.startsWith("rss")
+              ? "rss"
+              : id.startsWith("analytics")
+                ? "analytics"
+                : id.startsWith("records")
+                  ? "records"
+                  : "",
+            capabilities,
+          ),
+        ).map(({ id, label, icon }) => {
           const active = widgets[id]?.visible ?? false;
           return (
             <button
@@ -677,6 +694,7 @@ function FilterSelect({
         }`}
       >
         <select
+          aria-label={label}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
@@ -711,7 +729,6 @@ function Filters() {
     setActiveProvince,
     activeCityMuni,
     setActiveCityMuni,
-    resetFilters,
   } = useFilterStore();
   const setSelectedLocation = useMapStore((s) => s.setSelectedLocation);
   const mapAreaLevel = useMapStore((s) => s.mapAreaLevel);
@@ -774,13 +791,15 @@ function Filters() {
 
   return (
     <AccordionSection
-      title="Geographical Filter Selectors"
+      title="Geographic area"
       action={
         hasFilters ? (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              resetFilters();
+              setActiveRegion(null);
+              if (useMapStore.getState().mapAreaLevel === "municity")
+                useMapStore.getState().setMapAreaLevel("region");
               setSelectedLocation(null);
               setRegionSearch("");
             }}
@@ -801,6 +820,7 @@ function Filters() {
           <div className="relative mb-1">
             <input
               type="text"
+              aria-label="Search regions"
               value={regionSearch}
               onChange={(e) => setRegionSearch(e.target.value)}
               placeholder="Search region…"
@@ -821,6 +841,7 @@ function Filters() {
             }`}
           >
             <select
+              aria-label="Region"
               value={activeRegion ?? ""}
               onChange={(e) => handleRegionChange(e.target.value)}
               className={`w-full appearance-none bg-transparent py-1.5 pl-0 pr-6 text-[11px] outline-none cursor-pointer transition-colors ${
@@ -907,16 +928,17 @@ function MapDisplayToggles() {
   const setShowDots = useMapStore((s) => s.setShowDots);
   const setShowNumbers = useMapStore((s) => s.setShowNumbers);
 
+  const source = useEffectiveMapSource();
   const options = [
     {
       key: "choropleth",
-      label: "Choropleth",
+      label: "Area shading",
       value: showChoropleth,
       toggle: () => setShowChoropleth(!showChoropleth),
     },
     {
       key: "dots",
-      label: "Data Dots",
+      label: "Data points",
       value: showDots,
       toggle: () => setShowDots(!showDots),
     },
@@ -931,19 +953,21 @@ function MapDisplayToggles() {
   return (
     <AccordionSection title="Map Display">
       <div className="flex flex-wrap gap-2 pt-1">
-        {options.map(({ key, label, value, toggle }) => (
-          <button
-            key={key}
-            onClick={toggle}
-            className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${
-              value
-                ? "border-team bg-team text-white hover:bg-team-strong"
-                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+        {options
+          .filter((option) => source === "imported" || option.key === "choropleth")
+          .map(({ key, label, value, toggle }) => (
+            <button
+              key={key}
+              onClick={toggle}
+              className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${
+                value
+                  ? "border-team bg-team text-white hover:bg-team-strong"
+                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
       </div>
     </AccordionSection>
   );
@@ -954,7 +978,7 @@ function MapDisplayToggles() {
 // ---------------------------------------------------------------------------
 function DatasetLayerSwitcher() {
   const { activeLayerDatasetIds, toggleLayer, setActiveLayer } = useDatasetLayerStore();
-  const setMapAreaLevel = useMapStore((s) => s.setMapAreaLevel);
+  const [search, setSearch] = useState("");
   const updateWidget = useWorkspaceStore((s) => s.updateWidget);
 
   const { data: datasets = [], isLoading } = useQuery({
@@ -965,12 +989,6 @@ function DatasetLayerSwitcher() {
 
   if (!isLoading && datasets.length === 0) return null;
 
-  const PSGC_TO_MAP_LEVEL: Record<string, MapAreaLevel> = {
-    barangay: "municity",
-    city: "municity",
-    province: "province",
-  };
-
   const handleClearAll = () => {
     setActiveLayer(null);
     updateWidget("recordsPanel", { visible: false });
@@ -978,7 +996,7 @@ function DatasetLayerSwitcher() {
 
   return (
     <AccordionSection
-      title="Map Layer"
+      title="Imported events and datasets"
       defaultOpen={true}
       action={
         activeLayerDatasetIds.length > 0 ? (
@@ -997,52 +1015,73 @@ function DatasetLayerSwitcher() {
       <div className="space-y-1.5 pt-1">
         {isLoading && <p className="py-1 text-[10px] text-slate-400">Loading datasets…</p>}
 
-        {datasets.map((ds) => {
-          const checked = activeLayerDatasetIds.includes(ds.id);
-          return (
-            <button
-              key={ds.id}
-              onClick={() => {
-                toggleLayer(ds.id, ds.psgc_level);
-                if (!checked) {
-                  setMapAreaLevel(PSGC_TO_MAP_LEVEL[ds.psgc_level] ?? "region");
-                  useFilterStore.getState().setActiveRegion(null);
-                  updateWidget("recordsPanel", { visible: true });
-                } else {
-                  const remaining = activeLayerDatasetIds.filter((x) => x !== ds.id);
-                  if (remaining.length === 0) {
-                    updateWidget("recordsPanel", { visible: false });
+        <label className="block text-[11px]">
+          Find an event or dataset
+          <input
+            className="my-2 w-full rounded border p-2"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Name, category, organizer or status"
+          />
+        </label>
+        {datasets
+          .filter((ds) =>
+            [
+              ds.name,
+              ds.event_metadata?.date,
+              ds.event_metadata?.category,
+              ds.event_metadata?.organizer,
+              ds.event_metadata?.status,
+            ]
+              .join(" ")
+              .toLowerCase()
+              .includes(search.toLowerCase()),
+          )
+          .map((ds) => {
+            const checked = activeLayerDatasetIds.includes(ds.id);
+            return (
+              <button
+                key={ds.id}
+                onClick={() => {
+                  toggleLayer(ds.id, ds.psgc_level);
+                  if (!checked) {
+                    updateWidget("recordsPanel", { visible: true });
+                  } else {
+                    const remaining = activeLayerDatasetIds.filter((x) => x !== ds.id);
+                    if (remaining.length === 0) {
+                      updateWidget("recordsPanel", { visible: false });
+                    }
                   }
-                }
-              }}
-              className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition-all ${
-                checked
-                  ? "border-team bg-team text-white"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              <div className="min-w-0">
-                <span className="block truncate text-[11px] font-semibold">{ds.name}</span>
-                <span
-                  className={`text-[9px] ${checked ? "text-team-foreground/80" : "text-slate-400"}`}
-                >
-                  {ds.entity_type} · {ds.psgc_level}
-                </span>
-              </div>
-              {checked && (
-                <svg
-                  className="ml-2 h-3.5 w-3.5 shrink-0 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </button>
-          );
-        })}
+                }}
+                className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition-all ${
+                  checked
+                    ? "border-team bg-team text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <div className="min-w-0">
+                  <span className="block truncate text-[11px] font-semibold">{ds.name}</span>
+                  <span
+                    className={`text-[9px] ${checked ? "text-team-foreground/80" : "text-slate-400"}`}
+                  >
+                    {ds.event_metadata?.date ?? ds.entity_type} · {ds.psgc_level}
+                    {checked && activeLayerDatasetIds[0] === ds.id ? " · Primary map dataset" : ""}
+                  </span>
+                </div>
+                {checked && (
+                  <svg
+                    className="ml-2 h-3.5 w-3.5 shrink-0 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
       </div>
     </AccordionSection>
   );
@@ -1223,122 +1262,86 @@ function DisasterLayers() {
 // TIPAS Layer Switcher
 // ---------------------------------------------------------------------------
 function TipasLayerSwitcher() {
+  const state = useFilterStore();
   const {
-    showTipasEvents,
-    setShowTipasEvents,
-    showTipasAttendees,
-    setShowTipasAttendees,
-    selectedTipasEventId,
-    setSelectedTipasEventId,
-  } = useFilterStore();
-
-  const { data: events = [], isLoading } = useQuery({
-    queryKey: ["tipas-events"],
-    queryFn: fetchTipasEvents,
-    staleTime: 1000 * 60 * 5,
-  });
-
+    data: events = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({ queryKey: ["tipas-events"], queryFn: fetchTipasEvents, staleTime: 300_000 });
+  const view =
+    state.showTipasEvents && state.showTipasAttendees
+      ? "both"
+      : state.showTipasAttendees
+        ? "attendees"
+        : "events";
+  const event = events.find((item) => item.id === state.selectedTipasEventId);
   return (
-    <AccordionSection title="TIPAS Integration" defaultOpen={true}>
-      <div className="space-y-3 pt-1">
-        {/* Toggle Events */}
+    <AccordionSection title="TIPAS" defaultOpen={true}>
+      <div className="p-3 space-y-3 text-xs">
+        <label className="block">
+          Event
+          <select
+            className="block w-full mt-1 rounded border p-2"
+            id="tipas-map-event"
+            value={state.selectedTipasEventId ?? ""}
+            onChange={(e) => {
+              state.setSelectedTipasEventId(e.target.value ? Number(e.target.value) : null);
+              useDatasetLayerStore.getState().setChoroplethSelection(null);
+            }}
+          >
+            <option value="">All events</option>
+            {events.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {isLoading && <p>Loading events…</p>}
+        {isError && <button onClick={() => refetch()}>Could not load events. Retry</button>}
+        {!isLoading && !isError && !events.length && <p>No TIPAS events available.</p>}
+        <label className="block">
+          Show
+          <select
+            className="block w-full mt-1 rounded border p-2"
+            value={view}
+            onChange={(e) => {
+              state.setShowTipasEvents(e.target.value !== "attendees");
+              state.setShowTipasAttendees(e.target.value !== "events");
+              useDatasetLayerStore.getState().setChoroplethSelection(null);
+            }}
+          >
+            <option value="events">Event locations</option>
+            <option value="attendees">Attendee residence distribution</option>
+            <option value="both">Both</option>
+          </select>
+        </label>
+        <p className="text-slate-500">
+          Pins show approximate event venue areas; shading shows attendees’ residence areas.
+        </p>
+        <p>
+          {event
+            ? event.registered_count
+            : events.reduce((sum, item) => sum + item.registered_count, 0)}{" "}
+          registered ·{" "}
+          {event
+            ? event.checked_in_count
+            : events.reduce((sum, item) => sum + item.checked_in_count, 0)}{" "}
+          checked in
+        </p>
         <button
-          onClick={() => setShowTipasEvents(!showTipasEvents)}
-          className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition-all ${
-            showTipasEvents
-              ? "border-team bg-team text-white animate-pulse-soft"
-              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-          }`}
+          className="underline font-semibold"
+          onClick={() =>
+            useWorkspaceStore.getState().updateWidget("recordsPanel", { visible: true })
+          }
         >
-          <div className="min-w-0">
-            <span className="block text-[11px] font-semibold text-left">TIPAS Events Map</span>
-            <span
-              className={`text-[9px] ${showTipasEvents ? "text-team-foreground/80" : "text-slate-400"}`}
-            >
-              Show events held by city/municipality
-            </span>
-          </div>
-          {showTipasEvents && (
-            <svg
-              className="ml-2 h-3.5 w-3.5 shrink-0 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          )}
+          Open records
         </button>
-
-        {/* Toggle Attendees Distribution */}
-        <button
-          onClick={() => setShowTipasAttendees(!showTipasAttendees)}
-          className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition-all ${
-            showTipasAttendees
-              ? "border-team bg-team text-white animate-pulse-soft"
-              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-          }`}
-        >
-          <div className="min-w-0">
-            <span className="block text-[11px] font-semibold text-left">
-              Attendees Distribution Map
-            </span>
-            <span
-              className={`text-[9px] ${showTipasAttendees ? "text-team-foreground/80" : "text-slate-400"}`}
-            >
-              Show density/count of attendees by city
-            </span>
-          </div>
-          {showTipasAttendees && (
-            <svg
-              className="ml-2 h-3.5 w-3.5 shrink-0 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          )}
-        </button>
-
-        {/* Event Filter Selector (only active if either layer is active) */}
-        {(showTipasEvents || showTipasAttendees) && (
-          <div className="space-y-1 bg-slate-50 border border-slate-100 rounded-lg p-2.5">
-            <label className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
-              Filter by Event
-            </label>
-            <div className="relative border-b border-slate-200">
-              <select
-                value={selectedTipasEventId ?? ""}
-                onChange={(e) =>
-                  setSelectedTipasEventId(e.target.value ? Number(e.target.value) : null)
-                }
-                className="w-full appearance-none bg-transparent py-1.5 pl-0 pr-6 text-[11px] text-slate-700 font-semibold outline-none cursor-pointer"
-              >
-                <option value="">All Events</option>
-                {isLoading ? (
-                  <option disabled>Loading events…</option>
-                ) : (
-                  events.map((evt) => (
-                    <option key={evt.id} value={evt.id}>
-                      {evt.name} ({evt.registered_count} registered)
-                    </option>
-                  ))
-                )}
-              </select>
-              <svg
-                className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
+        {!event && (
+          <p className="text-slate-500">
+            All events shows aggregate counts. Select one event to browse attendee records.
+          </p>
         )}
       </div>
     </AccordionSection>
@@ -1350,19 +1353,78 @@ function TipasLayerSwitcher() {
 // ---------------------------------------------------------------------------
 export default function SidebarFilters() {
   const capabilities = useAuthStore((s) => s.user?.capabilities);
-  const canUseTipas = useAuthStore((s) => s.user?.capabilities?.includes("tipas.use"));
+  const source = useEffectiveMapSource();
+  const setSource = useMapSourceStore((s) => s.setSource);
   return (
     <>
+      <AccordionSection title="Map data" defaultOpen={true}>
+        <div className="flex gap-2 p-2">
+          {capabilities?.includes("datasets.use") && !capabilities.includes("tipas.use") && (
+            <span className="p-2 text-xs font-semibold">Imported data</span>
+          )}
+          {capabilities?.includes("tipas.use") && !capabilities.includes("datasets.use") && (
+            <span className="p-2 text-xs font-semibold">TIPAS</span>
+          )}
+          {capabilities?.includes("datasets.use") && capabilities.includes("tipas.use") && (
+            <button
+              aria-pressed={source === "imported"}
+              className={
+                source === "imported"
+                  ? "rounded bg-team text-white p-2 text-xs"
+                  : "rounded border p-2 text-xs"
+              }
+              onClick={() => setSource("imported")}
+            >
+              Imported data
+            </button>
+          )}
+          {capabilities?.includes("tipas.use") && capabilities.includes("datasets.use") && (
+            <button
+              aria-pressed={source === "tipas"}
+              className={
+                source === "tipas"
+                  ? "rounded bg-team text-white p-2 text-xs"
+                  : "rounded border p-2 text-xs"
+              }
+              onClick={() => setSource("tipas")}
+            >
+              TIPAS
+            </button>
+          )}
+        </div>
+        <p className="px-3 pb-2 text-[11px] text-slate-500">
+          One primary source controls the map, legend and records.
+        </p>
+      </AccordionSection>
+      {source === "none" && (
+        <p className="p-3 text-xs text-slate-500">
+          No primary data source is enabled for your team.
+        </p>
+      )}
+      {source === "none" && (
+        <p className="p-3 text-xs text-slate-500">
+          No primary data source is enabled for your team.
+        </p>
+      )}
+      {source === "imported" && <DatasetLayerSwitcher />}
+      {source === "tipas" && <TipasLayerSwitcher />}
+      <AccordionSection title="Filters" defaultOpen={true}>
+        {source === "imported" && <DatasetFilterControls />}
+        <Filters />
+      </AccordionSection>
+      <AccordionSection title="Appearance" defaultOpen={false}>
+        <MapDisplayToggles />
+        <MapAreaToggle />
+      </AccordionSection>
+      <AccordionSection title="Additional layers" defaultOpen={false}>
+        <DisasterLayers />
+      </AccordionSection>
+      <AccordionSection title="Panels and sources" defaultOpen={false}>
+        <WidgetToggles />
+        {capabilities?.includes("rss.use") && <RssFeedSettings />}
+        <VideoLinkManager />
+      </AccordionSection>
       <ElectionCountdown />
-      <WidgetToggles />
-      {capabilities?.includes("rss.use") && <RssFeedSettings />}
-      <VideoLinkManager />
-      {capabilities?.includes("datasets.use") && <DatasetLayerSwitcher />}
-      {canUseTipas && <TipasLayerSwitcher />}
-      <MapDisplayToggles />
-      <DisasterLayers />
-      <MapAreaToggle />
-      <Filters />
     </>
   );
 }

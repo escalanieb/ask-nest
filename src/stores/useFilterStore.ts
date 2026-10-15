@@ -1,3 +1,4 @@
+import { useDatasetLayerStore } from "./useDatasetLayerStore";
 import { create } from "zustand";
 
 interface FilterState {
@@ -25,13 +26,22 @@ export const useFilterStore = create<FilterState>((set) => ({
   searchQuery: "",
   setSearchQuery: (q) => set({ searchQuery: q }),
   activeRegion: null,
-  setActiveRegion: (r) => set({ activeRegion: r, activeProvince: null, activeCityMuni: null }),
+  setActiveRegion: (r) => {
+    useDatasetLayerStore.getState().setChoroplethSelection(null);
+    set({ activeRegion: r, activeProvince: null, activeCityMuni: null });
+  },
   activeStatus: null,
   setActiveStatus: (s) => set({ activeStatus: s }),
   activeCityMuni: null,
-  setActiveCityMuni: (c) => set({ activeCityMuni: c }),
+  setActiveCityMuni: (c) => {
+    useDatasetLayerStore.getState().setChoroplethSelection(null);
+    set({ activeCityMuni: c });
+  },
   activeProvince: null,
-  setActiveProvince: (p) => set({ activeProvince: p, activeCityMuni: null }),
+  setActiveProvince: (p) => {
+    useDatasetLayerStore.getState().setChoroplethSelection(null);
+    set({ activeProvince: p, activeCityMuni: null });
+  },
   showTipasEvents: false,
   setShowTipasEvents: (v) => set({ showTipasEvents: v }),
   showTipasAttendees: false,

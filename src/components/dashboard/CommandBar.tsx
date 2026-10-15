@@ -1,3 +1,6 @@
+import { useMapSourceStore } from "../../stores/useMapSourceStore";
+import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
+import { Link } from "react-router-dom";
 import { useFilterStore } from "../../stores/useFilterStore";
 import { useMapStore } from "../../stores/useMapStore";
 import { useAuthStore } from "../../stores/useAuthStore";
@@ -25,6 +28,7 @@ export default function CommandBar() {
             {selectedLocation.name}
           </span>
           <button
+            aria-label="Clear selected map location"
             onClick={() => useMapStore.getState().setSelectedLocation(null)}
             className="ml-1 shrink-0 text-team hover:text-team transition-colors"
           >
@@ -41,9 +45,24 @@ export default function CommandBar() {
 
       <div className="mx-1 h-6 w-px bg-slate-200" />
 
+      {user?.role === "admin" && user.capabilities?.includes("datasets.use") && (
+        <Link
+          to="/datasets/import"
+          className="flex shrink-0 items-center gap-2 rounded-lg bg-team px-4 py-2 text-sm font-semibold text-team-foreground shadow-sm"
+        >
+          <span aria-hidden="true">↑</span> Import dataset
+        </Link>
+      )}
       {/* Reset */}
       <button
-        onClick={resetFilters}
+        onClick={() => {
+          resetFilters();
+          useMapStore.getState().setSelectedLocation(null);
+          useMapStore.getState().setMapAreaLevel("region");
+          useDatasetLayerStore.getState().clearDatasetFilters();
+          useDatasetLayerStore.getState().setActiveLayer(null);
+          useMapSourceStore.getState().setSource("imported");
+        }}
         title="Reset all filters"
         className="shrink-0 flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 transition-all"
       >
@@ -84,7 +103,9 @@ export default function CommandBar() {
               d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
             />
           </svg>
-          <span className="truncate">{user.name} · {user.team?.name ?? "Team unavailable"}</span>
+          <span className="truncate">
+            {user.name} · {user.team?.name ?? "Team unavailable"}
+          </span>
         </div>
       )}
     </header>

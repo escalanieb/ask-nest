@@ -86,7 +86,7 @@ export default function DatasetFormPage() {
   const save = useMutation({
     mutationFn: (payload: DatasetPayload) =>
       isEdit ? updateDataset(Number(id), payload) : createDataset(payload),
-    onSuccess: () => navigate("/datasets"),
+    onSuccess: (dataset) => navigate(new URLSearchParams(window.location.search).get("next") === "upload" ? `/datasets/${dataset.id}/upload` : "/datasets"),
   });
 
   // ---------------------------------------------------------------------------

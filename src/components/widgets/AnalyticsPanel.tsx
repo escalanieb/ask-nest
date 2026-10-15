@@ -1,3 +1,7 @@
+import { useEffectiveMapSource } from "../../stores/useMapSourceStore";
+import { useFilterStore } from "../../stores/useFilterStore";
+import { geographicPrefix } from "../../lib/datasetQuery";
+import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
 import { useQuery } from "@tanstack/react-query";
 import { fetchDatasetCoverage, type DatasetCoverageItem } from "../../services/api/analyticsApi";
 import { useMapStore } from "../../stores/useMapStore";
@@ -56,18 +60,32 @@ function DatasetRow({ ds, max }: { ds: DatasetCoverageItem; max: number }) {
 }
 
 export default function AnalyticsPanel() {
-  const selectedLocation = useMapStore((s) => s.selectedLocation);
+  const source = useEffectiveMapSource();
+  const geo = useFilterStore();
+  const datasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
+  const allFilters = useDatasetLayerStore((s) => s.filtersByDataset);
+  const filters = datasetId ? (allFilters[datasetId] ?? {}) : {};
+  const selectedLocation = useDatasetLayerStore((s) => s.choroplethSelection);
   const mapAreaLevel = useMapStore((s) => s.mapAreaLevel);
 
   const psgcPrefix = selectedLocation
     ? toPsgcPrefix(selectedLocation.psgcCode, mapAreaLevel)
-    : null;
+    : geographicPrefix(geo);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["analytics-datasets", psgcPrefix],
-    queryFn: () => fetchDatasetCoverage(psgcPrefix),
+    queryKey: ["analytics-datasets", psgcPrefix, datasetId, filters],
+    queryFn: () => fetchDatasetCoverage(psgcPrefix, datasetId, filters),
     staleTime: 30_000,
+    enabled: source === "imported" && !!datasetId,
   });
+
+  if (source !== "imported" || !datasetId)
+    return (
+      <p className="p-4 text-xs text-slate-500">
+        Imported dataset analytics: select Imported data and a dataset to view filtered attendance
+        totals.
+      </p>
+    );
 
   const areaLabel = selectedLocation ? selectedLocation.name : "All Regions";
   const levelLabel = selectedLocation ? LEVEL_LABELS[mapAreaLevel] : null;

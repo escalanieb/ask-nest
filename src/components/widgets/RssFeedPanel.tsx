@@ -97,8 +97,8 @@ export default function RssFeedPanel() {
             onClick={() => {
               setMultipleMode(true);
               setShowMultiSelector(true);
-              if (activeFeedId && !selectedFeedIds.includes(activeFeedId)) {
-                toggleFeedSelection(activeFeedId);
+              if (effectiveFeedId && !selectedFeedIds.includes(effectiveFeedId)) {
+                toggleFeedSelection(effectiveFeedId);
               }
             }}
             title="View multiple feeds"
@@ -106,9 +106,11 @@ export default function RssFeedPanel() {
           >
             Multi
           </button>
-          {singleFeedResult && (
+          {effectiveFeedId && (
             <button
               onClick={() => refetchSingle()}
+              aria-label="Refresh RSS feed"
+              title="Refresh RSS feed"
               className="shrink-0 text-[9px] text-slate-400 transition-colors hover:text-red-500"
             >
               &#x21BB;
@@ -117,7 +119,7 @@ export default function RssFeedPanel() {
         </div>
 
         {/* Single feed content */}
-        {!activeFeedId ? (
+        {!effectiveFeedId ? (
           <div className="flex h-full items-center justify-center px-6 text-center">
             <p className="text-[11px] leading-relaxed text-slate-400">
               Select a feed to start reading articles.

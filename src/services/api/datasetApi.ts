@@ -31,9 +31,13 @@ export interface LayerConfig {
   aggregate_function: AggregateFunction;
   tooltip_fields: TooltipField[];
   filter_fields?: string[];
+  filter_definitions?: FilterDefinition[];
 }
 
 export interface Dataset {
+  event_key?: string | null;
+  event_metadata?: EventMetadata | null;
+  import_config?: ImportConfiguration | null;
   id: number;
   name: string;
   description: string | null;
@@ -139,6 +143,7 @@ export interface UploadBatch {
 }
 
 export interface UploadPreview {
+  pending_conflicts?: number;
   batch_id: number;
   stats: BatchStats;
   preview: {
@@ -161,8 +166,140 @@ export interface LayerDataPoint {
 }
 
 export interface LayerResponse {
-  dataset: Pick<Dataset, "id" | "name" | "entity_type" | "psgc_level" | "layer_config">;
+  dataset: Pick<
+    Dataset,
+    "id" | "name" | "entity_type" | "psgc_level" | "layer_config" | "event_key" | "event_metadata"
+  >;
   layer_data: LayerDataPoint[];
+  summary?: {
+    total: number;
+    unfiltered_total: number;
+    mapped: number;
+    unmapped: number;
+    areas: number;
+    unique_participants: number | null;
+  };
+}
+
+export interface EventMetadata {
+  id: string;
+  name: string;
+  date: string;
+  organizer: string;
+  category: string;
+  status: "upcoming" | "ongoing" | "completed" | "cancelled";
+  venue: string;
+  venue_psgc?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+export interface ImportColumn {
+  source: string;
+  key: string;
+  label: string;
+  role:
+    | "participant_id"
+    | "attendee_name"
+    | "residence"
+    | "attendance_status"
+    | "field"
+    | "event_id"
+    | "event_name"
+    | "ignore";
+  type: "text" | "number" | "date" | "category";
+  filter: boolean;
+  popup: boolean;
+  required: boolean;
+  date_format?: "Y-m-d" | "m/d/Y" | "d/m/Y";
+}
+export interface ImportConfiguration {
+  sheet: string;
+  header_row: number;
+  columns: ImportColumn[];
+  locations: Record<string, string | null>;
+}
+export interface WorkbookInspection {
+  sheets: string[];
+  sheet: string;
+  header_row: number;
+  row_count: number;
+  columns: { source: string; samples: string[]; values: string[]; has_more: boolean }[];
+}
+export interface FilterDefinition {
+  key: string;
+  label: string;
+  type: "category" | "range" | "date" | "search";
+  values?: string[];
+  has_more?: boolean;
+  has_missing?: boolean;
+}
+export type DatasetFilterValues = Record<
+  string,
+  {
+    values?: string[];
+    min?: string | number;
+    max?: string | number;
+    search?: string;
+    missing?: boolean;
+  }
+>;
+
+export function filterQuery(filters: DatasetFilterValues = {}, prefix?: string): string {
+  const params = new URLSearchParams({ filters: JSON.stringify(filters) });
+  if (prefix) params.set("psgc_prefix", prefix);
+  return "?" + params.toString();
+}
+export async function inspectWorkbook(
+  file: File,
+  sheet?: string,
+  headerRow = 1,
+): Promise<WorkbookInspection> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("header_row", String(headerRow));
+  if (sheet) form.append("sheet", sheet);
+  return apiFetch("/datasets/import/inspect", { method: "POST", body: form });
+}
+export async function saveEventImport(
+  payload: ImportConfiguration & {
+    metadata: EventMetadata;
+    psgc_level: PsgcLevel;
+    template_name?: string;
+  },
+  id?: number,
+): Promise<Dataset> {
+  return apiFetch(id ? `/datasets/${id}/import-config` : "/datasets/import/events", {
+    method: id ? "PUT" : "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+export const fetchImportTemplates = () =>
+  apiFetch<
+    { id: number; name: string; configuration: ImportConfiguration & { psgc_level: PsgcLevel } }[]
+  >("/datasets/import/templates");
+export const findImportLocations = (level: PsgcLevel, q: string) =>
+  apiFetch<{ data: { code: string; name: string }[]; total: number }>(
+    `/datasets/import/locations?${new URLSearchParams({ level, q })}`,
+  );
+export const fetchDatasetFilterOptions = (id: number, q = "") =>
+  apiFetch<{ data: FilterDefinition[] }>(
+    `/datasets/${id}/filter-options?${new URLSearchParams({ q })}`,
+  );
+export const fetchBatchPreview = (id: number) => apiFetch<UploadPreview>(`/batches/${id}/preview`);
+
+export async function downloadDatasetFile(path: string, filename: string): Promise<void> {
+  const generation = sessionGeneration();
+  const response = await apiRequest(path);
+  if (!response.ok) throw new Error("Could not download this file. Please retry.");
+  const blob = await response.blob();
+  assertSession(generation);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ---------------------------------------------------------------------------
@@ -227,9 +364,17 @@ export async function downloadDatasetTemplate(id: number): Promise<void> {
 // Upload / Batch
 // ---------------------------------------------------------------------------
 
-export async function uploadDatasetFile(datasetId: number, file: File): Promise<UploadPreview> {
+export async function uploadDatasetFile(
+  datasetId: number,
+  file: File,
+  confirmation?: { sheets: string[] },
+): Promise<UploadPreview> {
   const form = new FormData();
   form.append("file", file);
+  if (confirmation) {
+    form.append("confirmed_single_event", "1");
+    form.append("reviewed_sheets", JSON.stringify(confirmation.sheets));
+  }
   return apiFetch<UploadPreview>(`/datasets/${datasetId}/upload`, {
     method: "POST",
     body: form,
@@ -262,11 +407,14 @@ export async function resolveConflict(
   resolution: Exclude<ConflictResolution, "pending">,
   mergedData?: Record<string, unknown>,
 ): Promise<{ message: string; pending_conflicts: number }> {
-  return apiFetch<{ message: string; pending_conflicts: number }>(`/batches/${batchId}/conflicts/${conflictId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ resolution, merged_data: mergedData }),
-  });
+  return apiFetch<{ message: string; pending_conflicts: number }>(
+    `/batches/${batchId}/conflicts/${conflictId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resolution, merged_data: mergedData }),
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -327,8 +475,14 @@ export async function fetchRecordHistory(
 // Map Layer
 // ---------------------------------------------------------------------------
 
-export async function fetchDatasetLayer(datasetId: number): Promise<LayerResponse> {
-  const res = await apiFetch<LayerResponse>(`/datasets/${datasetId}/layer`);
+export async function fetchDatasetLayer(
+  datasetId: number,
+  filters: DatasetFilterValues = {},
+  prefix?: string,
+): Promise<LayerResponse> {
+  const res = await apiFetch<LayerResponse>(
+    `/datasets/${datasetId}/layer${filterQuery(filters, prefix)}`,
+  );
   // Ensure psgc_code is always a string regardless of DB column type
   res.layer_data = res.layer_data
     .filter((pt) => pt.psgc_code != null)
@@ -355,8 +509,14 @@ export async function fetchMapPanelRecords(
   datasetId: number,
   psgcPrefix?: string,
   page = 1,
+  filters: DatasetFilterValues = {},
 ): Promise<MapPanelRecordsResponse> {
-  const params: Record<string, string> = { per_page: "20", page: String(page) };
+  const params: Record<string, string> = {
+    per_page: "20",
+    page: String(page),
+    status: "active",
+    filters: JSON.stringify(filters),
+  };
   if (psgcPrefix) params.psgc_prefix = psgcPrefix;
   const qs = "?" + new URLSearchParams(params).toString();
   return apiFetch<MapPanelRecordsResponse>(`/datasets/${datasetId}/records${qs}`);

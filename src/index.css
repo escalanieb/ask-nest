@@ -199,6 +199,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .disaster-marker__ring,
+  .disaster-marker__ring--slow,
   .asc-stream-cursor,
   [class*="asc-dot-pulse"],
   [class*="asc-msg-in"] {

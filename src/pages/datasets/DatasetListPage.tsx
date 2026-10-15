@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,6 +18,9 @@ const ENTITY_COLORS: Record<string, string> = {
 
 export default function DatasetListPage() {
   const navigate = useNavigate();
+  const [eventSearch, setEventSearch] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const qc = useQueryClient();
 
   const {
@@ -26,6 +30,18 @@ export default function DatasetListPage() {
   } = useQuery({
     queryKey: ["datasets"],
     queryFn: () => fetchDatasets(),
+  });
+
+  const visibleDatasets = datasets.filter((ds) => {
+    const meta = ds.event_metadata;
+    const text = [ds.name, meta?.id, meta?.category, meta?.organizer, meta?.status]
+      .join(" ")
+      .toLowerCase();
+    return (
+      text.includes(eventSearch.toLowerCase()) &&
+      (!fromDate || (!!meta?.date && meta.date >= fromDate)) &&
+      (!toDate || (!!meta?.date && meta.date <= toDate))
+    );
   });
 
   const template = useMutation({ mutationFn: downloadDatasetTemplate });
@@ -54,7 +70,11 @@ export default function DatasetListPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {template.isError && <p role="alert" className="p-4 text-red-700">{template.error.message}</p>}
+      {template.isError && (
+        <p role="alert" className="p-4 text-red-700">
+          {template.error.message}
+        </p>
+      )}
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-4">
         <Link to="/" className="text-slate-400 hover:text-slate-700 transition-colors">
@@ -92,6 +112,43 @@ export default function DatasetListPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8">
+        <Link
+          to="/datasets/import"
+          className="mb-5 inline-flex rounded-lg bg-team px-4 py-2 text-sm font-semibold text-team-foreground"
+        >
+          ↑ Import event attendees
+        </Link>
+        <div className="mb-5 flex flex-wrap gap-3 text-xs">
+          <label>
+            Event, category, organizer or status
+            <input
+              className="block border rounded p-2"
+              value={eventSearch}
+              onChange={(e) => setEventSearch(e.target.value)}
+            />
+          </label>
+          <label>
+            From
+            <input
+              className="block border rounded p-2"
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+            />
+          </label>
+          <label>
+            To
+            <input
+              className="block border rounded p-2"
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+            />
+          </label>
+        </div>
+        {!isLoading && !!datasets.length && !visibleDatasets.length && (
+          <p>No datasets match these filters.</p>
+        )}
         {isLoading && (
           <div className="flex items-center justify-center py-20 text-slate-400 text-sm gap-2">
             <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -151,7 +208,7 @@ export default function DatasetListPage() {
 
         {datasets.length > 0 && (
           <div className="grid gap-4">
-            {datasets.map((ds) => (
+            {visibleDatasets.map((ds) => (
               <div
                 key={ds.id}
                 className={`rounded-xl border bg-white shadow-sm transition-all ${
@@ -185,6 +242,12 @@ export default function DatasetListPage() {
                       <p className="mt-1 text-xs text-slate-400 line-clamp-1">{ds.description}</p>
                     )}
                     <div className="mt-2 flex items-center gap-4 text-xs text-slate-400">
+                      {ds.event_metadata && (
+                        <span>
+                          {ds.event_metadata.date} · {ds.event_metadata.organizer} ·{" "}
+                          {ds.event_metadata.category} · {ds.event_metadata.status}
+                        </span>
+                      )}
                       <span>{ds.field_definitions?.length ?? 0} fields</span>
                       <span className="h-3 w-px bg-slate-200" />
                       <span>{(ds.records_count ?? 0).toLocaleString()} active records</span>
@@ -216,7 +279,13 @@ export default function DatasetListPage() {
                       Upload
                     </button>
                     <button
-                      onClick={() => navigate(`/datasets/${ds.id}/edit`)}
+                      onClick={() =>
+                        navigate(
+                          ds.event_key
+                            ? `/datasets/import?dataset=${ds.id}`
+                            : `/datasets/${ds.id}/edit`,
+                        )
+                      }
                       className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                     >
                       Edit

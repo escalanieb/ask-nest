@@ -1,4 +1,6 @@
-import { buildDatasetLayer } from "../../lib/datasetLayer";
+import { currentMapSource, useEffectiveMapSource } from "../../stores/useMapSourceStore";
+import { geographicPrefix, datasetLayerKey } from "../../lib/datasetQuery";
+import { buildDatasetLayer, summarizeDatasetArea } from "../../lib/datasetLayer";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useEffect, useRef, useState, useCallback, type JSX } from "react";
 import {
@@ -788,21 +790,38 @@ function choroplethStyle(
 // Module-level helper: read fresh choropleth style from query cache.
 // Used in mouse-event handlers to avoid stale-closure bugs.
 // ---------------------------------------------------------------------------
+function tipasMaximum(points: TipasDistributionPoint[], level: string): number {
+  const counts = new Map<string, number>();
+  const length = level === "region" ? 2 : level === "province" ? 4 : 6;
+  for (const point of points) {
+    const key = point.psgc_code.slice(0, length);
+    counts.set(key, (counts.get(key) ?? 0) + point.count);
+  }
+  return Math.max(1, ...counts.values());
+}
+
 function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
+  const showChoropleth = useMapStore.getState().showChoropleth;
   const showTipasAttendees =
+    currentMapSource() === "tipas" &&
+    useMapStore.getState().showChoropleth &&
     useAuthStore.getState().user?.capabilities?.includes("tipas.use") &&
     useFilterStore.getState().showTipasAttendees;
   const level = useMapStore.getState().mapAreaLevel;
 
-  if (showTipasAttendees) {
+  if (showTipasAttendees && showChoropleth) {
     const selectedEventId = useFilterStore.getState().selectedTipasEventId;
-    const distribution = queryClient.getQueryData<TipasDistributionPoint[]>([
+    const cachedDistribution = queryClient.getQueryData<TipasDistributionPoint[]>([
       "tipas-attendees-distribution",
       selectedEventId,
     ]);
+    const prefixFilter = geographicPrefix(useFilterStore.getState());
+    const distribution = prefixFilter
+      ? cachedDistribution?.filter((point) => point.psgc_code.startsWith(prefixFilter))
+      : cachedDistribution;
     if (distribution?.length) {
       const tipasMap = new Map(distribution.map((d) => [d.psgc_code, d.count]));
-      const tipasMaxVal = Math.max(1, ...distribution.map((d) => d.count));
+      const tipasMaxVal = tipasMaximum(distribution, level);
 
       const prefix =
         level === "region"
@@ -839,11 +858,11 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
     return defaultStyle;
   }
 
-  const layerId = useDatasetLayerStore.getState().activeLayerDatasetId;
-  const showChoropleth = useMapStore.getState().showChoropleth;
+  const layerId =
+    currentMapSource() === "imported" ? useDatasetLayerStore.getState().activeLayerDatasetId : null;
   if (!layerId || !showChoropleth) return defaultStyle;
 
-  const cached = queryClient.getQueryData<LayerResponse>(["layer", layerId]);
+  const cached = queryClient.getQueryData<LayerResponse>(datasetLayerKey(layerId));
   if (!cached?.layer_data.length) return defaultStyle;
 
   const m = buildDatasetLayer(cached, level);
@@ -851,10 +870,79 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
   return choroplethStyle(psgcCode, m, mv);
 }
 
+async function eventAreaCentre(code: string) {
+  const area = code.endsWith("00000") ? code : code.slice(0, 6) + "000";
+  const level = area.endsWith("0000000")
+    ? "region"
+    : area.endsWith("00000")
+      ? "province"
+      : "municity";
+  const path =
+    level === "region"
+      ? "regions/hires/regions.0.1.json"
+      : level === "province"
+        ? "provinces/hires/provinces-region-ph" + area.slice(0, 2) + "0000000.0.1.json"
+        : "municties/hires/municities-province-ph" + area.slice(0, 4) + "00000.0.1.json";
+  const collection = await fetchGeoJSON(BASE_GEO_URL + path);
+  const field =
+    level === "region" ? "ADM1_PCODE" : level === "province" ? "ADM2_PCODE" : "ADM3_PCODE";
+  const feature = collection?.features.find(
+    (feature) => String(feature.properties?.[field] ?? "").replace(/^PH/, "") === area,
+  );
+  if (!feature) return null;
+  const center = L.geoJSON(feature).getBounds().getCenter();
+  return { lat: center.lat, lng: center.lng };
+}
+
+function ImportedEventVenue({ data }: { data: LayerResponse | undefined }) {
+  const meta = data?.dataset.event_metadata;
+  const exact = meta?.latitude != null && meta?.longitude != null;
+  const { data: areaCentre } = useQuery({
+    queryKey: ["event-venue-area", meta?.venue_psgc],
+    queryFn: () => eventAreaCentre(meta!.venue_psgc!),
+    enabled: !!meta?.venue_psgc && !exact,
+    staleTime: 86_400_000,
+  });
+  if (!meta) return null;
+  const point = exact
+    ? { lat: meta.latitude!, lng: meta.longitude! }
+    : meta.venue_psgc
+      ? areaCentre
+      : undefined;
+  if (!point) return null;
+  return (
+    <CircleMarker
+      center={[point.lat, point.lng]}
+      radius={9}
+      pathOptions={{ color: "#0f172a", fillColor: "#fff", fillOpacity: 1 }}
+    >
+      <Popup>
+        <strong>{meta.name}</strong>
+        <p>
+          {meta.date} · {meta.venue}
+        </p>
+        <p>
+          {meta.category} · {meta.organizer} · {meta.status}
+        </p>
+        <p>
+          {exact ? "Supplied venue coordinates" : "Approximate area centre"}. Event venue; attendees
+          are shaded by residence.
+        </p>
+        <p>{data?.summary?.total ?? 0} filtered attendees</p>
+        <Link to={"/datasets/" + data!.dataset.id + "/records"}>View filtered records</Link>
+      </Popup>
+    </CircleMarker>
+  );
+}
+
 function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
   const canUseTipas = useAuthStore((s) => !!s.user?.capabilities?.includes("tipas.use"));
   const tipasEventsSelected = useFilterStore((s) => s.showTipasEvents);
-  const showTipasEvents = canUseTipas && tipasEventsSelected;
+  const source = useEffectiveMapSource();
+  const tipasGeo = useFilterStore();
+  const prefix = geographicPrefix(tipasGeo);
+  const showTipasEvents =
+    source === "tipas" && canUseTipas && (tipasEventsSelected || !tipasGeo.showTipasAttendees);
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
 
   const { data: events = [] } = useQuery({
@@ -866,9 +954,11 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
 
   if (!showTipasEvents) return null;
 
-  const filteredEvents = selectedTipasEventId
-    ? events.filter((e) => e.id === selectedTipasEventId)
-    : events;
+  const filteredEvents = events.filter(
+    (event) =>
+      (!selectedTipasEventId || event.id === selectedTipasEventId) &&
+      (!prefix || event.psgc_code?.startsWith(prefix)),
+  );
 
   // Group events by their resolved psgc_code to handle multiple events in one location
   const groupedEvents: Record<string, typeof events> = {};
@@ -884,29 +974,10 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
       {Object.entries(groupedEvents).map(([psgcCode, cityEvents]) => {
         let pos = centroidMap.get(psgcCode);
 
-        // Fallback: search for a province/region prefix match in centroidMap
-        if (!pos) {
-          const provPrefix = psgcCode.substring(0, 4);
-          const regPrefix = psgcCode.substring(0, 2);
-
-          // Try province prefix
-          for (const [key, value] of centroidMap.entries()) {
-            if (key.startsWith(provPrefix)) {
-              pos = value;
-              break;
-            }
-          }
-
-          // Try region prefix
-          if (!pos) {
-            for (const [key, value] of centroidMap.entries()) {
-              if (key.startsWith(regPrefix)) {
-                pos = value;
-                break;
-              }
-            }
-          }
-        }
+        if (!pos)
+          pos =
+            centroidMap.get(psgcCode.slice(0, 4) + "00000") ??
+            centroidMap.get(psgcCode.slice(0, 2) + "0000000");
 
         if (!pos) return null;
 
@@ -986,7 +1057,7 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
                       )}
                       <div style={{ fontSize: "11px", color: "#334155" }} className="space-y-1">
                         <p>
-                          📍 held in:{" "}
+                          Approximate area location:{" "}
                           <span className="font-semibold text-slate-700">
                             {evt.location ?? "Unknown"}
                           </span>
@@ -1056,10 +1127,13 @@ function MapPanZoomController() {
       const zoomLevel =
         selectedLocation.type === "Region" ? 8 : selectedLocation.type === "Province" ? 9 : 11;
       map.setView([selectedLocation.lat, selectedLocation.lng], zoomLevel, {
-        animate: true,
+        animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
         duration: 1.2,
       });
     }
+    return () => {
+      if (map.getPane("mapPane")) map.stop();
+    };
   }, [selectedLocation, map]);
 
   return null;
@@ -1111,10 +1185,20 @@ export default function MapCanvas() {
 
   const canUseDatasets = useAuthStore((s) => !!s.user?.capabilities?.includes("datasets.use"));
   const selectedDatasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
-  const activeLayerDatasetId = canUseDatasets ? selectedDatasetId : null;
+  const source = useEffectiveMapSource();
+  const activeLayerDatasetId = source === "imported" && canUseDatasets ? selectedDatasetId : null;
+  const allFilters = useDatasetLayerStore((s) => s.filtersByDataset);
+  const datasetFilters = activeLayerDatasetId ? (allFilters[activeLayerDatasetId] ?? {}) : {};
+  const geoFilters = useFilterStore();
+  const datasetPrefix = geographicPrefix(geoFilters);
   const choroplethSelection = useDatasetLayerStore((s) => s.choroplethSelection);
   const setChoroplethSelection = useDatasetLayerStore((s) => s.setChoroplethSelection);
   const geoJsonRef = useRef<L.GeoJSON | null>(null);
+  const [geoReady, setGeoReady] = useState(false);
+  const attachGeoJson = useCallback((layer: L.GeoJSON | null) => {
+    geoJsonRef.current = layer;
+    if (layer) setGeoReady(true);
+  }, []);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [loadKey, setLoadKey] = useState(0);
@@ -1129,28 +1213,40 @@ export default function MapCanvas() {
   } | null>(null);
 
   // Fetch choropleth layer data
-  const { data: layerData } = useQuery({
-    queryKey: ["layer", activeLayerDatasetId],
-    queryFn: () => fetchDatasetLayer(activeLayerDatasetId!),
+  const {
+    data: layerData,
+    isFetching: layerLoading,
+    isError: layerError,
+    refetch: retryLayer,
+  } = useQuery({
+    queryKey: ["layer", activeLayerDatasetId, datasetFilters, datasetPrefix],
+    queryFn: () => fetchDatasetLayer(activeLayerDatasetId!, datasetFilters, datasetPrefix),
     enabled: !!activeLayerDatasetId,
     staleTime: 1000 * 60 * 5,
   });
 
   const canUseTipas = useAuthStore((s) => !!s.user?.capabilities?.includes("tipas.use"));
   const tipasAttendeesSelected = useFilterStore((s) => s.showTipasAttendees);
-  const showTipasAttendees = canUseTipas && tipasAttendeesSelected;
+  const showTipasAttendees = source === "tipas" && canUseTipas && tipasAttendeesSelected;
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
 
   // Fetch TIPAS distribution data
-  const { data: tipasDistribution = [] } = useQuery({
+  const {
+    data: unfilteredTipasDistribution = [],
+    isError: tipasDistributionError,
+    refetch: retryDistribution,
+  } = useQuery({
     queryKey: ["tipas-attendees-distribution", selectedTipasEventId],
     queryFn: () => fetchTipasAttendeesDistribution(selectedTipasEventId ?? undefined),
     enabled: showTipasAttendees,
     staleTime: 1000 * 30,
   });
 
+  const tipasDistribution = datasetPrefix
+    ? unfilteredTipasDistribution.filter((point) => point.psgc_code.startsWith(datasetPrefix))
+    : unfilteredTipasDistribution;
   const tipasMap = new Map(tipasDistribution.map((d) => [d.psgc_code, d.count]));
-  const tipasMaxVal = Math.max(1, ...tipasDistribution.map((d) => d.count));
+  const tipasMaxVal = tipasMaximum(tipasDistribution, mapAreaLevel);
 
   const layerMap = useCallback((): Map<string, LayerDataPoint> => {
     return layerData ? buildDatasetLayer(layerData, mapAreaLevel) : new Map();
@@ -1158,22 +1254,18 @@ export default function MapCanvas() {
 
   const maxVal = Math.max(...Array.from(layerMap().values(), (point) => point.display_value), 1);
 
-  // When layer data loads, auto-derive dominant region and set it so the
-  // correct GeoJSON tiles (municity/province) load automatically.
+  // Geography clicks may fetch a different subset after the popup opens.
   useEffect(() => {
-    if (!layerData?.layer_data.length) return;
-    const currentRegion = useFilterStore.getState().activeRegion;
-    if (currentRegion) return; // respect user's existing selection
-    const prefixCounts: Record<string, number> = {};
-    for (const pt of layerData.layer_data) {
-      const prefix = pt.psgc_code.substring(0, 2);
-      prefixCounts[prefix] = (prefixCounts[prefix] ?? 0) + 1;
+    const selection = useDatasetLayerStore.getState().choroplethSelection;
+    if (!selection || !activeLayerDatasetId || !layerData || layerLoading) return;
+    const details = summarizeDatasetArea(layerData.layer_data, selection.prefix);
+    if (
+      selection.count !== details.count ||
+      JSON.stringify(selection.tooltip) !== JSON.stringify(details.tooltip)
+    ) {
+      useDatasetLayerStore.getState().setChoroplethSelection({ ...selection, ...details });
     }
-    const topPrefix = Object.entries(prefixCounts).sort(([, a], [, b]) => b - a)[0]?.[0];
-    if (topPrefix) {
-      useFilterStore.getState().setActiveRegion(topPrefix + "0000000");
-    }
-  }, [layerData]);
+  }, [layerData, layerLoading, activeLayerDatasetId, choroplethSelection?.prefix]);
 
   // Initialise popup position when a new selection is made
   useEffect(() => {
@@ -1207,7 +1299,7 @@ export default function MapCanvas() {
       let styleToApply = defaultStyle;
       if (code === selectedLocation?.psgcCode) {
         styleToApply = selectedStyle;
-      } else if (showTipasAttendees) {
+      } else if (showTipasAttendees && showChoropleth) {
         // Calculate counts based on map level prefix
         const prefix =
           mapAreaLevel === "region"
@@ -1328,7 +1420,7 @@ export default function MapCanvas() {
     return () => {
       cancelled = true;
     };
-  }, [mapAreaLevel, activeRegion, loadKey]);
+  }, [mapAreaLevel, activeRegion, loadKey, geoReady]);
 
   // onEachFeature is captured by Leaflet at layer-creation time and reused for
   // all subsequent addData() calls. Use getState() throughout to avoid stale
@@ -1437,8 +1529,13 @@ export default function MapCanvas() {
       });
 
       // Store selection for the draggable choropleth popup + dot marker
-      const dsId = useDatasetLayerStore.getState().activeLayerDatasetId;
+      const dsId =
+        currentMapSource() === "imported"
+          ? useDatasetLayerStore.getState().activeLayerDatasetId
+          : null;
       const tipasActive =
+        currentMapSource() === "tipas" &&
+        useMapStore.getState().showChoropleth &&
         useAuthStore.getState().user?.capabilities?.includes("tipas.use") &&
         useFilterStore.getState().showTipasAttendees;
 
@@ -1479,7 +1576,7 @@ export default function MapCanvas() {
           y: e.containerPoint.y,
         } satisfies ChoroplethSelection);
       } else if (dsId) {
-        const cached = queryClient.getQueryData<LayerResponse>(["layer", dsId]);
+        const cached = queryClient.getQueryData<LayerResponse>(datasetLayerKey(dsId));
         // Aggregate all records whose psgc_code starts with the area prefix
         const prefix =
           level === "region"
@@ -1487,34 +1584,21 @@ export default function MapCanvas() {
             : level === "province"
               ? psgcCode.substring(0, 4)
               : psgcCode.substring(0, 6); // Include barangays within the city.
-        const matching = (cached?.layer_data ?? []).filter((p) => p.psgc_code.startsWith(prefix));
-        const aggCount = matching.reduce((s, p) => s + p.count, 0);
-        // Merge tooltip breakdowns across matching areas
-        const mergedTooltip: Record<string, Record<string, number>> = {};
-        for (const p of matching) {
-          for (const [key, val] of Object.entries(p.tooltip)) {
-            if (key === "Total") continue;
-            if (typeof val === "object" && val !== null) {
-              mergedTooltip[key] ??= {};
-              for (const [v, cnt] of Object.entries(val as Record<string, number>)) {
-                mergedTooltip[key][v] = (mergedTooltip[key][v] ?? 0) + cnt;
-              }
-            }
-          }
-        }
+        const details = summarizeDatasetArea(cached?.layer_data ?? [], prefix);
         useDatasetLayerStore.getState().setChoroplethSelection({
           psgcCode,
           prefix,
           name,
           lat: center.lat,
           lng: center.lng,
-          count: aggCount,
-          tooltip: mergedTooltip,
+          count: details.count,
+          tooltip: details.tooltip,
           x: e.containerPoint.x,
           y: e.containerPoint.y,
         } satisfies ChoroplethSelection);
       }
 
+      const selection = useDatasetLayerStore.getState().choroplethSelection;
       if (level === "region") {
         useFilterStore.getState().setActiveRegion(psgcCode);
       } else if (level === "province") {
@@ -1525,6 +1609,7 @@ export default function MapCanvas() {
       } else if (level === "municity") {
         useFilterStore.getState().setActiveCityMuni(psgcCode);
       }
+      useDatasetLayerStore.getState().setChoroplethSelection(selection);
     });
   }
 
@@ -1543,11 +1628,12 @@ export default function MapCanvas() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         <GeoJSON
-          ref={geoJsonRef}
+          ref={attachGeoJson}
           data={{ type: "FeatureCollection", features: [] } as GeoJSON.GeoJsonObject}
           style={defaultStyle}
           onEachFeature={onEachFeature}
         />
+        {activeLayerDatasetId && <ImportedEventVenue data={layerData} />}
         {activeLayerDatasetId && showDots && <AllChoroplethDots layerData={layerData} />}
         {activeLayerDatasetId && showNumbers && <ChoroplethNumbers layerData={layerData} />}
         <EarthquakeLayer />
@@ -1646,13 +1732,56 @@ export default function MapCanvas() {
           </div>
         </div>
       )}
+      {showTipasAttendees && showChoropleth && (
+        <div className="pointer-events-none absolute bottom-8 right-4 z-[800] rounded-xl bg-white p-3 shadow text-xs">
+          <strong>TIPAS attendee residence distribution</strong>
+          <p>
+            {selectedTipasEventId ? "Selected event" : "All events"} ·{" "}
+            {tipasDistribution.reduce((sum, point) => sum + point.count, 0)} mapped attendees
+          </p>
+          <div className="flex h-3 my-2">
+            {CHOROPLETH_COLORS.map((color) => (
+              <span key={color} className="flex-1" style={{ background: color }} />
+            ))}
+          </div>
+          <p>0–{tipasMaxVal} attendees per residence area</p>
+        </div>
+      )}
+      {activeLayerDatasetId && (layerLoading || layerError) && (
+        <div
+          role="status"
+          className="absolute top-16 left-4 z-[800] rounded bg-white p-3 text-xs shadow"
+        >
+          {layerError ? (
+            <button onClick={() => retryLayer()}>Could not load filtered map data. Retry</button>
+          ) : (
+            "Loading filtered map data…"
+          )}
+        </div>
+      )}
+      {showTipasAttendees && tipasDistributionError && (
+        <button
+          className="absolute top-16 left-4 z-[800] rounded bg-white p-3 text-xs shadow"
+          onClick={() => retryDistribution()}
+        >
+          Could not load TIPAS distribution. Retry
+        </button>
+      )}
       {/* Choropleth legend */}
-      {activeLayerDatasetId && layerData && (
+      {activeLayerDatasetId && layerData && showChoropleth && (
         <div className="pointer-events-none absolute bottom-8 right-4 z-[800]">
           <div className="rounded-xl bg-white/95 px-4 py-3 shadow-lg ring-1 ring-slate-200 backdrop-blur-sm min-w-[160px]">
             <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">
               {layerData.dataset.name}
             </p>
+            {layerData.summary && (
+              <p className="text-[10px] mb-2 text-slate-600">
+                {layerData.summary.total} filtered / {layerData.summary.unfiltered_total} imported
+                <br />
+                {layerData.summary.mapped} mapped · {layerData.summary.unmapped} unmapped ·{" "}
+                {layerData.summary.areas} areas
+              </p>
+            )}
             <div className="flex items-center gap-1.5 mb-1">
               {CHOROPLETH_COLORS.map((c, i) => (
                 <div key={i} className="h-3 flex-1 rounded-sm" style={{ backgroundColor: c }} />
@@ -1693,6 +1822,9 @@ export default function MapCanvas() {
                   y: dragState.current.origY + (e.clientY - dragState.current.startY),
                 });
               }}
+              onPointerCancel={() => {
+                dragState.current = null;
+              }}
               onPointerUp={() => {
                 dragState.current = null;
               }}
@@ -1721,6 +1853,7 @@ export default function MapCanvas() {
                   )}
                 </div>
                 <button
+                  aria-label="Close area details"
                   onClick={() => setChoroplethSelection(null)}
                   className="shrink-0 rounded-full p-1 text-team hover:bg-team-soft0 hover:text-white transition-colors"
                 >

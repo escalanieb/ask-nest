@@ -25,7 +25,16 @@ export interface DatasetCoverage {
   total_records: number;
 }
 
-export async function fetchDatasetCoverage(psgcPrefix?: string | null): Promise<DatasetCoverage> {
+export async function fetchDatasetCoverage(
+  psgcPrefix?: string | null,
+  datasetId?: number | null,
+  filters: Record<string, unknown> = {},
+): Promise<DatasetCoverage> {
   const qs = psgcPrefix ? `?psgc_prefix=${encodeURIComponent(psgcPrefix)}` : "";
-  return apiFetch<DatasetCoverage>(`/analytics/datasets${qs}`);
+  const params = new URLSearchParams(qs.replace(/^\?/, ""));
+  if (datasetId) {
+    params.set("dataset_id", String(datasetId));
+    params.set("filters", JSON.stringify(filters));
+  }
+  return apiFetch<DatasetCoverage>(`/analytics/datasets?${params}`);
 }

@@ -1,4 +1,5 @@
 import { accessContext } from "./teamAccess";
+import { useMapSourceStore } from "../stores/useMapSourceStore";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useAscStore } from "../stores/useAscStore";
 import { useMapStore } from "../stores/useMapStore";
@@ -27,6 +28,7 @@ function reset(identity: string) {
   useMapStore.setState(useMapStore.getInitialState());
   useFilterStore.setState(useFilterStore.getInitialState());
   useDatasetLayerStore.setState(useDatasetLayerStore.getInitialState());
+  useMapSourceStore.setState(useMapSourceStore.getInitialState());
   useWorkspaceStore.setState(useWorkspaceStore.getInitialState());
   useRssStore.setState(useRssStore.getInitialState());
   useVideoStore.setState(useVideoStore.getInitialState());

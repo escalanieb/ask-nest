@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { DatasetFilterValues } from "../services/api/datasetApi";
 
 export interface ChoroplethSelection {
   psgcCode: string;
@@ -18,6 +19,9 @@ export interface ChoroplethSelection {
 }
 
 interface DatasetLayerState {
+  filtersByDataset: Record<number, DatasetFilterValues>;
+  setDatasetFilters: (id: number, filters: DatasetFilterValues) => void;
+  clearDatasetFilters: () => void;
   /** All selected dataset IDs (multi-select checkboxes) */
   activeLayerDatasetIds: number[];
   /** Primary dataset for choropleth colouring (first in the array, or null) */
@@ -34,6 +38,13 @@ interface DatasetLayerState {
 export const useDatasetLayerStore = create<DatasetLayerState>()(
   persist(
     (set) => ({
+      filtersByDataset: {},
+      setDatasetFilters: (id, filters) =>
+        set((state) => ({
+          filtersByDataset: { ...state.filtersByDataset, [id]: filters },
+          choroplethSelection: null,
+        })),
+      clearDatasetFilters: () => set({ filtersByDataset: {}, choroplethSelection: null }),
       activeLayerDatasetIds: [],
       activeLayerDatasetId: null,
       activeLayerPsgcLevel: null,
