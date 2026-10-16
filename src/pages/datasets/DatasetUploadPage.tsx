@@ -145,7 +145,7 @@ function DatasetUploadSession() {
     : null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="h-full min-h-0 overflow-y-auto bg-slate-50">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-4">
         <Link to="/datasets" className="text-slate-400 hover:text-slate-700 transition-colors">
