@@ -1,4 +1,5 @@
 import { useMapSourceStore } from "../../stores/useMapSourceStore";
+import { canManageDatasets } from "../../lib/datasetPermissions";
 import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
 import { Link } from "react-router-dom";
 import { useFilterStore } from "../../stores/useFilterStore";
@@ -45,7 +46,7 @@ export default function CommandBar() {
 
       <div className="mx-1 h-6 w-px bg-slate-200" />
 
-      {user?.role === "admin" && user.capabilities?.includes("datasets.use") && (
+      {canManageDatasets(user) && (
         <Link
           to="/datasets/import"
           className="flex shrink-0 items-center gap-2 rounded-lg bg-team px-4 py-2 text-sm font-semibold text-team-foreground shadow-sm"

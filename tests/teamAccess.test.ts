@@ -21,5 +21,12 @@ test("persisted widgets cannot bypass disabled team access", () => {
 test("capability changes invalidate session context while ordering changes do not", () => {
   const user = { id: 1, team: { id: 2 }, capabilities: ["rss.use", "ai.use"] };
   assert.notEqual(accessContext(user), accessContext({ ...user, capabilities: ["rss.use"] }));
-  assert.equal(accessContext(user), accessContext({ ...user, capabilities: ["ai.use", "rss.use"] }));
+  assert.equal(
+    accessContext(user),
+    accessContext({ ...user, capabilities: ["ai.use", "rss.use"] }),
+  );
+  assert.notEqual(
+    accessContext({ ...user, role: "data_manager" }),
+    accessContext({ ...user, role: "viewer" }),
+  );
 });

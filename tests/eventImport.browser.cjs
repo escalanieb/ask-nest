@@ -45,9 +45,20 @@ const preview = {
 (async () => {
   const browser = await chromium.launch({ headless: true });
   try {
-    for (const profile of ["communications", "legislative", "political", "communications-viewer"]) {
-      const team = profile.replace("-viewer", "");
-      const role = profile.endsWith("-viewer") ? "viewer" : "admin";
+    for (const profile of [
+      "communications",
+      "legislative",
+      "political",
+      "legislative-manager",
+      "political-manager",
+      "communications-viewer",
+    ]) {
+      const team = profile.replace(/-(viewer|manager)$/, "");
+      const role = profile.endsWith("-viewer")
+        ? "viewer"
+        : profile.endsWith("-manager")
+          ? "data_manager"
+          : "admin";
       const context = await browser.newContext({
         viewport: { width: team === "legislative" ? 1024 : 1440, height: 1000 },
         reducedMotion: "reduce",
@@ -115,9 +126,24 @@ const preview = {
           else if (url.pathname.endsWith("/records"))
             value = {
               data: [
-                { id: 1, data: { reference: "001", sector: "Youth" }, psgc_code: "012345001" },
+                {
+                  id: 1,
+                  status: "active",
+                  data: { reference: "001", sector: "Youth" },
+                  psgc_code: "012345001",
+                },
               ],
               total: 1,
+            };
+          else if (url.pathname === "/api/datasets/1/records/1")
+            value = {
+              record: {
+                id: 1,
+                status: "active",
+                data: { reference: "001", sector: "Youth" },
+                psgc_code: "012345001",
+              },
+              history: [],
             };
           else if (url.pathname.endsWith("/inspect"))
             value = {
@@ -200,9 +226,26 @@ const preview = {
         await page.getByRole("button", { name: "RSS sources", exact: true }).click();
         assert.equal(await page.getByRole("button", { name: /Add Feed/ }).count(), 0);
         console.log("communications viewer: import and feed-management actions hidden");
+        await page.goto(base + "/datasets/1/records");
+        await page.getByText("001", { exact: true }).first().waitFor();
+        await page.getByRole("row").filter({ hasText: "001" }).click();
+        await page.getByText("Record #1", { exact: true }).waitFor();
+        assert.equal(await page.getByRole("link", { name: "Upload", exact: true }).count(), 0);
+        assert.equal(await page.getByRole("button", { name: "Edit", exact: true }).count(), 0);
+        assert.equal(
+          await page.getByRole("button", { name: "Deactivate", exact: true }).count(),
+          0,
+        );
+        await page.goto(base + "/datasets/import");
+        await page.waitForURL(base + "/");
         assert.deepEqual(errors, []);
         await context.close();
         continue;
+      }
+      if (role === "data_manager") {
+        await page.getByRole("button", { name: "Panels and sources", exact: true }).click();
+        await page.getByRole("button", { name: "RSS sources", exact: true }).click();
+        assert.equal(await page.getByRole("button", { name: /Add Feed/ }).count(), 0);
       }
       const appearance = page.getByRole("button", { name: "Appearance", exact: true });
       await appearance.focus();
@@ -216,8 +259,10 @@ const preview = {
       await page.getByRole("button", { name: meta.name }).click();
       await page.locator(".leaflet-overlay-pane path.leaflet-interactive").first().waitFor();
       await Promise.all([
-        page.waitForResponse((response) => response.url().includes("/layer?") && response.url().includes("Youth")),
-        page.getByLabel("Youth", {exact: true}).check(),
+        page.waitForResponse(
+          (response) => response.url().includes("/layer?") && response.url().includes("Youth"),
+        ),
+        page.getByLabel("Youth", { exact: true }).check(),
       ]);
       if (team === "communications") {
         await page.getByRole("button", { name: "TIPAS", exact: true }).first().click();
@@ -281,6 +326,11 @@ const preview = {
       // A reload retains the exact area and dataset filters from the map link.
       await page.reload();
       await page.getByText("001", { exact: true }).first().waitFor();
+      assert.equal(await page.getByRole("link", { name: "Upload", exact: true }).count(), 1);
+      await page.getByRole("row").filter({ hasText: "001" }).click();
+      await page.getByText("Record #1", { exact: true }).waitFor();
+      assert.equal(await page.getByRole("button", { name: "Edit", exact: true }).count(), 1);
+      assert.equal(await page.getByRole("button", { name: "Deactivate", exact: true }).count(), 1);
       const matchingRequests = calls.filter(
         (path) =>
           path.includes("/records?") && new URL(path, base).searchParams.get("per_page") === "25",
@@ -352,8 +402,20 @@ const preview = {
           0,
         );
       }
+      if (role === "data_manager") {
+        user.role = "viewer";
+        await page.clock.fastForward(61_000);
+        await page
+          .getByRole("link", { name: "Import dataset", exact: false })
+          .first()
+          .waitFor({ state: "hidden" });
+        await page.goto(base + "/datasets/import");
+        await page.waitForURL(base + "/");
+      }
       assert.deepEqual(errors, []);
-      console.log(team + ": source gating, filters, guided preview, commit and map handoff passed");
+      console.log(
+        profile + ": source gating, filters, guided preview, commit and map handoff passed",
+      );
       await context.close();
     }
   } finally {

@@ -1,12 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { sessionFetch, sessionGeneration, assertSession } from "../lib/session";
+import type { UserRole } from "../lib/datasetPermissions";
 
 export interface AuthUser {
   id: number;
   name: string;
   email: string;
-  role: "admin" | "viewer";
+  role: UserRole;
   team?: { id: number; slug: string; name: string; accent_color: string };
   capabilities?: string[];
 }

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom
 import AppLoader from "./components/AppLoader";
 import AppShell from "./components/layout/AppShell";
 import { useAuthStore } from "./stores/useAuthStore";
+import { canManageDatasets } from "./lib/datasetPermissions";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Login = lazy(() => import("./pages/Login"));
@@ -18,15 +19,15 @@ const AscPage = lazy(() => import("./pages/asc/AscPage"));
 
 const BOOT_MS = 1800;
 
-// Guard: redirect to / if not admin (used nested inside AppShell)
+// Feature access and role permissions are checked independently.
 function RequireFeature({ capability }: { capability: string }) {
   const allowed = useAuthStore((s) => s.user?.capabilities?.includes(capability));
   return allowed ? <Outlet /> : <Navigate to="/" replace />;
 }
 
-function RequireAdmin() {
-  const isAdmin = useAuthStore((s) => s.isAdmin);
-  return isAdmin() ? <Outlet /> : <Navigate to="/" replace />;
+function RequireDatasetManager() {
+  const allowed = useAuthStore((s) => canManageDatasets(s.user));
+  return allowed ? <Outlet /> : <Navigate to="/" replace />;
 }
 
 function PageFallback() {
@@ -87,9 +88,9 @@ export default function App() {
             {/* Authenticated — AppShell provides sidebar + auth guard */}
             <Route element={<AppShell />}>
               <Route path="/" element={<Dashboard />} />
-              {/* Dataset admin — admin only */}
+              {/* Dataset management — admins and data managers */}
               <Route element={<RequireFeature capability="datasets.use" />}>
-                <Route element={<RequireAdmin />}>
+                <Route element={<RequireDatasetManager />}>
                   <Route path="/datasets" element={<DatasetListPage />} />
                   <Route path="/datasets/import" element={<EventImportPage />} />
                   <Route path="/datasets/new" element={<DatasetFormPage />} />

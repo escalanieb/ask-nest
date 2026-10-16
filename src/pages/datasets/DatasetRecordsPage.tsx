@@ -1,4 +1,6 @@
 import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
+import { useAuthStore } from "../../stores/useAuthStore";
+import { canManageDatasets } from "../../lib/datasetPermissions";
 import { useFilterStore } from "../../stores/useFilterStore";
 import { geographicPrefix } from "../../lib/datasetQuery";
 import { useState } from "react";
@@ -22,6 +24,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export default function DatasetRecordsPage() {
+  const managesDatasets = useAuthStore((s) => canManageDatasets(s.user));
   const { id } = useParams<{ id: string }>();
   const datasetId = Number(id);
   const qc = useQueryClient();
@@ -106,7 +109,10 @@ export default function DatasetRecordsPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-4 shrink-0">
-        <Link to="/datasets" className="text-slate-400 hover:text-slate-700 transition-colors">
+        <Link
+          to={managesDatasets ? "/datasets" : "/"}
+          className="text-slate-400 hover:text-slate-700 transition-colors"
+        >
           <svg
             className="h-5 w-5"
             fill="none"
@@ -121,12 +127,14 @@ export default function DatasetRecordsPage() {
           <h1 className="text-lg font-bold text-slate-800">Records</h1>
           <p className="text-xs text-slate-400">{dataset?.name ?? "Loading…"}</p>
         </div>
-        <Link
-          to={`/datasets/${id}/upload`}
-          className="rounded-lg bg-team px-4 py-2 text-sm font-semibold text-white hover:bg-team-strong transition-colors"
-        >
-          Upload
-        </Link>
+        {managesDatasets && (
+          <Link
+            to={`/datasets/${id}/upload`}
+            className="rounded-lg bg-team px-4 py-2 text-sm font-semibold text-white hover:bg-team-strong transition-colors"
+          >
+            Upload
+          </Link>
+        )}
       </header>
 
       {recordsError && (
@@ -275,7 +283,7 @@ export default function DatasetRecordsPage() {
               <p className="flex-1 font-semibold text-slate-800 text-sm truncate">
                 Record #{selectedRecord.id}
               </p>
-              {!editMode && (
+              {managesDatasets && !editMode && (
                 <button
                   onClick={startEdit}
                   className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
@@ -283,19 +291,21 @@ export default function DatasetRecordsPage() {
                   Edit
                 </button>
               )}
-              <button
-                onClick={() =>
-                  toggleStatus.mutate(selectedRecord.status === "active" ? "inactive" : "active")
-                }
-                disabled={toggleStatus.isPending}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
-                  selectedRecord.status === "active"
-                    ? "border-amber-200 text-amber-700 hover:bg-amber-50"
-                    : "border-green-200 text-green-700 hover:bg-green-50"
-                }`}
-              >
-                {selectedRecord.status === "active" ? "Deactivate" : "Activate"}
-              </button>
+              {managesDatasets && (
+                <button
+                  onClick={() =>
+                    toggleStatus.mutate(selectedRecord.status === "active" ? "inactive" : "active")
+                  }
+                  disabled={toggleStatus.isPending}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                    selectedRecord.status === "active"
+                      ? "border-amber-200 text-amber-700 hover:bg-amber-50"
+                      : "border-green-200 text-green-700 hover:bg-green-50"
+                  }`}
+                >
+                  {selectedRecord.status === "active" ? "Deactivate" : "Activate"}
+                </button>
+              )}
               <button
                 onClick={() => setSelectedRecord(null)}
                 className="text-slate-300 hover:text-slate-600 transition-colors"
@@ -325,7 +335,7 @@ export default function DatasetRecordsPage() {
 
               {/* Fields — view or edit */}
               <div className="px-5 py-4 space-y-3">
-                {editMode ? (
+                {managesDatasets && editMode ? (
                   <>
                     {fields.map((f) => (
                       <div key={f.key}>

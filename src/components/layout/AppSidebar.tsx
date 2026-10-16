@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/useAuthStore";
+import { canManageDatasets } from "../../lib/datasetPermissions";
 import NestLogo from "../NestLogo";
 import AppsMenu from "./AppsMenu";
 
@@ -7,7 +8,7 @@ interface NavItem {
   to: string;
   label: string;
   icon: React.ReactNode;
-  adminOnly?: boolean;
+  datasetManagerOnly?: boolean;
   end?: boolean;
 }
 
@@ -98,19 +99,19 @@ const NAV_ITEMS: NavItem[] = [
     to: "/datasets",
     label: "Datasets",
     icon: <DatasetIcon />,
-    adminOnly: true,
+    datasetManagerOnly: true,
   },
 ];
 
 export default function AppSidebar() {
-  const isAdmin = useAuthStore((s) => s.isAdmin);
+  const managesDatasets = useAuthStore((s) => canManageDatasets(s.user));
   const logout = useAuthStore((s) => s.logout);
   const location = useLocation();
 
   const capabilities = useAuthStore((s) => s.user?.capabilities);
   const visible = NAV_ITEMS.filter(
     (item) =>
-      (!item.adminOnly || isAdmin()) &&
+      (!item.datasetManagerOnly || managesDatasets) &&
       (item.to !== "/insight" || capabilities?.includes("insight.use")) &&
       (item.to !== "/asc" || capabilities?.includes("ai.use")) &&
       (item.to !== "/datasets" || capabilities?.includes("datasets.use")),
