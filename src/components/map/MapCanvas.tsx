@@ -242,19 +242,20 @@ function AllChoroplethDots({ layerData }: { layerData: LayerResponse | undefined
 }
 
 // Renders count numbers on municity centroids
-function ChoroplethNumbers({ layerData }: { layerData: LayerResponse | undefined }) {
+function ChoroplethNumbers({ layerData, level }: { layerData: LayerResponse | undefined; level: "region" | "province" | "municity" }) {
   if (!layerData?.layer_data.length) return null;
   return (
     <>
-      {layerData.layer_data.map((pt) => {
+      {[...buildDatasetLayer(layerData, level).values()].map((pt) => {
         const pos = centroidMap.get(pt.psgc_code);
         if (!pos) return null;
         const icon = L.divIcon({
-          html: `<span style="font-size:10px;font-weight:700;color:#991b1b;text-shadow:0 1px 2px rgba(255,255,255,0.9);white-space:nowrap">${pt.count.toLocaleString()}</span>`,
-          className: "",
-          iconAnchor: [0, 0],
+          html: `<span class="dataset-count-badge">${pt.count.toLocaleString()}</span>`,
+          className: "dataset-count-icon",
+          iconSize: [48, 28],
+          iconAnchor: [24, 14],
         });
-        return <Marker key={`num-${pt.psgc_code}`} position={[pos.lat, pos.lng]} icon={icon} />;
+        return <Marker key={`num-${pt.psgc_code}`} position={[pos.lat, pos.lng]} icon={icon} interactive={false} keyboard={false} />;
       })}
     </>
   );
@@ -1653,7 +1654,7 @@ export default function MapCanvas() {
         />
         {activeLayerDatasetId && <ImportedEventVenue data={layerData} />}
         {activeLayerDatasetId && showDots && <AllChoroplethDots layerData={layerData} />}
-        {activeLayerDatasetId && showNumbers && <ChoroplethNumbers layerData={layerData} />}
+        {activeLayerDatasetId && showNumbers && <ChoroplethNumbers layerData={layerData} level={mapAreaLevel} />}
         <EarthquakeLayer />
         <GdacsLayer />
         <ReliefWebLayer />

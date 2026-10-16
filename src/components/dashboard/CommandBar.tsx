@@ -48,6 +48,14 @@ export default function CommandBar() {
 
       {canManageDatasets(user) && (
         <Link
+          to="/datasets"
+          className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Datasets
+        </Link>
+      )}
+      {canManageDatasets(user) && (
+        <Link
           to="/datasets/import"
           className="flex shrink-0 items-center gap-2 rounded-lg bg-team px-4 py-2 text-sm font-semibold text-team-foreground shadow-sm"
         >

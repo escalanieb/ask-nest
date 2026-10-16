@@ -2,6 +2,12 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../../stores/useAuthStore";
+import ImportColumnChoices from "./ImportColumnChoices";
+import {
+  suggestedColumns,
+  singleEventValue,
+  eventColumnProblem,
+} from "../../lib/eventImportSuggestions";
 import {
   fetchBatches,
   fetchDatasets,
@@ -125,6 +131,7 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
   const teamName = useAuthStore((state) => state.user?.team?.name);
   const [savedId, setSavedId] = useState<number | undefined>(dataset?.id);
   const [templateSaved, setTemplateSaved] = useState(false);
+  const [idEdited, setIdEdited] = useState(false);
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [inspection, setInspection] = useState<WorkbookInspection | null>(null);
@@ -137,11 +144,11 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
   );
   const [metadata, setMetadata] = useState<EventMetadata>(
     dataset?.event_metadata ?? {
-      id: "",
+      id: `event-${crypto.randomUUID()}`,
       name: "",
       date: "",
-      organizer: "",
-      category: "",
+      organizer: teamName ?? "Team",
+      category: "Event",
       status: "completed",
       venue: "",
     },
@@ -166,7 +173,7 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
       selectedSheet?: string;
       row: number;
     }) => inspectWorkbook(selectedFile, selectedSheet, row),
-    onSuccess: (result) => {
+    onSuccess: (result, { selectedFile }) => {
       setInspection(result);
       setSheet(result.sheet);
       setHeaderRow(result.header_row);
@@ -174,26 +181,19 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
       setConfirmed(false);
       setLocations(dataset?.import_config?.locations ?? {});
       setLocationPage(0);
-      setColumns((old) =>
-        result.columns.map(
-          (column, index) =>
-            old.find((saved) => saved.source === column.source) ?? {
-              source: column.source,
-              key:
-                column.source
-                  .toLowerCase()
-                  .replace(/[^a-z0-9]+/g, "_")
-                  .replace(/^_+|_+$/g, "")
-                  .replace(/^[^a-z]+/, "") || `field_${index + 1}`,
-              label: column.source,
-              role: "ignore",
-              type: "text",
-              filter: false,
-              popup: false,
-              required: false,
-            },
-        ),
-      );
+      const suggested = suggestedColumns(result, columns);
+      setColumns(suggested);
+      const eventId = singleEventValue(result, suggested, "event_id");
+      const eventName = singleEventValue(result, suggested, "event_name");
+      setMetadata((current) => ({
+        ...current,
+        ...(!savedId && !idEdited && eventId && /^[a-zA-Z0-9_-]{1,100}$/.test(eventId)
+          ? { id: eventId }
+          : {}),
+        ...(!current.name
+          ? { name: eventName ?? selectedFile.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ") }
+          : {}),
+      }));
     },
   });
   const save = useMutation({
@@ -231,6 +231,8 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
       current.map((column, i) => (i === index ? { ...column, ...patch } : column)),
     );
   const validateMapping = () => {
+    const eventProblem = inspection ? eventColumnProblem(inspection, columns, metadata) : "";
+    if (eventProblem) return eventProblem;
     if (
       columns.filter((column) => column.role === "participant_id").length !== 1 ||
       columns.filter((column) => column.role === "residence").length !== 1
@@ -248,7 +250,7 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
       ) ||
       new Set(fields.map((column) => column.key)).size !== fields.length
     )
-      return "Give attendee fields unique snake_case keys and labels; system keys are reserved.";
+      return "Some column labels or saved settings conflict. Open Advanced column settings to review them.";
     return "";
   };
 
@@ -272,7 +274,7 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
             return;
           }
         }
-        if (step < 3) setStep(step + 1);
+        if (step < 3) setStep((current) => current + 1);
         else save.mutate();
       }}
     >
@@ -285,7 +287,7 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
         </p>
       </div>
       <ol className="flex gap-4 text-sm" aria-label="Import progress">
-        {["Event & file", "Map columns", "Locations & review"].map((label, index) => (
+        {["Event & file", "Choose columns & filters", "Review locations"].map((label, index) => (
           <li
             key={label}
             aria-current={step === index + 1 ? "step" : undefined}
@@ -301,11 +303,8 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
           <div className="grid gap-4 md:grid-cols-2">
             {(
               [
-                ["id", "Stable event ID"],
                 ["name", "Event name"],
                 ["date", "Event date"],
-                ["organizer", "Organizer"],
-                ["category", "Program / category"],
                 ["venue", "Event venue"],
               ] as const
             ).map(([key, label]) => (
@@ -316,46 +315,76 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
                   type={key === "date" ? "date" : "text"}
                   aria-label={label}
                   required
-                  maxLength={key === "id" ? 100 : undefined}
-                  pattern={key === "id" ? "[A-Za-z0-9_\\-]+" : undefined}
-                  title={
-                    key === "id"
-                      ? "Use only letters, numbers, hyphens (-), and underscores (_). No spaces, slashes, or periods."
-                      : undefined
-                  }
-                  aria-describedby={key === "id" ? "event-id-help" : undefined}
                   value={metadata[key]}
-                  disabled={key === "id" && !!savedId}
                   onChange={(e) => setMetadata({ ...metadata, [key]: e.target.value })}
                 />
-                {key === "id" && (
-                  <span
-                    id="event-id-help"
-                    className="mt-1 block text-xs font-normal text-slate-500"
-                  >
-                    1–100 characters. Letters, numbers, hyphens (-), and underscores (_) only.
-                    Example: TEST-NCR-OUTREACH-20261016. If you map an event ID column, enter its
-                    value here.
-                  </span>
-                )}
               </label>
             ))}
+          </div>
+          <details className="rounded-lg border border-slate-200 p-3">
+            <summary className="cursor-pointer text-sm font-medium">
+              Advanced event settings
+            </summary>
+            <p className="my-2 text-xs text-slate-500">
+              The event reference is filled from your file when available, otherwise generated for
+              you. Change it only if you need a specific reference.
+            </p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm">
+                Stable event ID
+                <input
+                  aria-label="Stable event ID"
+                  className={control}
+                  value={metadata.id}
+                  maxLength={100}
+                  disabled={!!savedId}
+                  onChange={(e) => {
+                    setIdEdited(true);
+                    setMetadata((current) => ({ ...current, id: e.target.value }));
+                  }}
+                />
+              </label>
+              <label className="text-sm">
+                Organizer
+                <input
+                  className={control}
+                  value={metadata.organizer}
+                  required
+                  onChange={(e) =>
+                    setMetadata((current) => ({ ...current, organizer: e.target.value }))
+                  }
+                />
+              </label>
+              <label className="text-sm">
+                Program / category
+                <input
+                  className={control}
+                  value={metadata.category}
+                  required
+                  onChange={(e) =>
+                    setMetadata((current) => ({ ...current, category: e.target.value }))
+                  }
+                />
+              </label>
+              <label className="text-sm font-medium">
+                Event status
+                <select
+                  className={control}
+                  value={metadata.status}
+                  onChange={(e) =>
+                    setMetadata({ ...metadata, status: e.target.value as EventMetadata["status"] })
+                  }
+                >
+                  {["upcoming", "ongoing", "completed", "cancelled"].map((status) => (
+                    <option key={status}>{status}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </details>
+          <div className="grid gap-4 md:grid-cols-2">
             <label className="text-sm font-medium">
-              Event status
-              <select
-                className={control}
-                value={metadata.status}
-                onChange={(e) =>
-                  setMetadata({ ...metadata, status: e.target.value as EventMetadata["status"] })
-                }
-              >
-                {["upcoming", "ongoing", "completed", "cancelled"].map((status) => (
-                  <option key={status}>{status}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm font-medium">
-              Attendee residence level
+              Home locations are listed by
               <select
                 className={control}
                 value={level}
@@ -365,7 +394,13 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
                 }}
               >
                 {["city", "barangay", "province"].map((value) => (
-                  <option key={value}>{value}</option>
+                  <option key={value} value={value}>
+                    {value === "city"
+                      ? "City / Municipality"
+                      : value === "barangay"
+                        ? "Barangay"
+                        : "Province"}
+                  </option>
                 ))}
               </select>
             </label>
@@ -459,200 +494,244 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
       )}
       {step === 2 && inspection && (
         <section className="space-y-4 rounded-xl border bg-white p-5">
-          <div className="grid gap-3 md:grid-cols-3">
-            <label className="text-sm">
-              Attendee worksheet
-              <select className={control} value={sheet} onChange={(e) => setSheet(e.target.value)}>
-                {inspection.sheets.map((name) => (
-                  <option key={name}>{name}</option>
+          <ImportColumnChoices columns={columns} inspection={inspection} onChange={update} />
+          <details>
+            <summary className="cursor-pointer text-sm font-medium">
+              Advanced column settings
+            </summary>
+            <div className="grid gap-3 md:grid-cols-3">
+              <label className="text-sm">
+                Attendee worksheet
+                <select
+                  className={control}
+                  value={sheet}
+                  onChange={(e) => setSheet(e.target.value)}
+                >
+                  {inspection.sheets.map((name) => (
+                    <option key={name}>{name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm">
+                Header row
+                <input
+                  className={control}
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={headerRow}
+                  onChange={(e) => setHeaderRow(Number(e.target.value))}
+                />
+              </label>
+              <button
+                type="button"
+                className="self-end rounded-lg border px-3 py-2 text-sm"
+                disabled={inspect.isPending}
+                onClick={() =>
+                  file &&
+                  inspect.mutate({ selectedFile: file, selectedSheet: sheet, row: headerRow })
+                }
+              >
+                Read this worksheet
+              </button>
+            </div>
+            <label className="block text-sm">
+              Reuse a saved mapping
+              <select
+                className={control}
+                defaultValue=""
+                onChange={(e) => {
+                  const template = templates.find((item) => item.id === Number(e.target.value));
+                  if (template) {
+                    setLevel(template.configuration.psgc_level);
+                    setColumns((current) =>
+                      current.map(
+                        (column) =>
+                          template.configuration.columns.find(
+                            (saved) => saved.source === column.source,
+                          ) ?? column,
+                      ),
+                    );
+                  }
+                }}
+              >
+                <option value="">Choose a template (optional)</option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
                 ))}
               </select>
             </label>
-            <label className="text-sm">
-              Header row
-              <input
-                className={control}
-                type="number"
-                min={1}
-                max={50}
-                value={headerRow}
-                onChange={(e) => setHeaderRow(Number(e.target.value))}
-              />
-            </label>
-            <button
-              type="button"
-              className="self-end rounded-lg border px-3 py-2 text-sm"
-              disabled={inspect.isPending}
-              onClick={() =>
-                file && inspect.mutate({ selectedFile: file, selectedSheet: sheet, row: headerRow })
-              }
-            >
-              Read this worksheet
-            </button>
-          </div>
-          <label className="block text-sm">
-            Reuse a saved mapping
-            <select
-              className={control}
-              defaultValue=""
-              onChange={(e) => {
-                const template = templates.find((item) => item.id === Number(e.target.value));
-                if (template) {
-                  setLevel(template.configuration.psgc_level);
-                  setColumns((current) =>
-                    current.map(
-                      (column) =>
-                        template.configuration.columns.find(
-                          (saved) => saved.source === column.source,
-                        ) ?? column,
-                    ),
-                  );
-                }
-              }}
-            >
-              <option value="">Choose a template (optional)</option>
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <p className="text-sm text-slate-600">
-            Review every header. Choose participant ID and residence roles, then select filters and
-            popup fields for this event only.
-          </p>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[950px] text-left text-sm">
-              <thead>
-                <tr>
-                  {[
-                    "Excel column / samples",
-                    "Meaning",
-                    "Field key / label",
-                    "Type",
-                    "Filter",
-                    "Popup / list",
-                    "Required",
-                  ].map((label) => (
-                    <th key={label} className="p-2">
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {columns.map((column, index) => {
-                  const field = !["ignore", "residence", "event_id", "event_name"].includes(
-                    column.role,
-                  );
-                  return (
-                    <tr key={column.source} className="border-t">
-                      <td className="p-2 max-w-56">
-                        <strong>{column.source}</strong>
-                        <p
-                          className="truncate text-xs text-slate-500"
-                          title={inspection.columns[index]?.samples.join(" · ")}
-                        >
-                          {inspection.columns[index]?.samples.join(" · ")}
-                        </p>
-                      </td>
-                      <td className="p-2">
-                        <select
-                          className={control}
-                          aria-label={`Meaning of ${column.source}`}
-                          value={column.role}
-                          onChange={(e) =>
-                            update(index, {
-                              role: e.target.value as ImportColumn["role"],
-                              ...(e.target.value === "participant_id"
-                                ? { type: "text", required: true }
-                                : {}),
-                            })
-                          }
-                        >
-                          {roles.map((role) => (
-                            <option key={role.value} value={role.value}>
-                              {role.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="p-2">
-                        <input
-                          aria-label={`Key for ${column.source}`}
-                          className={control}
-                          disabled={!field}
-                          value={column.key}
-                          onChange={(e) => update(index, { key: e.target.value })}
-                        />
-                        <input
-                          aria-label={`Label for ${column.source}`}
-                          className={control}
-                          disabled={!field}
-                          value={column.label}
-                          onChange={(e) => update(index, { label: e.target.value })}
-                        />
-                      </td>
-                      <td className="p-2">
-                        <select
-                          aria-label={`Type of ${column.source}`}
-                          className={control}
-                          value={column.type}
-                          disabled={!field || column.role === "participant_id"}
-                          onChange={(e) =>
-                            update(index, { type: e.target.value as ImportColumn["type"] })
-                          }
-                        >
-                          {["text", "number", "date", "category"].map((type) => (
-                            <option key={type}>{type}</option>
-                          ))}
-                        </select>
-                        {column.type === "date" && (
+            <p className="text-sm text-slate-600">
+              Review every header. Choose participant ID and residence roles, then select filters
+              and popup fields for this event only.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[950px] text-left text-sm">
+                <thead>
+                  <tr>
+                    {[
+                      "Excel column / samples",
+                      "Meaning",
+                      "Field key / label",
+                      "Type",
+                      "Filter",
+                      "Popup / list",
+                      "Required",
+                    ].map((label) => (
+                      <th key={label} className="p-2">
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {columns.map((column, index) => {
+                    const field = !["ignore", "residence", "event_id", "event_name"].includes(
+                      column.role,
+                    );
+                    return (
+                      <tr key={column.source} className="border-t">
+                        <td className="p-2 max-w-56">
+                          <strong>{column.source}</strong>
+                          <p
+                            className="truncate text-xs text-slate-500"
+                            title={inspection.columns[index]?.samples.join(" · ")}
+                          >
+                            {inspection.columns[index]?.samples.join(" · ")}
+                          </p>
+                        </td>
+                        <td className="p-2">
                           <select
-                            aria-label={`Date format of ${column.source}`}
                             className={control}
-                            value={column.date_format ?? "Y-m-d"}
+                            aria-label={`Meaning of ${column.source}`}
+                            value={column.role}
                             onChange={(e) =>
                               update(index, {
-                                date_format: e.target.value as ImportColumn["date_format"],
+                                role: e.target.value as ImportColumn["role"],
+                                ...(e.target.value === "participant_id"
+                                  ? { type: "text", required: true }
+                                  : {}),
                               })
                             }
                           >
-                            {["Y-m-d", "m/d/Y", "d/m/Y"].map((format) => (
-                              <option key={format}>{format}</option>
+                            {roles.map((role) => (
+                              <option key={role.value} value={role.value}>
+                                {role.label}
+                              </option>
                             ))}
                           </select>
-                        )}
-                      </td>
-                      {(["filter", "popup", "required"] as const).map((key) => (
-                        <td key={key} className="p-2">
+                        </td>
+                        <td className="p-2">
                           <input
-                            aria-label={`${key} ${column.source}`}
-                            type="checkbox"
-                            disabled={
-                              !field || (key === "required" && column.role === "participant_id")
-                            }
-                            checked={column[key]}
-                            onChange={(e) => update(index, { [key]: e.target.checked })}
+                            aria-label={`Key for ${column.source}`}
+                            className={control}
+                            disabled={!field}
+                            value={column.key}
+                            onChange={(e) => update(index, { key: e.target.value })}
+                          />
+                          <input
+                            aria-label={`Label for ${column.source}`}
+                            className={control}
+                            disabled={!field}
+                            value={column.label}
+                            onChange={(e) => update(index, { label: e.target.value })}
                           />
                         </td>
-                      ))}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        <td className="p-2">
+                          <select
+                            aria-label={`Type of ${column.source}`}
+                            className={control}
+                            value={column.type}
+                            disabled={!field || column.role === "participant_id"}
+                            onChange={(e) =>
+                              update(index, { type: e.target.value as ImportColumn["type"] })
+                            }
+                          >
+                            {["text", "number", "date", "category"].map((type) => (
+                              <option key={type}>{type}</option>
+                            ))}
+                          </select>
+                          {column.type === "date" && (
+                            <select
+                              aria-label={`Date format of ${column.source}`}
+                              className={control}
+                              value={column.date_format ?? "Y-m-d"}
+                              onChange={(e) =>
+                                update(index, {
+                                  date_format: e.target.value as ImportColumn["date_format"],
+                                })
+                              }
+                            >
+                              {["Y-m-d", "m/d/Y", "d/m/Y"].map((format) => (
+                                <option key={format}>{format}</option>
+                              ))}
+                            </select>
+                          )}
+                          {field && column.filter && (
+                            <label className="mt-2 block text-xs">
+                              Filter style
+                              <select
+                                aria-label={`Filter style of ${column.source}`}
+                                className={control}
+                                value={
+                                  column.filter_mode ??
+                                  (column.type === "number"
+                                    ? "range"
+                                    : column.type === "date"
+                                      ? "date"
+                                      : "category")
+                                }
+                                onChange={(e) =>
+                                  update(index, {
+                                    filter_mode: e.target.value as ImportColumn["filter_mode"],
+                                  })
+                                }
+                              >
+                                <option value="category">Dropdown of distinct values</option>
+                                {column.type === "number" && (
+                                  <option value="range">Number range</option>
+                                )}
+                                {column.type === "date" && <option value="date">Date range</option>}
+                              </select>
+                            </label>
+                          )}
+                        </td>
+                        {(["filter", "popup", "required"] as const).map((key) => (
+                          <td key={key} className="p-2">
+                            <input
+                              aria-label={`${key} ${column.source}`}
+                              type="checkbox"
+                              disabled={
+                                !field || (key === "required" && column.role === "participant_id")
+                              }
+                              checked={column[key]}
+                              onChange={(e) =>
+                                update(index, {
+                                  [key]: e.target.checked,
+                                  ...(key === "filter" ? { filter_mode: "category" as const } : {}),
+                                })
+                              }
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </details>
         </section>
       )}
       {step === 3 && inspection && (
         <section className="space-y-4 rounded-xl border bg-white p-5">
           <h2 className="text-lg font-semibold">Residence locations and event confirmation</h2>
           <p className="text-sm text-slate-600">
-            9-digit codes are verified during preview. Known 10-digit codes use the reference’s
-            published 9-digit correspondence. Match place names explicitly; unresolved rows will be
-            rejected, not plotted at a guessed location.
+            We’ll verify home locations before adding attendees. If your file uses place names,
+            choose the matching locations below. Rows with unmatched locations will appear as
+            rejected in the preview so you can review them before importing.
           </p>
           {sourceLocation?.has_more && (
             <p className="text-sm text-amber-800">
@@ -799,15 +878,21 @@ export default function EventImportPage() {
   return (
     <div className="h-full overflow-y-auto bg-slate-50">
       <header className="flex items-center gap-4 border-b bg-white p-5">
+        <Link to="/datasets" className="text-sm font-semibold text-team">
+          Datasets
+        </Link>
         <Link to="/" className="text-sm text-slate-600">
           ← Map
         </Link>
         <h1 className="text-xl font-bold">Import dataset</h1>
       </header>
       <main className="mx-auto max-w-6xl space-y-6 p-6">
-        <Link className="text-sm text-team underline" to="/datasets/new?next=upload">
-          Create a generic dataset with the existing template workflow
-        </Link>
+        <details className="text-sm">
+          <summary className="cursor-pointer text-slate-600">Other import options</summary>
+          <Link className="mt-2 inline-block text-team underline" to="/datasets/new?next=upload">
+            Create a dataset manually using the template workflow
+          </Link>
+        </details>
         <label className="block text-sm font-medium">
           Create an event or append/update an existing dataset
           <select

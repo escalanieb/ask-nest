@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchDatasets,
   activateDataset,
   deactivateDataset,
+  deleteDatasetPermanently,
   downloadDatasetTemplate,
 } from "../../services/api/datasetApi";
 import type { Dataset } from "../../services/api/datasetApi";
@@ -22,6 +24,14 @@ export default function DatasetListPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const qc = useQueryClient();
+  const [deleteTarget, setDeleteTarget] = useState<Dataset | null>(null);
+  const [confirmation, setConfirmation] = useState("");
+  const [notice, setNotice] = useState("");
+  const deleteDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (deleteTarget) deleteDialog.current?.showModal();
+    else deleteDialog.current?.close();
+  }, [deleteTarget]);
 
   const {
     data: datasets = [],
@@ -53,7 +63,51 @@ export default function DatasetListPage() {
 
   const deactivate = useMutation({
     mutationFn: (id: number) => deactivateDataset(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["datasets"] }),
+    onSuccess: (_, id) => {
+      useDatasetLayerStore.setState((state) => {
+        const active = state.activeLayerDatasetIds.filter((selected) => selected !== id);
+        return {
+          activeLayerDatasetIds: active,
+          activeLayerDatasetId: active[0] ?? null,
+          activeLayerPsgcLevel: datasets.find((ds) => ds.id === active[0])?.psgc_level ?? null,
+          choroplethSelection: null,
+        };
+      });
+      qc.invalidateQueries();
+    },
+  });
+  const purge = useMutation({
+    mutationFn: ({ id, name }: { id: number; name: string }) => deleteDatasetPermanently(id, name),
+    onSuccess: (result, { id }) => {
+      useDatasetLayerStore.setState((state) => {
+        const active = state.activeLayerDatasetIds.filter((selected) => selected !== id);
+        const filters = { ...state.filtersByDataset };
+        delete filters[id];
+        return {
+          activeLayerDatasetIds: active,
+          activeLayerDatasetId: active[0] ?? null,
+          activeLayerPsgcLevel: datasets.find((ds) => ds.id === active[0])?.psgc_level ?? null,
+          filtersByDataset: filters,
+          choroplethSelection: null,
+        };
+      });
+      qc.removeQueries({
+        predicate: (query) =>
+          [
+            "dataset",
+            "dataset-layer",
+            "layer",
+            "dataset-filter-options",
+            "records",
+            "record",
+            "batches",
+          ].includes(String(query.queryKey[0])) && String(query.queryKey[1]) === String(id),
+      });
+      qc.invalidateQueries();
+      setNotice(result.message);
+      setDeleteTarget(null);
+      setConfirmation("");
+    },
   });
 
   function confirmActivate(ds: Dataset) {
@@ -89,13 +143,13 @@ export default function DatasetListPage() {
           </svg>
         </Link>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-slate-800">Dataset Registry</h1>
+          <h1 className="text-lg font-bold text-slate-800">Datasets</h1>
           <p className="text-xs text-slate-400">
-            Manage universal datasets for the map layer system
+            Your team’s imported data, records and upload history
           </p>
         </div>
         <Link
-          to="/datasets/new"
+          to="/datasets/import"
           className="flex items-center gap-2 rounded-lg bg-team px-4 py-2 text-sm font-semibold text-white hover:bg-team-strong transition-colors"
         >
           <svg
@@ -107,17 +161,25 @@ export default function DatasetListPage() {
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          New Dataset
+          Import dataset
         </Link>
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8">
-        <Link
-          to="/datasets/import"
-          className="mb-5 inline-flex rounded-lg bg-team px-4 py-2 text-sm font-semibold text-team-foreground"
-        >
-          ↑ Import event attendees
-        </Link>
+        {notice && (
+          <p role="status" className="mb-4 rounded-lg border border-slate-200 bg-white p-3 text-sm">
+            {notice}
+          </p>
+        )}
+        {(activate.isError || deactivate.isError) && (
+          <p role="alert" className="mb-4 text-sm text-red-700">
+            Could not update the dataset. Please retry.
+          </p>
+        )}
+        <p className="mb-5 text-sm text-slate-600">
+          Import one attendee workbook per event, or open an existing dataset to view records and
+          upload history.
+        </p>
         <div className="mb-5 flex flex-wrap gap-3 text-xs">
           <label>
             Event, category, organizer or status
@@ -198,10 +260,10 @@ export default function DatasetListPage() {
               Create your first dataset to start importing records
             </p>
             <Link
-              to="/datasets/new"
+              to="/datasets/import"
               className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-team px-4 py-2 text-sm font-semibold text-white hover:bg-team-strong transition-colors"
             >
-              Create Dataset
+              Import dataset
             </Link>
           </div>
         )}
@@ -257,7 +319,7 @@ export default function DatasetListPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex max-w-[420px] flex-wrap justify-end items-center gap-2 shrink-0">
                     <button
                       onClick={() => template.mutate(ds.id)}
                       disabled={template.isPending}
@@ -307,6 +369,16 @@ export default function DatasetListPage() {
                         Activate
                       </button>
                     )}
+                    <button
+                      onClick={() => {
+                        purge.reset();
+                        setConfirmation("");
+                        setDeleteTarget(ds);
+                      }}
+                      className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                    >
+                      Delete permanently
+                    </button>
                   </div>
                 </div>
               </div>
@@ -314,6 +386,70 @@ export default function DatasetListPage() {
           </div>
         )}
       </main>
+      <dialog
+        ref={deleteDialog}
+        onCancel={(event) => {
+          if (purge.isPending) event.preventDefault();
+        }}
+        onClose={() => {
+          if (!purge.isPending) setDeleteTarget(null);
+        }}
+        aria-labelledby="delete-dataset-title"
+        aria-describedby="delete-dataset-help"
+        className="fixed inset-0 m-auto w-[min(92vw,480px)] rounded-xl border border-slate-200 p-6 shadow-xl backdrop:bg-slate-900/50"
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (deleteTarget && confirmation === deleteTarget.name)
+              purge.mutate({ id: deleteTarget.id, name: confirmation });
+          }}
+        >
+          <h2 id="delete-dataset-title" className="text-lg font-semibold text-slate-900">
+            Delete dataset permanently?
+          </h2>
+          <p id="delete-dataset-help" className="my-3 text-sm text-slate-600">
+            This removes {deleteTarget?.name}, all its records, upload history and uploaded
+            workbooks. It cannot be undone through rollback. Choose Deactivate instead to preserve
+            the data.
+          </p>
+          <label className="block text-sm font-medium">
+            Type the dataset name to confirm
+            <strong className="my-2 block break-words">{deleteTarget?.name}</strong>
+            <input
+              aria-label="Dataset name confirmation"
+              className="w-full rounded-lg border border-slate-300 p-2"
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+              disabled={purge.isPending}
+              required
+              autoComplete="off"
+            />
+          </label>
+          {purge.isError && (
+            <p role="alert" className="mt-3 text-sm text-red-700">
+              Deletion failed. Check the dataset name and retry. {purge.error.message}
+            </p>
+          )}
+          <div className="mt-5 flex justify-end gap-3">
+            <button
+              type="button"
+              disabled={purge.isPending}
+              onClick={() => setDeleteTarget(null)}
+              className="rounded-lg border px-4 py-2 text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={purge.isPending || !deleteTarget || confirmation !== deleteTarget.name}
+              className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {purge.isPending ? "Deleting…" : "Delete permanently"}
+            </button>
+          </div>
+        </form>
+      </dialog>
     </div>
   );
 }

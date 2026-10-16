@@ -52,7 +52,7 @@ export default function DatasetFilterControls() {
         <button onClick={() => query.refetch()}>Could not load filters. Retry</button>
       )}
       <label className="block">
-        Search available category values
+        Find dropdown options
         <input
           className="block w-full border rounded p-2 mt-1"
           value={search}
@@ -66,28 +66,45 @@ export default function DatasetFilterControls() {
             <legend className="font-semibold px-1">{def.label}</legend>
             {def.type === "category" ? (
               <>
-                <div className="max-h-36 overflow-y-auto">
-                  {Array.from(new Set([...(value.values ?? []), ...(def.values ?? [])])).map(
-                    (option) => (
-                      <label className="flex gap-2 py-1" key={option}>
-                        <input
-                          type="checkbox"
-                          checked={value.values?.includes(option) ?? false}
-                          onChange={(e) =>
-                            update(def.key, {
-                              ...value,
-                              values: e.target.checked
-                                ? [...(value.values ?? []), option]
-                                : value.values?.filter((v) => v !== option),
-                            })
-                          }
-                        />
-                        {option}
-                      </label>
-                    ),
+                <details className="rounded-lg border border-slate-300 bg-white">
+                  <summary
+                    aria-label={`Filter by ${def.label}`}
+                    className="cursor-pointer px-3 py-2 font-medium"
+                  >
+                    {value.values?.length ? `${value.values.length} selected` : "All values"}
+                  </summary>
+                  <div className="max-h-48 overflow-y-auto border-t border-slate-200 p-2">
+                    {Array.from(new Set([...(value.values ?? []), ...(def.values ?? [])])).map(
+                      (option) => (
+                        <label className="flex gap-2 py-1" key={option}>
+                          <input
+                            type="checkbox"
+                            checked={value.values?.includes(option) ?? false}
+                            onChange={(e) =>
+                              update(def.key, {
+                                ...value,
+                                values: e.target.checked
+                                  ? [...(value.values ?? []), option]
+                                  : value.values?.filter((v) => v !== option),
+                              })
+                            }
+                          />
+                          {option}
+                        </label>
+                      ),
+                    )}
+                  </div>
+                  {(value.values?.length ?? 0) > 0 && (
+                    <button
+                      type="button"
+                      className="m-2 underline"
+                      onClick={() => update(def.key, { ...value, values: [] })}
+                    >
+                      Clear selection
+                    </button>
                   )}
-                </div>
-                {def.has_more && <p>More values available. Use category search above.</p>}
+                </details>
+                {def.has_more && <p>More values available. Search dropdown options above.</p>}
               </>
             ) : def.type === "search" ? (
               <input

@@ -85,6 +85,7 @@ const preview = {
         user,
       );
       let omitMappedRows = false;
+      let datasetDeleted = false;
       const calls = [];
       const errors = [];
       await context.route("**/*", async (route) => {
@@ -93,8 +94,17 @@ const preview = {
           calls.push(url.pathname + url.search);
           let value = [];
           if (url.pathname === "/api/auth/me") value = user;
-          else if (url.pathname === "/api/datasets") value = [dataset];
-          else if (/^\/api\/datasets\/[12]$/.test(url.pathname)) value = dataset;
+          else if (url.pathname === "/api/datasets") value = datasetDeleted ? [] : [dataset];
+          else if (url.pathname === "/api/datasets/1/permanent") {
+            assert.equal(role, "data_manager");
+            assert.equal(route.request().method(), "DELETE");
+            assert.equal(route.request().postDataJSON().confirmation, dataset.name);
+            datasetDeleted = true;
+            value = {
+              message: "Dataset, records and imports permanently deleted.",
+              file_cleanup_pending: false,
+            };
+          } else if (/^\/api\/datasets\/[12]$/.test(url.pathname)) value = dataset;
           else if (url.pathname.endsWith("/batches")) value = { data: [] };
           else if (url.pathname.endsWith("/filter-options"))
             value = {
@@ -155,10 +165,15 @@ const preview = {
                 { source: "Reference", samples: ["001"], values: ["001"] },
                 { source: "Residence", samples: ["012345001"], values: ["012345001"] },
                 { source: "Sector", samples: ["Youth"], values: ["Youth"] },
+                { source: "Event Code", samples: ["MOCK-NEW-EVENT"], values: ["MOCK-NEW-EVENT"] },
               ],
             };
-          else if (url.pathname === "/api/datasets/import/events") value = { ...dataset, id: 2 };
-          else if (url.pathname.endsWith("/upload")) value = preview;
+          else if (url.pathname === "/api/datasets/import/events") {
+            const body = route.request().postDataJSON();
+            assert.equal(body.metadata.id, "MOCK-NEW-EVENT");
+            assert.equal(body.columns.find((c) => c.source === "Sector").filter_mode, "category");
+            value = { ...dataset, id: 2 };
+          } else if (url.pathname.endsWith("/upload")) value = preview;
           else if (url.pathname === "/api/batches/10/commit")
             value = { message: "Import committed" };
           else if (url.pathname === "/api/tipas/events")
@@ -258,6 +273,34 @@ const preview = {
       );
       await page.getByRole("button", { name: meta.name }).click();
       await page.locator(".leaflet-overlay-pane path.leaflet-interactive").first().waitFor();
+      assert.ok((await page.getByRole("link", { name: "Datasets", exact: true }).count()) > 0);
+      await appearance.click();
+      await page.getByRole("button", { name: "Count Labels", exact: true }).click();
+      await page.locator(".dataset-count-badge").first().waitFor();
+      const badgeStyle = await page
+        .locator(".dataset-count-badge")
+        .first()
+        .evaluate((element) => {
+          const style = getComputedStyle(element);
+          return {
+            background: style.backgroundColor,
+            shadow: style.boxShadow,
+            radius: style.borderRadius,
+          };
+        });
+      assert.equal(badgeStyle.background, "rgb(255, 255, 255)");
+      assert.notEqual(badgeStyle.shadow, "none");
+      assert.equal(badgeStyle.radius, "8px");
+      assert.equal(await page.locator(".dataset-count-icon img").count(), 0);
+      await page.screenshot({
+        path: require("node:path").join(
+          process.env.TEMP,
+          "ask-nest-" + profile + "-count-badge.png",
+        ),
+        fullPage: true,
+      });
+      await appearance.click();
+      await page.getByLabel("Filter by Sector", { exact: true }).click();
       await Promise.all([
         page.waitForResponse(
           (response) => response.url().includes("/layer?") && response.url().includes("Youth"),
@@ -351,29 +394,44 @@ const preview = {
       });
       await page.getByRole("link", { name: "Import dataset", exact: false }).first().click();
       await page
-        .getByLabel("Stable event ID")
+        .getByLabel("Event name", { exact: true })
         .waitFor({ timeout: 5000 })
         .catch(async (error) => {
           console.log(page.url(), errors, await page.locator("body").innerText());
           throw error;
         });
-      await page.getByLabel("Stable event ID").fill("new-event");
       await page.getByLabel("Event name", { exact: true }).fill("New consultation");
       await page.getByLabel("Event date").fill("2026-10-16");
-      await page.getByLabel("Organizer", { exact: true }).fill("Test office");
-      await page.getByLabel("Program / category").fill("Consultation");
       await page.getByLabel("Event venue", { exact: true }).fill("Test venue");
       await page.locator("input[type=file]").setInputFiles({
         name: "synthetic.csv",
         mimeType: "text/csv",
-        buffer: Buffer.from("Reference,Residence,Sector\n001,012345001,Youth"),
+        buffer: Buffer.from(
+          "Reference,Residence,Sector,Event Code\n001,012345001,Youth,MOCK-NEW-EVENT",
+        ),
       });
       await page.getByRole("button", { name: "Continue", exact: true }).click();
-      await page.getByLabel("Meaning of Reference", { exact: true }).selectOption("participant_id");
-      await page.getByLabel("Meaning of Residence", { exact: true }).selectOption("residence");
-      await page.getByLabel("Meaning of Sector", { exact: true }).selectOption("field");
-      await page.getByLabel("Type of Sector", { exact: true }).selectOption("category");
-      await page.getByLabel("filter Sector", { exact: true }).check();
+      assert.equal(
+        await page.getByLabel("Use Reference for", { exact: true }).inputValue(),
+        "participant_id",
+      );
+      assert.equal(
+        await page.getByLabel("Use Residence for", { exact: true }).inputValue(),
+        "residence",
+      );
+      assert.equal(
+        await page.getByLabel("Use Event Code for", { exact: true }).inputValue(),
+        "event_id",
+      );
+      await page.getByLabel("Dropdown filter for Sector", { exact: true }).check();
+      assert.equal(await page.getByLabel("Key for Sector", { exact: true }).isVisible(), false);
+      await page.screenshot({
+        path: require("node:path").join(
+          process.env.TEMP,
+          "ask-nest-" + profile + "-simple-import.png",
+        ),
+        fullPage: true,
+      });
       await page.getByRole("button", { name: "Continue", exact: true }).click();
       await page.getByLabel("I reviewed all non-empty sheets", { exact: false }).check();
       await page.getByLabel("Every attendee in this workbook", { exact: false }).check();
@@ -403,6 +461,42 @@ const preview = {
         );
       }
       if (role === "data_manager") {
+        await page.goto(base + "/datasets");
+        await page.getByRole("button", { name: "Delete permanently", exact: true }).first().click();
+        const dialog = page.getByRole("dialog");
+        await dialog.waitFor();
+        assert.equal(
+          await dialog
+            .getByRole("button", { name: "Delete permanently", exact: true })
+            .isDisabled(),
+          true,
+        );
+        await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+        assert.equal(datasetDeleted, false);
+        await page.getByRole("button", { name: "Delete permanently", exact: true }).first().click();
+        await dialog.getByLabel("Dataset name confirmation").fill("wrong name");
+        assert.equal(
+          await dialog
+            .getByRole("button", { name: "Delete permanently", exact: true })
+            .isDisabled(),
+          true,
+        );
+        await dialog.getByLabel("Dataset name confirmation").fill(dataset.name);
+        await page.screenshot({
+          path: require("node:path").join(
+            process.env.TEMP,
+            "ask-nest-" + profile + "-delete-confirm.png",
+          ),
+          fullPage: true,
+        });
+        await dialog.getByRole("button", { name: "Delete permanently", exact: true }).click();
+        await dialog.waitFor({ state: "hidden" });
+        await page
+          .getByText("Dataset, records and imports permanently deleted.", { exact: true })
+          .waitFor();
+        assert.equal(datasetDeleted, true);
+        await page.goto(base + "/");
+        await page.getByRole("link", { name: "Import dataset", exact: false }).first().waitFor();
         user.role = "viewer";
         await page.clock.fastForward(61_000);
         await page

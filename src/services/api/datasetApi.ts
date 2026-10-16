@@ -208,6 +208,7 @@ export interface ImportColumn {
     | "ignore";
   type: "text" | "number" | "date" | "category";
   filter: boolean;
+  filter_mode?: "category" | "search" | "range" | "date";
   popup: boolean;
   required: boolean;
   date_format?: "Y-m-d" | "m/d/Y" | "d/m/Y";
@@ -336,6 +337,17 @@ export async function updateDataset(
 
 export async function deactivateDataset(id: number): Promise<void> {
   await apiFetch<{ message: string }>(`/datasets/${id}`, { method: "DELETE" });
+}
+
+export async function deleteDatasetPermanently(
+  id: number,
+  confirmation: string,
+): Promise<{ message: string; file_cleanup_pending: boolean }> {
+  return apiFetch(`/datasets/${id}/permanent`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ confirmation }),
+  });
 }
 
 export async function activateDataset(id: number): Promise<Dataset> {
