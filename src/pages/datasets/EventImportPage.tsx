@@ -258,6 +258,13 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
       onSubmit={(e) => {
         e.preventDefault();
         setError("");
+        if (!/^[a-zA-Z0-9_-]{1,100}$/.test(metadata.id)) {
+          setError(
+            "Stable event ID must be 1–100 characters using only letters, numbers, hyphens (-), or underscores (_). Use the ID in the workbook if you mapped an event ID column.",
+          );
+          setStep(1);
+          return;
+        }
         if (step === 2) {
           const problem = validateMapping();
           if (problem) {
@@ -307,11 +314,30 @@ function EventWizard({ dataset }: { dataset?: Dataset }) {
                 <input
                   className={control}
                   type={key === "date" ? "date" : "text"}
+                  aria-label={label}
                   required
+                  maxLength={key === "id" ? 100 : undefined}
+                  pattern={key === "id" ? "[A-Za-z0-9_\\-]+" : undefined}
+                  title={
+                    key === "id"
+                      ? "Use only letters, numbers, hyphens (-), and underscores (_). No spaces, slashes, or periods."
+                      : undefined
+                  }
+                  aria-describedby={key === "id" ? "event-id-help" : undefined}
                   value={metadata[key]}
                   disabled={key === "id" && !!savedId}
                   onChange={(e) => setMetadata({ ...metadata, [key]: e.target.value })}
                 />
+                {key === "id" && (
+                  <span
+                    id="event-id-help"
+                    className="mt-1 block text-xs font-normal text-slate-500"
+                  >
+                    1–100 characters. Letters, numbers, hyphens (-), and underscores (_) only.
+                    Example: TEST-NCR-OUTREACH-20261016. If you map an event ID column, enter its
+                    value here.
+                  </span>
+                )}
               </label>
             ))}
             <label className="text-sm font-medium">
