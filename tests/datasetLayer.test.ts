@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildDatasetLayer, summarizeDatasetArea } from "../src/lib/datasetLayer.ts";
+import {
+  buildDatasetLayer,
+  summarizeDatasetArea,
+  datasetBoundaryCoverage,
+  datasetBoundaryCodes,
+} from "../src/lib/datasetLayer.ts";
 import type { LayerResponse } from "../src/services/api/datasetApi.ts";
 
 const response = {
@@ -11,6 +16,38 @@ const response = {
     { psgc_code: "012346001", count: 1, display_value: 5, tooltip: {} },
   ],
 } as LayerResponse;
+
+test("boundary coverage distinguishes code-bearing records from available polygons", () => {
+  assert.deepEqual(datasetBoundaryCoverage(response, "municity", new Set(["012345000"])), {
+    withBoundary: 4,
+    withoutBoundary: 1,
+  });
+  assert.deepEqual(datasetBoundaryCoverage(response, "region", new Set()), {
+    withBoundary: 0,
+    withoutBoundary: 5,
+  });
+  const boundaries = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { ADM1_PCODE: "PH010000000" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [120, 14],
+              [121, 14],
+              [120, 15],
+              [120, 14],
+            ],
+          ],
+        },
+      },
+    ],
+  } as GeoJSON.FeatureCollection;
+  assert.deepEqual([...datasetBoundaryCodes(boundaries, "region")], ["010000000"]);
+});
 
 test("barangay imports roll up to cities, provinces and regions without mutating cached data", () => {
   const city = buildDatasetLayer(response, "municity");

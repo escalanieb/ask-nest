@@ -9,7 +9,7 @@ import { canManageDatasets } from "./lib/datasetPermissions";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Login = lazy(() => import("./pages/Login"));
 const TalaCallbackPage = lazy(() => import("./pages/TalaCallbackPage"));
-const EventImportPage = lazy(() => import("./pages/datasets/EventImportPage"));
+const GuidedImportPage = lazy(() => import("./pages/datasets/GuidedImportPage"));
 const DatasetListPage = lazy(() => import("./pages/datasets/DatasetListPage"));
 const DatasetFormPage = lazy(() => import("./pages/datasets/DatasetFormPage"));
 const DatasetUploadPage = lazy(() => import("./pages/datasets/DatasetUploadPage"));
@@ -92,7 +92,7 @@ export default function App() {
               <Route element={<RequireFeature capability="datasets.use" />}>
                 <Route element={<RequireDatasetManager />}>
                   <Route path="/datasets" element={<DatasetListPage />} />
-                  <Route path="/datasets/import" element={<EventImportPage />} />
+                  <Route path="/datasets/import" element={<GuidedImportPage />} />
                   <Route path="/datasets/new" element={<DatasetFormPage />} />
                   <Route path="/datasets/:id/edit" element={<DatasetFormPage />} />
                   <Route path="/datasets/:id/upload" element={<DatasetUploadPage />} />

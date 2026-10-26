@@ -3,7 +3,10 @@ const assert = require("node:assert/strict");
 const base = process.env.TEST_APP_URL || "http://127.0.0.1:4173";
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    channel: process.env.TEST_BROWSER_CHANNEL || "chrome",
+  });
   try {
     for (const viewport of [
       { width: 1024, height: 768 },
@@ -50,7 +53,7 @@ const base = process.env.TEST_APP_URL || "http://127.0.0.1:4173";
         return url.hostname === "127.0.0.1" ? route.continue() : route.abort();
       });
       const page = await context.newPage();
-      await page.goto(base + "/datasets/1/upload");
+      await page.goto(base + "/datasets/1/upload?history=1");
       await page
         .getByText("Synthetic-import-40.xlsx", { exact: true })
         .waitFor({ state: "attached" });

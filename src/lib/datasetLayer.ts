@@ -1,5 +1,43 @@
 import type { LayerDataPoint, LayerResponse } from "../services/api/datasetApi";
 
+/** Count records against loaded boundaries, independently of whether a code is present. */
+export function datasetBoundaryCoverage(
+  response: LayerResponse,
+  level: "region" | "province" | "municity",
+  boundaries: ReadonlySet<string>,
+) {
+  let withBoundary = 0;
+  let withoutBoundary = 0;
+  for (const point of buildDatasetLayer(response, level).values()) {
+    if (boundaries.has(point.psgc_code)) withBoundary += point.count;
+    else withoutBoundary += point.count;
+  }
+  return { withBoundary, withoutBoundary };
+}
+
+export function datasetBoundaryCodes(
+  collection: GeoJSON.FeatureCollection,
+  level: "region" | "province" | "municity",
+): Set<string> {
+  const codes = new Set<string>();
+  for (const feature of collection.features) {
+    const props = feature.properties ?? {};
+    const raw =
+      level === "region"
+        ? props.ADM1_PCODE
+        : level === "province"
+          ? props.ADM2_PCODE
+          : (props.ADM3_PCODE ?? props.ADM2_PCODE);
+    if (
+      typeof raw === "string" &&
+      feature.geometry &&
+      ["Polygon", "MultiPolygon"].includes(feature.geometry.type)
+    )
+      codes.add(raw.startsWith("PH") ? raw.slice(2) : raw);
+  }
+  return codes;
+}
+
 /** Aggregate the dataset's geography to the boundaries currently shown on the map. */
 export function buildDatasetLayer(
   response: LayerResponse,

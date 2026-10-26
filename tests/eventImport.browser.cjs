@@ -43,7 +43,10 @@ const preview = {
   },
 };
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    channel: process.env.TEST_BROWSER_CHANNEL || "chrome",
+  });
   try {
     for (const profile of [
       "communications",
@@ -227,6 +230,7 @@ const preview = {
           });
         return route.abort();
       });
+      await require("./guidedImport.browser.cjs").installImportMocks(context);
       const page = await context.newPage();
       page.on("pageerror", (error) => errors.push(error.stack));
       await page.clock.install();
@@ -393,56 +397,9 @@ const preview = {
         fullPage: true,
       });
       await page.getByRole("link", { name: "Import dataset", exact: false }).first().click();
-      await page
-        .getByLabel("Event name", { exact: true })
-        .waitFor({ timeout: 5000 })
-        .catch(async (error) => {
-          console.log(page.url(), errors, await page.locator("body").innerText());
-          throw error;
-        });
-      await page.getByLabel("Event name", { exact: true }).fill("New consultation");
-      await page.getByLabel("Event date").fill("2026-10-16");
-      await page.getByLabel("Event venue", { exact: true }).fill("Test venue");
-      await page.locator("input[type=file]").setInputFiles({
-        name: "synthetic.csv",
-        mimeType: "text/csv",
-        buffer: Buffer.from(
-          "Reference,Residence,Sector,Event Code\n001,012345001,Youth,MOCK-NEW-EVENT",
-        ),
+      await require("./guidedImport.browser.cjs").exerciseGuidedImport(page, {
+        screenshot: "ask-nest-" + profile,
       });
-      await page.getByRole("button", { name: "Continue", exact: true }).click();
-      assert.equal(
-        await page.getByLabel("Use Reference for", { exact: true }).inputValue(),
-        "participant_id",
-      );
-      assert.equal(
-        await page.getByLabel("Use Residence for", { exact: true }).inputValue(),
-        "residence",
-      );
-      assert.equal(
-        await page.getByLabel("Use Event Code for", { exact: true }).inputValue(),
-        "event_id",
-      );
-      await page.getByLabel("Dropdown filter for Sector", { exact: true }).check();
-      assert.equal(await page.getByLabel("Key for Sector", { exact: true }).isVisible(), false);
-      await page.screenshot({
-        path: require("node:path").join(
-          process.env.TEMP,
-          "ask-nest-" + profile + "-simple-import.png",
-        ),
-        fullPage: true,
-      });
-      await page.getByRole("button", { name: "Continue", exact: true }).click();
-      await page.getByLabel("I reviewed all non-empty sheets", { exact: false }).check();
-      await page.getByLabel("Every attendee in this workbook", { exact: false }).check();
-      await page.getByRole("button", { name: "Save event & preview import" }).click();
-      await page.getByRole("button", { name: "Commit", exact: false }).waitFor();
-      await page.screenshot({
-        path: require("node:path").join(process.env.TEMP, "ask-nest-" + team + "-preview.png"),
-        fullPage: true,
-      });
-      await page.getByRole("button", { name: "Commit", exact: true }).click();
-      await page.getByText("Import committed.", { exact: false }).waitFor();
       await Promise.all([
         page.waitForResponse((response) => response.url().includes("/datasets/2/layer")),
         page.getByRole("button", { name: "View on map" }).click(),

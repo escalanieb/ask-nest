@@ -74,7 +74,9 @@ export interface DatasetPayload {
 export interface DatasetRecord {
   id: number;
   dataset_id: number;
-  psgc_code: string;
+  psgc_code: string | null;
+  location_source?: Record<string, string> | null;
+  location_reason?: string | null;
   data: Record<string, unknown>;
   match_hash: string;
   status: RecordStatus;
@@ -176,6 +178,7 @@ export interface LayerResponse {
     unfiltered_total: number;
     mapped: number;
     unmapped: number;
+    unknown?: number;
     areas: number;
     unique_participants: number | null;
   };
@@ -206,7 +209,8 @@ export interface ImportColumn {
     | "event_id"
     | "event_name"
     | "ignore";
-  type: "text" | "number" | "date" | "category";
+  type: "text" | "number" | "date" | "category" | "select" | "email" | "url";
+  options?: string[];
   filter: boolean;
   filter_mode?: "category" | "search" | "range" | "date";
   popup: boolean;
@@ -214,12 +218,17 @@ export interface ImportColumn {
   date_format?: "Y-m-d" | "m/d/Y" | "d/m/Y";
 }
 export interface ImportConfiguration {
+  version?: number;
+  type?: "event" | "general";
+  location_source?: Partial<Record<"single" | "province" | "city" | "barangay", string>>;
   sheet: string;
   header_row: number;
   columns: ImportColumn[];
   locations: Record<string, string | null>;
 }
 export interface WorkbookInspection {
+  suggestions?: { sheet: string; header_row: number; score: number }[];
+  sample_rows?: (string | null)[][];
   sheets: string[];
   sheet: string;
   header_row: number;
@@ -452,14 +461,14 @@ export async function updateRecord(
   datasetId: number,
   recordId: number,
   data: Record<string, unknown>,
-  psgcCode?: string,
+  psgcCode?: string | null,
 ): Promise<DatasetRecord> {
   return apiFetch<DatasetRecord>(`/datasets/${datasetId}/records/${recordId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       data,
-      ...(psgcCode ? { psgc_code: psgcCode } : {}),
+      ...(psgcCode !== undefined ? { psgc_code: psgcCode } : {}),
     }),
   });
 }
@@ -508,7 +517,7 @@ export async function fetchDatasetLayer(
 
 export interface MapPanelRecord {
   id: number;
-  psgc_code: string;
+  psgc_code: string | null;
   data: Record<string, unknown>;
 }
 

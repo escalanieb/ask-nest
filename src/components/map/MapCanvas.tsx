@@ -1,6 +1,7 @@
 import { currentMapSource, useEffectiveMapSource } from "../../stores/useMapSourceStore";
 import { geographicPrefix, datasetLayerKey } from "../../lib/datasetQuery";
-import { buildDatasetLayer, summarizeDatasetArea } from "../../lib/datasetLayer";
+import { buildDatasetLayer, summarizeDatasetArea, datasetBoundaryCodes } from "../../lib/datasetLayer";
+import DatasetCoverage from "./DatasetCoverage";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useEffect, useRef, useState, useCallback, type JSX } from "react";
 import {
@@ -1205,6 +1206,7 @@ export default function MapCanvas() {
     if (layer) setGeoReady(true);
   }, []);
   const [geoLoading, setGeoLoading] = useState(false);
+  const [loadedBoundaries, setLoadedBoundaries] = useState<{ level: string; codes: Set<string> }>(() => ({ level: '', codes: new Set() }));
   const [geoError, setGeoError] = useState<string | null>(null);
   const [loadKey, setLoadKey] = useState(0);
 
@@ -1389,6 +1391,7 @@ export default function MapCanvas() {
           }
           geoJsonRef.current.clearLayers();
           geoJsonRef.current.addData(data);
+          setLoadedBoundaries({ level: mapAreaLevel, codes: datasetBoundaryCodes(data, mapAreaLevel) });
           setGeoVersion((v) => v + 1);
         } else if (mapAreaLevel === "province") {
           const urls = PROVINCE_REGION_CODES.map(
@@ -1403,10 +1406,12 @@ export default function MapCanvas() {
           }
           geoJsonRef.current.clearLayers();
           geoJsonRef.current.addData(merged);
+          setLoadedBoundaries({ level: mapAreaLevel, codes: datasetBoundaryCodes(merged, mapAreaLevel) });
           setGeoVersion((v) => v + 1);
         } else if (mapAreaLevel === "municity") {
           if (!activeRegion) {
             geoJsonRef.current.clearLayers();
+            setLoadedBoundaries({ level: mapAreaLevel, codes: new Set() });
             setGeoLoading(false);
             return;
           }
@@ -1428,6 +1433,7 @@ export default function MapCanvas() {
           centroidMap.clear();
           geoJsonRef.current.clearLayers();
           geoJsonRef.current.addData(merged);
+          setLoadedBoundaries({ level: mapAreaLevel, codes: datasetBoundaryCodes(merged, mapAreaLevel) });
           setGeoVersion((v) => v + 1);
         }
       } finally {
@@ -1793,14 +1799,7 @@ export default function MapCanvas() {
             <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">
               {layerData.dataset.name}
             </p>
-            {layerData.summary && (
-              <p className="text-[10px] mb-2 text-slate-600">
-                {layerData.summary.total} filtered / {layerData.summary.unfiltered_total} imported
-                <br />
-                {layerData.summary.mapped} mapped · {layerData.summary.unmapped} unmapped ·{" "}
-                {layerData.summary.areas} areas
-              </p>
-            )}
+            <DatasetCoverage data={layerData} level={mapAreaLevel} boundaries={loadedBoundaries.codes} loading={geoLoading || loadedBoundaries.level !== mapAreaLevel} error={!!geoError} />
             <div className="flex items-center gap-1.5 mb-1">
               {CHOROPLETH_COLORS.map((c, i) => (
                 <div key={i} className="h-3 flex-1 rounded-sm" style={{ backgroundColor: c }} />

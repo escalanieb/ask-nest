@@ -31,9 +31,15 @@ export default function DatasetRecordsPage() {
   const allFilters = useDatasetLayerStore((s) => s.filtersByDataset);
   const filters = allFilters[datasetId] ?? {};
   const geo = useFilterStore();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const prefix = params.get("psgc_prefix") ?? geographicPrefix(geo);
   const filterJSON = params.get("filters") ?? JSON.stringify(filters);
+  let locationStatus = "";
+  try {
+    locationStatus = JSON.parse(filterJSON)?.__location_status?.values?.[0] ?? "";
+  } catch {
+    /* Server reports malformed filters. */
+  }
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -175,6 +181,31 @@ export default function DatasetRecordsPage() {
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
+            <select
+              aria-label="Location status"
+              className="input w-40"
+              value={locationStatus}
+              onChange={(e) => {
+                let updated = {};
+                try {
+                  updated = JSON.parse(filterJSON);
+                } catch {
+                  /* Start with a valid filter object. */
+                }
+                const nextFilters = {
+                  ...updated,
+                  __location_status: { values: e.target.value ? [e.target.value] : [] },
+                };
+                const nextParams = new URLSearchParams(params);
+                nextParams.set("filters", JSON.stringify(nextFilters));
+                setParams(nextParams, { replace: true });
+                setPage(1);
+              }}
+            >
+              <option value="">All locations</option>
+              <option value="unknown">Location unknown</option>
+              <option value="provided">Location provided</option>
+            </select>
             {records && (
               <span className="text-xs text-slate-400 shrink-0">
                 {records.total.toLocaleString()} records
@@ -212,6 +243,14 @@ export default function DatasetRecordsPage() {
                   {records.data.map((record) => (
                     <tr
                       key={record.id}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedRecord(record);
+                          setEditMode(false);
+                        }
+                      }}
                       onClick={() => {
                         setSelectedRecord(record);
                         setEditMode(false);
@@ -220,7 +259,9 @@ export default function DatasetRecordsPage() {
                         selectedRecord?.id === record.id ? "bg-indigo-50/50" : ""
                       }`}
                     >
-                      <td className="px-5 py-2 font-mono text-slate-500">{record.psgc_code}</td>
+                      <td className="px-5 py-2 font-mono text-slate-500">
+                        {record.psgc_code ?? "Location unknown"}
+                      </td>
                       {fields.slice(0, 4).map((f) => (
                         <td
                           key={f.key}
@@ -307,6 +348,7 @@ export default function DatasetRecordsPage() {
                 </button>
               )}
               <button
+                aria-label="Close record details"
                 onClick={() => setSelectedRecord(null)}
                 className="text-slate-300 hover:text-slate-600 transition-colors"
               >
@@ -329,8 +371,20 @@ export default function DatasetRecordsPage() {
                   PSGC Code
                 </p>
                 <p className="mt-0.5 font-mono text-sm text-slate-700">
-                  {selectedRecord.psgc_code}
+                  {selectedRecord.psgc_code ?? "Location unknown"}
                 </p>
+                {selectedRecord.location_source && (
+                  <p className="mt-2 break-words text-xs text-slate-500">
+                    Source location:{" "}
+                    {Object.values(selectedRecord.location_source).filter(Boolean).join(" · ") ||
+                      "Not provided"}
+                  </p>
+                )}
+                {selectedRecord.location_reason && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Location review: {selectedRecord.location_reason}
+                  </p>
+                )}
               </div>
 
               {/* Fields — view or edit */}
@@ -339,11 +393,15 @@ export default function DatasetRecordsPage() {
                   <>
                     {fields.map((f) => (
                       <div key={f.key}>
-                        <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
+                        <label
+                          htmlFor={`record-field-${f.key}`}
+                          className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1"
+                        >
                           {f.label}
                         </label>
                         {f.type === "select" && f.options?.length ? (
                           <select
+                            id={`record-field-${f.key}`}
                             className="input text-sm"
                             value={editData[f.key] ?? ""}
                             onChange={(e) =>
@@ -362,6 +420,7 @@ export default function DatasetRecordsPage() {
                           </select>
                         ) : (
                           <input
+                            id={`record-field-${f.key}`}
                             className="input text-sm"
                             type={
                               f.type === "number" ? "number" : f.type === "date" ? "date" : "text"

@@ -4,7 +4,7 @@ import { useFilterStore } from "../../stores/useFilterStore";
 import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useState, useRef } from "react";
-import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
+import { Link, Navigate, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchBatchPreview,
@@ -23,6 +23,9 @@ type PreviewTab = "new" | "updates" | "conflicts" | "rejected";
 
 export default function DatasetUploadPage() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  if (!new URLSearchParams(location.search).has("history") && !location.state)
+    return <Navigate replace to={`/datasets/import?dataset=${id}`} />;
   return <DatasetUploadSession key={id} />;
 }
 
@@ -277,6 +280,15 @@ function DatasetUploadSession() {
         )}
         {!preview && !pendingBatch && !loadingBatches && !dataset?.event_key && (
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Choose a spreadsheet for legacy upload"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                fileRef.current?.click();
+              }
+            }}
             onDragOver={(e) => {
               e.preventDefault();
               setDragging(true);

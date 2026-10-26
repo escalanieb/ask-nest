@@ -63,7 +63,17 @@ export function suggestedColumns(
         .replace(/^_+|_+$/g, "")
         .replace(/^[^a-z]+/, "")
         .slice(0, 55) || `column_${index + 1}`;
-    if (["event_id", "event_name", "psgc_code"].includes(base)) base = `column_${base}`;
+    if (
+      [
+        "event_id",
+        "event_name",
+        "psgc_code",
+        "location_status",
+        "location_source",
+        "location_reason",
+      ].includes(base)
+    )
+      base = `column_${base}`;
     let key = base;
     for (let suffix = 2; usedKeys.has(key); suffix++) key = `${base}_${suffix}`;
     usedKeys.add(key);

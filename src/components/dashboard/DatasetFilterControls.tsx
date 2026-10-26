@@ -47,6 +47,25 @@ export default function DatasetFilterControls() {
       >
         Clear dataset and area filters
       </button>
+      <label className="block">
+        Location status
+        <select
+          className="mt-1 block w-full rounded border p-2"
+          value={filters.__location_status?.values?.[0] ?? ""}
+          onChange={(e) =>
+            update("__location_status", { values: e.target.value ? [e.target.value] : [] })
+          }
+        >
+          <option value="">All records</option>
+          <option value="unknown">Location unknown</option>
+          <option value="provided">Location provided</option>
+        </select>
+      </label>
+      {filters.__location_status?.values?.includes("unknown") && geographicPrefix(geo) && (
+        <p className="text-amber-800">
+          Unknown locations cannot match a selected area. Clear the area filter to see them.
+        </p>
+      )}
       {query.isLoading && <p>Loading filters…</p>}
       {query.isError && (
         <button onClick={() => query.refetch()}>Could not load filters. Retry</button>
