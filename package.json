@@ -14,7 +14,7 @@
   "dependencies": {
     "@base-ui/react": "^1.6.0",
     "@tailwindcss/vite": "^4.2.4",
-    "@tala/sso-react": "file:tala-sso-react-1.0.4.tgz",
+    "@tala/sso-react": "file:tala-sso-react-1.1.1.tgz",
     "@tanstack/react-query": "^5.100.1",
     "@tanstack/react-table": "^8.21.3",
     "@types/leaflet": "^1.9.21",
