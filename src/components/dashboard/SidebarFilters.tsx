@@ -201,9 +201,9 @@ function MapAreaToggle() {
           ))}
         </div>
         <p className="text-[10px] text-slate-400 leading-relaxed">
-          <span className="font-semibold text-slate-500">Note:</span> Province and Municity GeoJSON
-          files are larger (~10–30 MB). Province loads quickly; Municities may take a few seconds on
-          first load.
+          <span className="font-semibold text-slate-500">Historical boundaries:</span> this map
+          uses the compatible 2019 snapshot. Areas changed since then may be unavailable. Choose
+          a region to view its cities and municipalities.
         </p>
       </div>
     </AccordionSection>

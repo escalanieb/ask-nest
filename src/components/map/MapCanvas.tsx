@@ -2,6 +2,7 @@ import { currentMapSource, useEffectiveMapSource } from "../../stores/useMapSour
 import { geographicPrefix, datasetLayerKey } from "../../lib/datasetQuery";
 import { buildDatasetLayer, summarizeDatasetArea, datasetBoundaryCodes } from "../../lib/datasetLayer";
 import DatasetCoverage from "./DatasetCoverage";
+import { createBoundaryLoader, boundaryAttribution } from "../../services/mapBoundaries";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useEffect, useRef, useState, useCallback, type JSX } from "react";
 import {
@@ -51,147 +52,13 @@ L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 
 const PH_CENTER: [number, number] = [12.8797, 121.774];
 
-const BASE_GEO_URL =
-  "https://raw.githubusercontent.com/faeldon/philippines-json-maps/master/2019/geojson/";
-
-// One file per region (18 regions)
-const PROVINCE_REGION_CODES = [
-  "010000000",
-  "020000000",
-  "030000000",
-  "040000000",
-  "050000000",
-  "060000000",
-  "070000000",
-  "080000000",
-  "090000000",
-  "100000000",
-  "110000000",
-  "120000000",
-  "130000000",
-  "140000000",
-  "150000000",
-  "160000000",
-  "170000000",
-  "180000000",
-];
-
-// One file per province — grouped by region prefix (first 2 digits)
-const MUNICITY_PROVINCE_CODES = [
-  "012800000",
-  "012900000",
-  "013300000",
-  "015500000",
-  "020900000",
-  "021500000",
-  "023100000",
-  "025000000",
-  "025700000",
-  "030800000",
-  "031400000",
-  "034900000",
-  "035400000",
-  "036900000",
-  "037100000",
-  "037700000",
-  "041000000",
-  "042100000",
-  "043400000",
-  "045600000",
-  "045800000",
-  "050500000",
-  "051600000",
-  "051700000",
-  "052000000",
-  "054100000",
-  "056200000",
-  "060400000",
-  "060600000",
-  "061900000",
-  "063000000",
-  "067900000",
-  "071200000",
-  "072200000",
-  "076100000",
-  "082600000",
-  "083700000",
-  "084800000",
-  "086000000",
-  "086400000",
-  "087800000",
-  "097200000",
-  "097300000",
-  "098300000",
-  "099700000",
-  "101300000",
-  "101800000",
-  "103500000",
-  "104200000",
-  "104300000",
-  "112300000",
-  "112400000",
-  "112500000",
-  "118200000",
-  "118600000",
-  "124700000",
-  "126300000",
-  "126500000",
-  "128000000",
-  "129800000",
-  "133900000",
-  "137400000",
-  "137500000",
-  "137600000",
-  "140100000",
-  "141100000",
-  "142700000",
-  "143200000",
-  "144400000",
-  "148100000",
-  "150700000",
-  "153600000",
-  "153800000",
-  "156600000",
-  "157000000",
-  "160200000",
-  "160300000",
-  "166700000",
-  "166800000",
-  "168500000",
-  "174000000",
-  "175100000",
-  "175200000",
-  "175300000",
-  "175900000",
-  "184500000",
-  "184600000",
-];
+const loadBoundaries = createBoundaryLoader(fetch, `${import.meta.env.BASE_URL}maps/ph-2019/`);
 
 const GEO_LEVEL_TYPES = {
   region: "Region",
   province: "Province",
   municity: "City/Municipality",
 } as const;
-
-async function fetchGeoJSON(url: string): Promise<GeoJSON.FeatureCollection | null> {
-  try {
-    const r = await fetch(url);
-    if (!r.ok) return null;
-    return r.json() as Promise<GeoJSON.FeatureCollection>;
-  } catch {
-    return null;
-  }
-}
-
-function mergeCollections(
-  collections: (GeoJSON.FeatureCollection | null)[],
-): GeoJSON.FeatureCollection {
-  const features: GeoJSON.Feature[] = [];
-  for (const c of collections) {
-    if (c?.features) features.push(...c.features);
-  }
-  return { type: "FeatureCollection", features };
-}
 
 // Module-level map instance — set once on mount, kept for future use
 
@@ -883,13 +750,7 @@ async function eventAreaCentre(code: string) {
     : area.endsWith("00000")
       ? "province"
       : "municity";
-  const path =
-    level === "region"
-      ? "regions/hires/regions.0.1.json"
-      : level === "province"
-        ? "provinces/hires/provinces-region-ph" + area.slice(0, 2) + "0000000.0.1.json"
-        : "municties/hires/municities-province-ph" + area.slice(0, 4) + "00000.0.1.json";
-  const collection = await fetchGeoJSON(BASE_GEO_URL + path);
+  const collection = await loadBoundaries(level, level === "region" ? undefined : area.slice(0, 2) + "0000000", level === "municity" ? area.slice(0, 4) + "00000" : undefined);
   const field =
     level === "region" ? "ADM1_PCODE" : level === "province" ? "ADM2_PCODE" : "ADM3_PCODE";
   const feature = collection?.features.find(
@@ -1383,7 +1244,7 @@ export default function MapCanvas() {
 
       try {
         if (mapAreaLevel === "region") {
-          const data = await fetchGeoJSON(`${BASE_GEO_URL}regions/hires/regions.0.1.json`);
+          const data = await loadBoundaries("region");
           if (cancelled) return;
           if (!data || data.features.length === 0) {
             setGeoError("Could not load region boundaries. Check your connection and try again.");
@@ -1394,12 +1255,8 @@ export default function MapCanvas() {
           setLoadedBoundaries({ level: mapAreaLevel, codes: datasetBoundaryCodes(data, mapAreaLevel) });
           setGeoVersion((v) => v + 1);
         } else if (mapAreaLevel === "province") {
-          const urls = PROVINCE_REGION_CODES.map(
-            (code) => `${BASE_GEO_URL}provinces/hires/provinces-region-ph${code}.0.1.json`,
-          );
-          const results = await Promise.all(urls.map(fetchGeoJSON));
+          const merged = await loadBoundaries("province");
           if (cancelled) return;
-          const merged = mergeCollections(results);
           if (merged.features.length === 0) {
             setGeoError("Could not load province boundaries. Check your connection and try again.");
             return;
@@ -1415,15 +1272,8 @@ export default function MapCanvas() {
             setGeoLoading(false);
             return;
           }
-          // Match province files by first 2 digits of region code
-          const prefix = activeRegion.substring(0, 2);
-          const codes = MUNICITY_PROVINCE_CODES.filter((c) => c.startsWith(prefix));
-          const urls = codes.map(
-            (code) => `${BASE_GEO_URL}municties/hires/municities-province-ph${code}.0.1.json`,
-          );
-          const results = await Promise.all(urls.map(fetchGeoJSON));
+          const merged = await loadBoundaries("municity", activeRegion);
           if (cancelled) return;
-          const merged = mergeCollections(results);
           if (merged.features.length === 0) {
             setGeoError(
               "Could not load city/municipality boundaries. Check your connection and try again.",
@@ -1436,6 +1286,8 @@ export default function MapCanvas() {
           setLoadedBoundaries({ level: mapAreaLevel, codes: datasetBoundaryCodes(merged, mapAreaLevel) });
           setGeoVersion((v) => v + 1);
         }
+      } catch (error) {
+        if (!cancelled) setGeoError(error instanceof Error ? error.message : "Could not load local boundaries. Retry.");
       } finally {
         if (!cancelled) setGeoLoading(false);
       }
@@ -1653,6 +1505,7 @@ export default function MapCanvas() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         <GeoJSON
+          attribution={boundaryAttribution}
           ref={attachGeoJson}
           data={{ type: "FeatureCollection", features: [] } as GeoJSON.GeoJsonObject}
           style={defaultStyle}

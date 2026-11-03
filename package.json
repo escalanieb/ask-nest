@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "maps:sync": "node scripts/sync-map-boundaries.mjs",
+    "maps:check": "node scripts/sync-map-boundaries.mjs --check",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "format": "prettier . --write",

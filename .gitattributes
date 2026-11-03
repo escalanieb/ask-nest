@@ -1,0 +1,3 @@
+# Boundary checksums must be identical on Windows and Linux checkouts.
+public/maps/ph-2019/*.json text eol=lf
+public/maps/ph-2019/*.txt text eol=lf
