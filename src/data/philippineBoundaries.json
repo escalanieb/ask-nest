@@ -1,0 +1,1195 @@
+{
+  "schemaVersion": 1,
+  "vintage": "2019",
+  "resolution": "medres",
+  "coordinateDecimals": 6,
+  "repository": "https://github.com/faeldon/philippines-json-maps",
+  "revision": "8eeead560246863c8c820c31ca6fbca81a279477",
+  "regions": {
+    "file": "regions.json",
+    "codeField": "ADM1_PCODE",
+    "featureCount": 18,
+    "regionCodes": [
+      "150000000",
+      "140000000",
+      "130000000",
+      "180000000",
+      "010000000",
+      "020000000",
+      "030000000",
+      "040000000",
+      "170000000",
+      "090000000",
+      "050000000",
+      "060000000",
+      "070000000",
+      "080000000",
+      "100000000",
+      "110000000",
+      "120000000",
+      "160000000"
+    ],
+    "sha256": "fad8d8789aa82e59c3dc5f4cc05abd76e89743563c482fa3a87ad2cd12904267",
+    "sourcePath": "2019/geojson/regions/medres/regions.0.01.json",
+    "sourceBlob": "e1b27c7b4f56a85433d638457c8a08adceea229d"
+  },
+  "provinces": {
+    "100000000": {
+      "file": "provinces-100000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "100000000"
+      ],
+      "sha256": "cc0b85391d69932deb10239b1fd3c2a0dbfd1173856049c4b259bdf8c280db49",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph100000000.0.01.json",
+      "sourceBlob": "a0d544466158cb25e48c05f243055c4bade7eb8d"
+    },
+    "110000000": {
+      "file": "provinces-110000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "110000000"
+      ],
+      "sha256": "542eaf75542ba1481c1241ea99c9c8c0d74642fe8ee0430fed6a50e8b6bd0a77",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph110000000.0.01.json",
+      "sourceBlob": "1fbbd30921e63d8078ef6fb242e20585b4bf9f91"
+    },
+    "120000000": {
+      "file": "provinces-120000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "120000000"
+      ],
+      "sha256": "ab454fb3b90b9677da2074bab70126123e48966cde8d6f9038013c60e0d7d2c5",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph120000000.0.01.json",
+      "sourceBlob": "e93d2c50e8e0151b06ed888cc8cad9385dbb0d6c"
+    },
+    "130000000": {
+      "file": "provinces-130000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 4,
+      "regionCodes": [
+        "130000000"
+      ],
+      "sha256": "db91a4199e8199f80ebe3044a4808402cdfe0fa1972d2a3eff3962c0cdcbae35",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph130000000.0.01.json",
+      "sourceBlob": "ab2b0ec4a0647c94d3d7b1a0510fd8c2598aa996"
+    },
+    "140000000": {
+      "file": "provinces-140000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 6,
+      "regionCodes": [
+        "140000000"
+      ],
+      "sha256": "d19453ff84ea460ff131997e9fd02446a39c52836988208726cf0f327ce4b8c6",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph140000000.0.01.json",
+      "sourceBlob": "9af38641613c41646834c9c0d03fbaed46620238"
+    },
+    "150000000": {
+      "file": "provinces-150000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "150000000"
+      ],
+      "sha256": "a6d9159493a6c7d2644fd860f724700108134b7649351b54416ef1bf68b1b676",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph150000000.0.01.json",
+      "sourceBlob": "e9eb6402207058e4cb3e72ab4ae91bfc4cb5c6d3"
+    },
+    "160000000": {
+      "file": "provinces-160000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "160000000"
+      ],
+      "sha256": "da22ac7473141d7a2e909a5df9444572ebd3d7c6d9cb6a145bf29303b9db6291",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph160000000.0.01.json",
+      "sourceBlob": "76dc03951c2b8981a5fa4c52bbbe9c9288afd2e7"
+    },
+    "170000000": {
+      "file": "provinces-170000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "170000000"
+      ],
+      "sha256": "751ca0e841681e140965d060eec98976653431f6f4cf60275ca8ca1f37f9c9b8",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph170000000.0.01.json",
+      "sourceBlob": "d137654a5c0414ce7bf0f1a783b626fc607900bc"
+    },
+    "180000000": {
+      "file": "provinces-180000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 2,
+      "regionCodes": [
+        "180000000"
+      ],
+      "sha256": "f081278a7274f3e6e08fb22a578aefd730435f65bf141083da3a35356977776d",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph180000000.0.01.json",
+      "sourceBlob": "5f580e60443349b4435707511da7c8829ca8a97e"
+    },
+    "010000000": {
+      "file": "provinces-010000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 4,
+      "regionCodes": [
+        "010000000"
+      ],
+      "sha256": "117d71507edfcdf44d95733c906ab6568f24d30a209f879253d2b62ed6370529",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph010000000.0.01.json",
+      "sourceBlob": "b42a219d3184a72175014b6718287039a9c01386"
+    },
+    "020000000": {
+      "file": "provinces-020000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "020000000"
+      ],
+      "sha256": "4c4099cb8798eb39185d70ef0982426466185a40e6f7ae868126d7894a8b8bff",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph020000000.0.01.json",
+      "sourceBlob": "de861db551013a83d4c8c313709fd058d014aec8"
+    },
+    "030000000": {
+      "file": "provinces-030000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 7,
+      "regionCodes": [
+        "030000000"
+      ],
+      "sha256": "5566176b287b1438f94c40b60105b9b738fd8b7fc9deb12493a290cb4403756b",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph030000000.0.01.json",
+      "sourceBlob": "a7a4b950f650f129aba8b02402b9700c2c96d941"
+    },
+    "040000000": {
+      "file": "provinces-040000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "040000000"
+      ],
+      "sha256": "7d5ab9d758a6c8496cf8e4ae9bdc128d106f1f5117af8c261600eeca4936b33c",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph040000000.0.01.json",
+      "sourceBlob": "dbda178eac1fe718f00fc448284c81051a1edb59"
+    },
+    "050000000": {
+      "file": "provinces-050000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 6,
+      "regionCodes": [
+        "050000000"
+      ],
+      "sha256": "0785d64a3ba94972dea17ffaf8f90493175f737c5807ce57d5ebca503018b63c",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph050000000.0.01.json",
+      "sourceBlob": "aaa25ae5829fa2116cd143df262f99bf25eb3061"
+    },
+    "060000000": {
+      "file": "provinces-060000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "060000000"
+      ],
+      "sha256": "2808f173dc54409aa6694b3c42147274e86376538217d6efdb85a93da0aa21bc",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph060000000.0.01.json",
+      "sourceBlob": "6e051d07122137539e9a8fe43372137f39f1c462"
+    },
+    "070000000": {
+      "file": "provinces-070000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 3,
+      "regionCodes": [
+        "070000000"
+      ],
+      "sha256": "802640a170a68e81988bd4b6d0f9e9556375c0a168625c36b7a35a28002561cb",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph070000000.0.01.json",
+      "sourceBlob": "5afeac02c3cb42f299efa3c8e11941b479dbfe27"
+    },
+    "080000000": {
+      "file": "provinces-080000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 6,
+      "regionCodes": [
+        "080000000"
+      ],
+      "sha256": "7dc778e508774c8ad3cc86f3a04d26c72dbd8ed86e9c447d391f616bfeb11ba8",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph080000000.0.01.json",
+      "sourceBlob": "ee3f4035f3c3070357a3c8b45b1be020b0382077"
+    },
+    "090000000": {
+      "file": "provinces-090000000.json",
+      "codeField": "ADM2_PCODE",
+      "featureCount": 4,
+      "regionCodes": [
+        "090000000"
+      ],
+      "sha256": "a2be4dc52032da4ea7ad4b0003396306c7209ce40a0ae7d50ec71a4d664804b3",
+      "sourcePath": "2019/geojson/provinces/medres/provinces-region-ph090000000.0.01.json",
+      "sourceBlob": "61f7d4dfc25c55be61dc43bc22c707187b7bdd6c"
+    }
+  },
+  "municipalities": {
+    "101300000": {
+      "file": "municipalities-101300000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 22,
+      "regionCodes": [
+        "100000000"
+      ],
+      "sha256": "7378f06b87d456b568f19bd980b3cc965439f93bc16142826d7310acc466ebdc",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph101300000.0.01.json",
+      "sourceBlob": "fca0275ac9d1458efb6b73ed402ba28668afbd0a"
+    },
+    "101800000": {
+      "file": "municipalities-101800000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "100000000"
+      ],
+      "sha256": "7ee1e290d658c2371d38f478d8007c01e9e6ed01b1f08a7aa0d1310ee1c18d0a",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph101800000.0.01.json",
+      "sourceBlob": "cbaee99e889aa7389e6fdc495aa402daada8c17c"
+    },
+    "103500000": {
+      "file": "municipalities-103500000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 23,
+      "regionCodes": [
+        "100000000"
+      ],
+      "sha256": "cce06cf4f558453e1b3ea82ee7d6e9aae323fc868eee93d7972cc17069658e35",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph103500000.0.01.json",
+      "sourceBlob": "195595ecf7d229bd2e5e6273f7d939402b8df7c3"
+    },
+    "104200000": {
+      "file": "municipalities-104200000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 17,
+      "regionCodes": [
+        "100000000"
+      ],
+      "sha256": "8438fa2d3bb3d838681aae4d30bd5bc57c0541535880ac1c92a8ddd095897aba",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph104200000.0.01.json",
+      "sourceBlob": "fa81d5ac8a5a02b17d9b256e740f7f6cdb91198c"
+    },
+    "104300000": {
+      "file": "municipalities-104300000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 26,
+      "regionCodes": [
+        "100000000"
+      ],
+      "sha256": "9efa54bb20081cafa9c9f62df0cedb1d5dae0f15227f51630e6b65ba60bc73b1",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph104300000.0.01.json",
+      "sourceBlob": "822dbf48fb7161795485ff657f3877e637a425bd"
+    },
+    "112300000": {
+      "file": "municipalities-112300000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 11,
+      "regionCodes": [
+        "110000000"
+      ],
+      "sha256": "0a8a117b9a5068b2e2b3a9dfc5bd28171aaf775de096bf1ae3ac4afaef81a7b7",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph112300000.0.01.json",
+      "sourceBlob": "ee23dbdd37c4c16aa19a8f9094d87c244616cf7b"
+    },
+    "112400000": {
+      "file": "municipalities-112400000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 11,
+      "regionCodes": [
+        "110000000"
+      ],
+      "sha256": "f1f9ff35180111cbd8fd02f2ac95e6d81671638cae70b27638d22969e36bb536",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph112400000.0.01.json",
+      "sourceBlob": "2943ca91d16db8bcfcb4762ac6bf8e8b52f67453"
+    },
+    "112500000": {
+      "file": "municipalities-112500000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 11,
+      "regionCodes": [
+        "110000000"
+      ],
+      "sha256": "2955427808e98569278b8cb9df405b904e889b8056fc17aa6d3efb7023e26fef",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph112500000.0.01.json",
+      "sourceBlob": "aa0c84a93549b6739386f5d1b45aa0054ec7684e"
+    },
+    "118200000": {
+      "file": "municipalities-118200000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 11,
+      "regionCodes": [
+        "110000000"
+      ],
+      "sha256": "10a8a52212664728acefac4739aff7df6e2a4c2db4a067d590c7674ea837fb61",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph118200000.0.01.json",
+      "sourceBlob": "167db9a74795727a231518b96a6ac8cf43c0d7ca"
+    },
+    "118600000": {
+      "file": "municipalities-118600000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "110000000"
+      ],
+      "sha256": "d0e3c5db8e205665bf339236a386f1b16befe3550fd976934b2fbf6b7540e572",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph118600000.0.01.json",
+      "sourceBlob": "1bad2be44b1d6a7757055c1410472ca41c29997e"
+    },
+    "124700000": {
+      "file": "municipalities-124700000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 18,
+      "regionCodes": [
+        "120000000"
+      ],
+      "sha256": "ade11614f956864eb559cafc219c2939c14973831b94d13a9bac3ffb9c08476f",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph124700000.0.01.json",
+      "sourceBlob": "64c6764f262783a0e724940a6a3d5bd4c6421eee"
+    },
+    "126300000": {
+      "file": "municipalities-126300000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 12,
+      "regionCodes": [
+        "120000000"
+      ],
+      "sha256": "0c853b9abb40b5602cc7ae1f72a31922a1291e04087bbffefdcd7ce15da88260",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph126300000.0.01.json",
+      "sourceBlob": "c941b0f5c5c3fa71266dfc07663d0ec61a7d3e76"
+    },
+    "126500000": {
+      "file": "municipalities-126500000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 12,
+      "regionCodes": [
+        "120000000"
+      ],
+      "sha256": "38cb8e173bb66e7b799307e1bdd9d401cba08d880704df9ce51f377b731d91a3",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph126500000.0.01.json",
+      "sourceBlob": "5d062bd596b3301f06397703b24c8241541d46d3"
+    },
+    "128000000": {
+      "file": "municipalities-128000000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 7,
+      "regionCodes": [
+        "120000000"
+      ],
+      "sha256": "2d85d536bab31da52f8b757562c502337723dcd5ca0988492978abd50c6c76fa",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph128000000.0.01.json",
+      "sourceBlob": "80b22f11b99a57447f79d413688f7b76f69d1a6d"
+    },
+    "129800000": {
+      "file": "municipalities-129800000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 1,
+      "regionCodes": [
+        "120000000"
+      ],
+      "sha256": "c087007808456ed9773ccdeecac2ee73848084ebef54dc0a041ffd77799f56a4",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph129800000.0.01.json",
+      "sourceBlob": "6bde9a76f19c3c752f7162f135062fc3b1ad7031"
+    },
+    "133900000": {
+      "file": "municipalities-133900000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 14,
+      "regionCodes": [
+        "130000000"
+      ],
+      "sha256": "609ed1dcbb7e42506cf3b5292452b0db41501f2ca18b9f700e562693ed1aea49",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph133900000.0.01.json",
+      "sourceBlob": "a1615a2e41bcdb7196b6ce4e77cf292c03e7c187"
+    },
+    "137400000": {
+      "file": "municipalities-137400000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "130000000"
+      ],
+      "sha256": "b19558cab521da45b885ee24c9c36a9993d2142c2c6449866b48ea540d4c8e56",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph137400000.0.01.json",
+      "sourceBlob": "fa3780a14de20724eefbe70283e860782dab101b"
+    },
+    "137500000": {
+      "file": "municipalities-137500000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 4,
+      "regionCodes": [
+        "130000000"
+      ],
+      "sha256": "426464fb2200bcf814d7aaacb042b2639933b28af0899d3c5bac6a61c0947d69",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph137500000.0.01.json",
+      "sourceBlob": "a376db8b2bc26d00008963ae7b38f0662e0b796d"
+    },
+    "137600000": {
+      "file": "municipalities-137600000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 7,
+      "regionCodes": [
+        "130000000"
+      ],
+      "sha256": "884349a75b97b9443eb9a302cc8e43d2e6f1b1a1f5e2b7f55db56092a25e94c0",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph137600000.0.01.json",
+      "sourceBlob": "b1c73924e769d3f541ed81a6f8b85c81e3c95dd2"
+    },
+    "140100000": {
+      "file": "municipalities-140100000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 27,
+      "regionCodes": [
+        "140000000"
+      ],
+      "sha256": "51e1bbf019ea42d16b66740341aaa8d7150201e13b26a7124bcfe457ee96b430",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph140100000.0.01.json",
+      "sourceBlob": "485f88eab747d7193036785bbd281a24289e1a74"
+    },
+    "141100000": {
+      "file": "municipalities-141100000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 14,
+      "regionCodes": [
+        "140000000"
+      ],
+      "sha256": "04af00ec56e097e45056459ba475045a5356c7cea1d609b722abd81d9b5f59b9",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph141100000.0.01.json",
+      "sourceBlob": "d7a7ef6791bc2fdd9d7532b8257b53179458c327"
+    },
+    "142700000": {
+      "file": "municipalities-142700000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 11,
+      "regionCodes": [
+        "140000000"
+      ],
+      "sha256": "b8b8a0fc751396bc144fd1357084914579b31febc1eef18a46fbec04bb54c730",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph142700000.0.01.json",
+      "sourceBlob": "fccbdafa52ed6caad10f38f7da2362e22cd79937"
+    },
+    "143200000": {
+      "file": "municipalities-143200000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 8,
+      "regionCodes": [
+        "140000000"
+      ],
+      "sha256": "6b64e855dd903372c92cf24346943cffaf842a5683b1f70ac64da919879a65c6",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph143200000.0.01.json",
+      "sourceBlob": "dcd9cf000f5d05b871a30d0fb8446d4df0c0307d"
+    },
+    "144400000": {
+      "file": "municipalities-144400000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 10,
+      "regionCodes": [
+        "140000000"
+      ],
+      "sha256": "334ceaa7f7094ad1398eb410db2d87281475cd311d00a0d9de491f224efb6a5c",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph144400000.0.01.json",
+      "sourceBlob": "224ab89c65c28c18c76fd68ba885fb4fb4e4e5c2"
+    },
+    "148100000": {
+      "file": "municipalities-148100000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 7,
+      "regionCodes": [
+        "140000000"
+      ],
+      "sha256": "df3cb5c11c8bd154fad9cb3fddfd99d1cb98db906057de0b7fa229dee8b0ac91",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph148100000.0.01.json",
+      "sourceBlob": "73f8fd5e0247b9f4ba28c1cb0003d3f2ed40eb8c"
+    },
+    "150700000": {
+      "file": "municipalities-150700000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 12,
+      "regionCodes": [
+        "150000000"
+      ],
+      "sha256": "c9c72279bf006a760704a0d553a87c3adb3acce0bc88906c6af3ff4a57e00112",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph150700000.0.01.json",
+      "sourceBlob": "e1739dc8674a0bb3ab7ad25d662c84182f1e6efe"
+    },
+    "153600000": {
+      "file": "municipalities-153600000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 40,
+      "regionCodes": [
+        "150000000"
+      ],
+      "sha256": "bc4a8aa9a12b00658f08b7519aa81c7bd64a80394c32d8252deb6da203d1dd32",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph153600000.0.01.json",
+      "sourceBlob": "8fee6c99ec7aac31f28419dc649af09000ff1064"
+    },
+    "153800000": {
+      "file": "municipalities-153800000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 36,
+      "regionCodes": [
+        "150000000"
+      ],
+      "sha256": "4908155b8ad725e5908ec342f585e5124b761809dc4b54790caa69880927ff7a",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph153800000.0.01.json",
+      "sourceBlob": "737710a587c745d288a6bec01291a70b5eda38b5"
+    },
+    "156600000": {
+      "file": "municipalities-156600000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 19,
+      "regionCodes": [
+        "150000000"
+      ],
+      "sha256": "4e29a08c2464215d4b87aa3b01c05a85a4e33dc74a9debe16eb8e4cd67c71ba9",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph156600000.0.01.json",
+      "sourceBlob": "3eebf230644be8632a4b61c74b468d2a5cb7a04d"
+    },
+    "157000000": {
+      "file": "municipalities-157000000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 11,
+      "regionCodes": [
+        "150000000"
+      ],
+      "sha256": "f39c0667bf243b1ae3d39a49d02224a409eacedf6541d41a92e0ed00234e1a35",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph157000000.0.01.json",
+      "sourceBlob": "c46690ee2b6d2db31fe739e9af4ffb7e257214db"
+    },
+    "160200000": {
+      "file": "municipalities-160200000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 12,
+      "regionCodes": [
+        "160000000"
+      ],
+      "sha256": "536a4bed1c866b974c032a9febb0cdbfde29b16aaa6e6acb912b240e4a07608e",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph160200000.0.01.json",
+      "sourceBlob": "ef0d1d0c016c57e9489aeaccadcba7860b93a823"
+    },
+    "160300000": {
+      "file": "municipalities-160300000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 14,
+      "regionCodes": [
+        "160000000"
+      ],
+      "sha256": "bf5123f2a24148850cfdad60c52db325b26e45f0d0e832896e96f26ef0626130",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph160300000.0.01.json",
+      "sourceBlob": "921a41151a97804db382238e53fee1094e5b6805"
+    },
+    "166700000": {
+      "file": "municipalities-166700000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 21,
+      "regionCodes": [
+        "160000000"
+      ],
+      "sha256": "e49e39da8cd979d07101368e8d1ebdf90828f6051afa10d7ef534aea597d24b2",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph166700000.0.01.json",
+      "sourceBlob": "5537b82f33212b7ed9954ec1cb2b591272b4a866"
+    },
+    "166800000": {
+      "file": "municipalities-166800000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 19,
+      "regionCodes": [
+        "160000000"
+      ],
+      "sha256": "54b48ef8427ad772d8057276992a37e74003e2fabb908cf70de78c59e557af09",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph166800000.0.01.json",
+      "sourceBlob": "8e1f9e7ada8f86f8d35687f19000397a7cf5f2af"
+    },
+    "168500000": {
+      "file": "municipalities-168500000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 7,
+      "regionCodes": [
+        "160000000"
+      ],
+      "sha256": "e266897f3128b60dc98f60f06a8d3804f3c31d6d5eff8b2a50e6d8f395f9ba25",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph168500000.0.01.json",
+      "sourceBlob": "57471cdfe9bfd5c0acbaa0822c4486403e57cf6c"
+    },
+    "174000000": {
+      "file": "municipalities-174000000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 6,
+      "regionCodes": [
+        "170000000"
+      ],
+      "sha256": "1df83ed8db9c19515874e780e7136feba6b6978e3fad74445c283bde2cfa8110",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph174000000.0.01.json",
+      "sourceBlob": "5be49e5a70dd9b3ab74c3a4679d89afd8da5779e"
+    },
+    "175100000": {
+      "file": "municipalities-175100000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 11,
+      "regionCodes": [
+        "170000000"
+      ],
+      "sha256": "95ea6786bcd72195f6150f3b39ef95d10e9d5daadfe7fdf9c874e7e5ceb2e79f",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph175100000.0.01.json",
+      "sourceBlob": "da8e232458bde72ed6f6c9d131dd65a79dd93894"
+    },
+    "175200000": {
+      "file": "municipalities-175200000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 15,
+      "regionCodes": [
+        "170000000"
+      ],
+      "sha256": "c7fbb1b780a1746985791ffb02bc6db0ef8d2f3f034142aa58d29fcc8f3f983c",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph175200000.0.01.json",
+      "sourceBlob": "678ef89acec19e0de62a48b922bed006e08d49b0"
+    },
+    "175300000": {
+      "file": "municipalities-175300000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 24,
+      "regionCodes": [
+        "170000000"
+      ],
+      "sha256": "7b9bff51706d52972fa2a6f4d4f96d2659f4e1e1bee10841acddb71764792cb5",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph175300000.0.01.json",
+      "sourceBlob": "f3bbfaf5568e2911dd0b3e25f7c68a61980fe40b"
+    },
+    "175900000": {
+      "file": "municipalities-175900000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 17,
+      "regionCodes": [
+        "170000000"
+      ],
+      "sha256": "ce014046f9e878824134843dd93aa4c1577f8b597d1aaf1fbec2779d8ad4689e",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph175900000.0.01.json",
+      "sourceBlob": "75df8f5cbd548218ab19dfe5ae5d5179ed97404a"
+    },
+    "184500000": {
+      "file": "municipalities-184500000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 32,
+      "regionCodes": [
+        "180000000"
+      ],
+      "sha256": "4fda36b7207e7c7b15976d4b14a5c758731599c3d7f0280d30b6d5cef9bb9b55",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph184500000.0.01.json",
+      "sourceBlob": "0d9bf229a2c4bacd40edafa9baedc0cfd6799b39"
+    },
+    "184600000": {
+      "file": "municipalities-184600000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 25,
+      "regionCodes": [
+        "180000000"
+      ],
+      "sha256": "db6b15f7a1d33d4a4f993f983a35d6c1e64a779b0d25665516cb4fd13658d9a6",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph184600000.0.01.json",
+      "sourceBlob": "15280e28532f0ea8c652efdde33970ad60d5f43b"
+    },
+    "012800000": {
+      "file": "municipalities-012800000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 23,
+      "regionCodes": [
+        "010000000"
+      ],
+      "sha256": "f157a4ebff353e28ff800557412549e768beb9fe70e19ee7402d693ae34eccc6",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph012800000.0.01.json",
+      "sourceBlob": "1cac2da09609d80e66068413c10d03982ce35b9b"
+    },
+    "012900000": {
+      "file": "municipalities-012900000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 34,
+      "regionCodes": [
+        "010000000"
+      ],
+      "sha256": "717b05cfad4ee0e72116243a1d9447853bfdcb6019a8d07aa083f08c0220e328",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph012900000.0.01.json",
+      "sourceBlob": "2162a8659e5542f375510bc0d9655d90df1d0c99"
+    },
+    "013300000": {
+      "file": "municipalities-013300000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 20,
+      "regionCodes": [
+        "010000000"
+      ],
+      "sha256": "880437abb258daa0d5d183a5afb0e42fe692c806b4d7f772d89dad09dd738704",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph013300000.0.01.json",
+      "sourceBlob": "f50d372c2b0cd378b8e0b19678e203fbb3689705"
+    },
+    "015500000": {
+      "file": "municipalities-015500000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 48,
+      "regionCodes": [
+        "010000000"
+      ],
+      "sha256": "900d4df4611a55106915087b1ee5e64598b7fb3cfdbd9dbe5ea91331cbded2d0",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph015500000.0.01.json",
+      "sourceBlob": "07b075c60220a57923e8741f58acfaf550f6d2ce"
+    },
+    "020900000": {
+      "file": "municipalities-020900000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 6,
+      "regionCodes": [
+        "020000000"
+      ],
+      "sha256": "003955ab85596d6479b39c644aba31350375d0d7552f0c6a0b7f227c61fbece5",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph020900000.0.01.json",
+      "sourceBlob": "675c28598b2871d57ce45122d2812ce179fadc9f"
+    },
+    "021500000": {
+      "file": "municipalities-021500000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 29,
+      "regionCodes": [
+        "020000000"
+      ],
+      "sha256": "d10d7a72af794acd574a75585bcb6c667fadfa73f96cae13ba74ab87c480b181",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph021500000.0.01.json",
+      "sourceBlob": "ee4a47028ebd62935a4e99ed773a656f91d62874"
+    },
+    "023100000": {
+      "file": "municipalities-023100000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 37,
+      "regionCodes": [
+        "020000000"
+      ],
+      "sha256": "cf73bc70871dee4cd9a73cb29a124cb2e95954fb6f981aa0297f86924bffcd8a",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph023100000.0.01.json",
+      "sourceBlob": "81a01b2afe1a1ce5c2e3cf56a7999750915e4b10"
+    },
+    "025000000": {
+      "file": "municipalities-025000000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 15,
+      "regionCodes": [
+        "020000000"
+      ],
+      "sha256": "f05c3f60540a6f59480b608e971a005ddf3d5eb6375b039d4c61bd8eb2bacaa8",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph025000000.0.01.json",
+      "sourceBlob": "3970252ee36685fa11f2e063c66ed717dc0a6be5"
+    },
+    "025700000": {
+      "file": "municipalities-025700000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 6,
+      "regionCodes": [
+        "020000000"
+      ],
+      "sha256": "5b6e2412cc75bbfb7bc2266e847e91a1704719957badba498398329fe3803677",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph025700000.0.01.json",
+      "sourceBlob": "383bb5637dad168c7a898d6ee9b4c909331f2425"
+    },
+    "030800000": {
+      "file": "municipalities-030800000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 12,
+      "regionCodes": [
+        "030000000"
+      ],
+      "sha256": "ca8af6a6c36b7d6b7b777ef1ce13c76b93a0fbc691518084db94fd18c991d9e1",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph030800000.0.01.json",
+      "sourceBlob": "0306376459def78b129bc5899166a116ed592a29"
+    },
+    "031400000": {
+      "file": "municipalities-031400000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 24,
+      "regionCodes": [
+        "030000000"
+      ],
+      "sha256": "7ecf61f82a8185f791897fb6362cb8892d63049e82f7684ce7202b4450849e42",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph031400000.0.01.json",
+      "sourceBlob": "7ea4b661285dbb91baa3d44ebf53903dd069a0a8"
+    },
+    "034900000": {
+      "file": "municipalities-034900000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 32,
+      "regionCodes": [
+        "030000000"
+      ],
+      "sha256": "237d765b0c4c2586c8cd1a55c83fc61091ae966f19efe977b57059b38fe337a6",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph034900000.0.01.json",
+      "sourceBlob": "c3cd731f89a847aa942388670283d7c272d998ae"
+    },
+    "035400000": {
+      "file": "municipalities-035400000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 22,
+      "regionCodes": [
+        "030000000"
+      ],
+      "sha256": "203d851aabc7a7aff918e72dff205882e7bb8a2de02eb3920de674107850afc7",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph035400000.0.01.json",
+      "sourceBlob": "a563d266b45bf85b22f1b934e53da73fe362abaa"
+    },
+    "036900000": {
+      "file": "municipalities-036900000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 18,
+      "regionCodes": [
+        "030000000"
+      ],
+      "sha256": "7b1c6de1042e072f832060e9452f0b4f63a0f95f75cdaadb2b204f700f23c91b",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph036900000.0.01.json",
+      "sourceBlob": "86d20c8acb912da5b4c5e596510e01f4931008d7"
+    },
+    "037100000": {
+      "file": "municipalities-037100000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 14,
+      "regionCodes": [
+        "030000000"
+      ],
+      "sha256": "08a573b25ee4e5e73d412cd8458a39a441dc75b8ce5bba23e58554bdd5bb52b7",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph037100000.0.01.json",
+      "sourceBlob": "c8163d210ac0bf7224696c49e84eec25489e1ea9"
+    },
+    "037700000": {
+      "file": "municipalities-037700000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 8,
+      "regionCodes": [
+        "030000000"
+      ],
+      "sha256": "1e835ebca47909203bbdc1b2f91758870b2e83c3e7dab5e6fc12eb2db367b1aa",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph037700000.0.01.json",
+      "sourceBlob": "84b0b8a20652bc2f7452228a6942c79dec075d92"
+    },
+    "041000000": {
+      "file": "municipalities-041000000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 34,
+      "regionCodes": [
+        "040000000"
+      ],
+      "sha256": "35042e87ed28b018943a3cae95bd957eff64f81a269c2bc389534c8d98efa2a0",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph041000000.0.01.json",
+      "sourceBlob": "17a23f9ecad02bfd6956d149d0dd41160a51d8e5"
+    },
+    "042100000": {
+      "file": "municipalities-042100000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 23,
+      "regionCodes": [
+        "040000000"
+      ],
+      "sha256": "e22b84c75915ba79549889a3bb16ef5d1413f757eb22901f21c0962be62bbdaf",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph042100000.0.01.json",
+      "sourceBlob": "b9ca1c9221e3064013fb91a4594449821e70ad2c"
+    },
+    "043400000": {
+      "file": "municipalities-043400000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 30,
+      "regionCodes": [
+        "040000000"
+      ],
+      "sha256": "816df80c03cb1d4ec0249b1e744f9cb3deebdba095df1feadc8b352e30978e3b",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph043400000.0.01.json",
+      "sourceBlob": "ed37641c0d0454162cad28d1f3188fae69e0d4c6"
+    },
+    "045600000": {
+      "file": "municipalities-045600000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 41,
+      "regionCodes": [
+        "040000000"
+      ],
+      "sha256": "9fd6a0142da7060e4155864a7d548c9202cc67c43dd6b46f79728ebcdd8afb8e",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph045600000.0.01.json",
+      "sourceBlob": "f9cc3539586e385d804d19fed5cfc6e6c7b00c36"
+    },
+    "045800000": {
+      "file": "municipalities-045800000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 14,
+      "regionCodes": [
+        "040000000"
+      ],
+      "sha256": "eb745197ea77eb5499e968210a4e49dc374c215dab4ba3c238331a0f7c7aa1cc",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph045800000.0.01.json",
+      "sourceBlob": "c67dafb341a14fddb5c18861f7070a6e32c05268"
+    },
+    "050500000": {
+      "file": "municipalities-050500000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 18,
+      "regionCodes": [
+        "050000000"
+      ],
+      "sha256": "64819817a086b0c5d3c8663b61dbdf2b42884fdabda562a4ea0998f344376bb9",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph050500000.0.01.json",
+      "sourceBlob": "0fe96df7dcf3c37e7433ac979da232113ddb951f"
+    },
+    "051600000": {
+      "file": "municipalities-051600000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 12,
+      "regionCodes": [
+        "050000000"
+      ],
+      "sha256": "2e231cb05c5d64f3935c2957a8c7b82a45a681db47e687663d3e9e48a2a8eb24",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph051600000.0.01.json",
+      "sourceBlob": "66beb5518bdfa44931b990b3acf3f28bd3071b73"
+    },
+    "051700000": {
+      "file": "municipalities-051700000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 37,
+      "regionCodes": [
+        "050000000"
+      ],
+      "sha256": "87bc7369fd9dfd80e28e03bfe8aa8eac6c4fb09d3d3e29aa64f61588fc2928dd",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph051700000.0.01.json",
+      "sourceBlob": "2c2df37df967dd66c0b06a817823b4e101577866"
+    },
+    "052000000": {
+      "file": "municipalities-052000000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 11,
+      "regionCodes": [
+        "050000000"
+      ],
+      "sha256": "fa532c5d7da2172211f9f2f3d89a2ef8cb1834a62cf4784a0681626790e80d60",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph052000000.0.01.json",
+      "sourceBlob": "11c0e4fdb08f70700d45e920785e9d1aaa00b534"
+    },
+    "054100000": {
+      "file": "municipalities-054100000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 21,
+      "regionCodes": [
+        "050000000"
+      ],
+      "sha256": "2319b0887c5d625c7632b5d6ba6a539e72d7c6d28fec82a1ed5daedd94c17a5a",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph054100000.0.01.json",
+      "sourceBlob": "a879509cd34724a60470e9182ab0ccc3d5a18567"
+    },
+    "056200000": {
+      "file": "municipalities-056200000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 15,
+      "regionCodes": [
+        "050000000"
+      ],
+      "sha256": "5ead53c6f12aec6d15715e8f0c505ac498c851aca494e5f52616b61d3a48fd25",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph056200000.0.01.json",
+      "sourceBlob": "b96a1841d4e222ee98ad55c7b3c2e4e44056f2da"
+    },
+    "060400000": {
+      "file": "municipalities-060400000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 17,
+      "regionCodes": [
+        "060000000"
+      ],
+      "sha256": "f106a8aa003871234f2d1044dba8d827c040c4fdb93b283efd40b1d0396490f4",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph060400000.0.01.json",
+      "sourceBlob": "49174e3d178774679b0641a5230c9487eb3d1f8e"
+    },
+    "060600000": {
+      "file": "municipalities-060600000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 18,
+      "regionCodes": [
+        "060000000"
+      ],
+      "sha256": "77462db128ebb86f147373c460afe1bda952570e2b670be802bb498b3a43c3be",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph060600000.0.01.json",
+      "sourceBlob": "e894f9daf55ec82477bd19b075cda7bb5f3b4c4b"
+    },
+    "061900000": {
+      "file": "municipalities-061900000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 17,
+      "regionCodes": [
+        "060000000"
+      ],
+      "sha256": "a94166243bd80e66d97213503c1379842fd09ecac52b8f46e13827abe26d4b9c",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph061900000.0.01.json",
+      "sourceBlob": "1adfe10b72ca5c08dd3c4898c2dc3ac3594138f0"
+    },
+    "063000000": {
+      "file": "municipalities-063000000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 44,
+      "regionCodes": [
+        "060000000"
+      ],
+      "sha256": "018e8c1a158977ab086b3042a035fa8a2c34117608b40e604bffe2daaf2049b2",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph063000000.0.01.json",
+      "sourceBlob": "29749eddc35134f0fb8fd7e8d3a8066c01b49c5c"
+    },
+    "067900000": {
+      "file": "municipalities-067900000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 5,
+      "regionCodes": [
+        "060000000"
+      ],
+      "sha256": "3c6bff427fe93c23dee0e15af0d1c345976aa3806c4618fa050a8b127d66ff2e",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph067900000.0.01.json",
+      "sourceBlob": "fa467eab11111d1bbc5c35f2c90756c5d0e6ed98"
+    },
+    "071200000": {
+      "file": "municipalities-071200000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 48,
+      "regionCodes": [
+        "070000000"
+      ],
+      "sha256": "07e4af4bce9ffe6fa9511ae6cb748d588fed7103f5a31d7bfb6b20c8573931e6",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph071200000.0.01.json",
+      "sourceBlob": "71d4b5b6011b881a22a304fd6359f2de7657f6c6"
+    },
+    "072200000": {
+      "file": "municipalities-072200000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 53,
+      "regionCodes": [
+        "070000000"
+      ],
+      "sha256": "d88b3fe076b1f7c5119360d3d11c5f186c37549de60ce390f959f65f4d9ef1d4",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph072200000.0.01.json",
+      "sourceBlob": "30233bb66a6dc5379cee94f40b1e9601c491167c"
+    },
+    "076100000": {
+      "file": "municipalities-076100000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 6,
+      "regionCodes": [
+        "070000000"
+      ],
+      "sha256": "b820483f7e0ca5fc60e66b5102a2806b77949724fe64eb1971d1d6d3f20d9141",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph076100000.0.01.json",
+      "sourceBlob": "1278d3b18e51a72f41809f728ecd8c5b381b0d49"
+    },
+    "082600000": {
+      "file": "municipalities-082600000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 23,
+      "regionCodes": [
+        "080000000"
+      ],
+      "sha256": "dd5332c620f05845128369ab6e617aa935eb8c3b7b7c747e201a0538d05a80fd",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph082600000.0.01.json",
+      "sourceBlob": "251d969fe6761ca830231f16e425fe648586c741"
+    },
+    "083700000": {
+      "file": "municipalities-083700000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 43,
+      "regionCodes": [
+        "080000000"
+      ],
+      "sha256": "3941603f446c4409f9c8cf14f4a62224083005098b44e5c1718deb4168c3d7bf",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph083700000.0.01.json",
+      "sourceBlob": "ba9eea3bb59325482fd00da068bb49e72824fc77"
+    },
+    "084800000": {
+      "file": "municipalities-084800000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 24,
+      "regionCodes": [
+        "080000000"
+      ],
+      "sha256": "81fd4c3267322bfcd54f650036065a4b79b2a55cf19e2fdc36b9516c01dc24cf",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph084800000.0.01.json",
+      "sourceBlob": "5a3caf2df58eaa5e90a9e8742212c663774e5ecd"
+    },
+    "086000000": {
+      "file": "municipalities-086000000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 26,
+      "regionCodes": [
+        "080000000"
+      ],
+      "sha256": "3721e95940d97b24ebb29175dec669a1dda587ba43f68b2663a36aec1136ab89",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph086000000.0.01.json",
+      "sourceBlob": "b4502eb57bd4d7c21aa28e25d8586532f83ab7db"
+    },
+    "086400000": {
+      "file": "municipalities-086400000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 19,
+      "regionCodes": [
+        "080000000"
+      ],
+      "sha256": "fd60501b267e892c50e6fb449068192651c1bfee73a72e8bc39dd608c7205d3e",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph086400000.0.01.json",
+      "sourceBlob": "d9d447263d62bce4d7341b6437d122b98bc4f0e7"
+    },
+    "087800000": {
+      "file": "municipalities-087800000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 8,
+      "regionCodes": [
+        "080000000"
+      ],
+      "sha256": "48a634d62a8ef3db35a5cefec59360ab67af16809b9783b865f846ffd855dd17",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph087800000.0.01.json",
+      "sourceBlob": "d952bbff69e1ba9ce3d91f2877d4ba27ce2f6a3a"
+    },
+    "097200000": {
+      "file": "municipalities-097200000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 27,
+      "regionCodes": [
+        "090000000"
+      ],
+      "sha256": "7af4ebdbba29084226342086f9dc97232f48868cb5f7b2fe08ddda817f8dbcc4",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph097200000.0.01.json",
+      "sourceBlob": "bc93ab1edf14b71422ae20b58211d6a882d2b578"
+    },
+    "097300000": {
+      "file": "municipalities-097300000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 28,
+      "regionCodes": [
+        "090000000"
+      ],
+      "sha256": "efd5104e1add027884b680347c358eff56db7226b1a30131b53791a6ffcdb0eb",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph097300000.0.01.json",
+      "sourceBlob": "41087478e3d39cd42eb4a0983066679864d9f576"
+    },
+    "098300000": {
+      "file": "municipalities-098300000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 16,
+      "regionCodes": [
+        "090000000"
+      ],
+      "sha256": "3fbe8a5695cbac7967ca91a3f766ab359fbf8df854d4039f16103d5459821f43",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph098300000.0.01.json",
+      "sourceBlob": "21647e29b41704db85e651e1b9881c29b7dcca5c"
+    },
+    "099700000": {
+      "file": "municipalities-099700000.json",
+      "codeField": "ADM3_PCODE",
+      "featureCount": 1,
+      "regionCodes": [
+        "090000000"
+      ],
+      "sha256": "1c954a661bddebda322f6a21b03c787d640ab25b61ccba7843e6e1913111cd89",
+      "sourcePath": "2019/geojson/municties/medres/municities-province-ph099700000.0.01.json",
+      "sourceBlob": "73e5a4b3f6c3b4f46d19c9feadbf78f535f6173c"
+    }
+  }
+}

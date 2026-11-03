@@ -198,36 +198,19 @@ const preview = {
             value = { datasets: [{ ...dataset, record_count: 1 }], total_records: 1 };
           return route.fulfill({ json: value });
         }
+        if (url.pathname.startsWith("/maps/ph-2019/") && url.pathname.endsWith(".json")) {
+          const file = require("node:path").join(
+            __dirname,
+            "../public/maps/ph-2019",
+            require("node:path").basename(url.pathname),
+          );
+          const collection = JSON.parse(require("node:fs").readFileSync(file, "utf8"));
+          collection.features.sort((a, b) =>
+            String(a.properties.ADM1_PCODE).localeCompare(String(b.properties.ADM1_PCODE)),
+          );
+          return route.fulfill({ json: collection });
+        }
         if (url.hostname === "127.0.0.1") return route.continue();
-        if (url.hostname === "raw.githubusercontent.com")
-          return route.fulfill({
-            json: {
-              type: "FeatureCollection",
-              features: [
-                {
-                  type: "Feature",
-                  properties: {
-                    ADM1_PCODE: "PH010000000",
-                    ADM1_EN: "Synthetic region",
-                    ADM2_PCODE: "PH012300000",
-                    ADM3_PCODE: "PH012345000",
-                  },
-                  geometry: {
-                    type: "Polygon",
-                    coordinates: [
-                      [
-                        [120, 13],
-                        [122, 13],
-                        [122, 15],
-                        [120, 15],
-                        [120, 13],
-                      ],
-                    ],
-                  },
-                },
-              ],
-            },
-          });
         return route.abort();
       });
       await require("./guidedImport.browser.cjs").installImportMocks(context);
