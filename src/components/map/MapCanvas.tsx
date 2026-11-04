@@ -1,6 +1,10 @@
 import { currentMapSource, useEffectiveMapSource } from "../../stores/useMapSourceStore";
 import { geographicPrefix, datasetLayerKey } from "../../lib/datasetQuery";
-import { buildDatasetLayer, summarizeDatasetArea, datasetBoundaryCodes } from "../../lib/datasetLayer";
+import {
+  buildDatasetLayer,
+  summarizeDatasetArea,
+  datasetBoundaryCodes,
+} from "../../lib/datasetLayer";
 import DatasetCoverage from "./DatasetCoverage";
 import { createBoundaryLoader, boundaryAttribution } from "../../services/mapBoundaries";
 import { useAuthStore } from "../../stores/useAuthStore";
@@ -24,7 +28,7 @@ import { useFilterStore } from "../../stores/useFilterStore";
 import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
 import type { ChoroplethSelection } from "../../stores/useDatasetLayerStore";
 import { useDisasterStore } from "../../stores/useDisasterStore";
-import { useWorkspaceStore } from "../../stores/useWorkspaceStore";
+import { useTrayStore } from "../../stores/useTrayStore";
 import {
   fetchDatasetLayer,
   fetchMapPanelRecords,
@@ -110,7 +114,13 @@ function AllChoroplethDots({ layerData }: { layerData: LayerResponse | undefined
 }
 
 // Renders count numbers on municity centroids
-function ChoroplethNumbers({ layerData, level }: { layerData: LayerResponse | undefined; level: "region" | "province" | "municity" }) {
+function ChoroplethNumbers({
+  layerData,
+  level,
+}: {
+  layerData: LayerResponse | undefined;
+  level: "region" | "province" | "municity";
+}) {
   if (!layerData?.layer_data.length) return null;
   return (
     <>
@@ -123,7 +133,15 @@ function ChoroplethNumbers({ layerData, level }: { layerData: LayerResponse | un
           iconSize: [48, 28],
           iconAnchor: [24, 14],
         });
-        return <Marker key={`num-${pt.psgc_code}`} position={[pos.lat, pos.lng]} icon={icon} interactive={false} keyboard={false} />;
+        return (
+          <Marker
+            key={`num-${pt.psgc_code}`}
+            position={[pos.lat, pos.lng]}
+            icon={icon}
+            interactive={false}
+            keyboard={false}
+          />
+        );
       })}
     </>
   );
@@ -750,7 +768,11 @@ async function eventAreaCentre(code: string) {
     : area.endsWith("00000")
       ? "province"
       : "municity";
-  const collection = await loadBoundaries(level, level === "region" ? undefined : area.slice(0, 2) + "0000000", level === "municity" ? area.slice(0, 4) + "00000" : undefined);
+  const collection = await loadBoundaries(
+    level,
+    level === "region" ? undefined : area.slice(0, 2) + "0000000",
+    level === "municity" ? area.slice(0, 4) + "00000" : undefined,
+  );
   const field =
     level === "region" ? "ADM1_PCODE" : level === "province" ? "ADM2_PCODE" : "ADM3_PCODE";
   const feature = collection?.features.find(
@@ -947,9 +969,7 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
                           onClick={() => {
                             useFilterStore.getState().setSelectedTipasEventId(evt.id);
                             useFilterStore.getState().setShowTipasAttendees(true);
-                            useWorkspaceStore
-                              .getState()
-                              .updateWidget("recordsPanel", { visible: true });
+                            useTrayStore.getState().setTab("results");
                           }}
                           style={{
                             width: "100%",
@@ -1067,7 +1087,9 @@ export default function MapCanvas() {
     if (layer) setGeoReady(true);
   }, []);
   const [geoLoading, setGeoLoading] = useState(false);
-  const [loadedBoundaries, setLoadedBoundaries] = useState<{ level: string; codes: Set<string> }>(() => ({ level: '', codes: new Set() }));
+  const [loadedBoundaries, setLoadedBoundaries] = useState<{ level: string; codes: Set<string> }>(
+    () => ({ level: "", codes: new Set() }),
+  );
   const [geoError, setGeoError] = useState<string | null>(null);
   const [loadKey, setLoadKey] = useState(0);
 
@@ -1252,7 +1274,10 @@ export default function MapCanvas() {
           }
           geoJsonRef.current.clearLayers();
           geoJsonRef.current.addData(data);
-          setLoadedBoundaries({ level: mapAreaLevel, codes: datasetBoundaryCodes(data, mapAreaLevel) });
+          setLoadedBoundaries({
+            level: mapAreaLevel,
+            codes: datasetBoundaryCodes(data, mapAreaLevel),
+          });
           setGeoVersion((v) => v + 1);
         } else if (mapAreaLevel === "province") {
           const merged = await loadBoundaries("province");
@@ -1263,7 +1288,10 @@ export default function MapCanvas() {
           }
           geoJsonRef.current.clearLayers();
           geoJsonRef.current.addData(merged);
-          setLoadedBoundaries({ level: mapAreaLevel, codes: datasetBoundaryCodes(merged, mapAreaLevel) });
+          setLoadedBoundaries({
+            level: mapAreaLevel,
+            codes: datasetBoundaryCodes(merged, mapAreaLevel),
+          });
           setGeoVersion((v) => v + 1);
         } else if (mapAreaLevel === "municity") {
           if (!activeRegion) {
@@ -1283,11 +1311,17 @@ export default function MapCanvas() {
           centroidMap.clear();
           geoJsonRef.current.clearLayers();
           geoJsonRef.current.addData(merged);
-          setLoadedBoundaries({ level: mapAreaLevel, codes: datasetBoundaryCodes(merged, mapAreaLevel) });
+          setLoadedBoundaries({
+            level: mapAreaLevel,
+            codes: datasetBoundaryCodes(merged, mapAreaLevel),
+          });
           setGeoVersion((v) => v + 1);
         }
       } catch (error) {
-        if (!cancelled) setGeoError(error instanceof Error ? error.message : "Could not load local boundaries. Retry.");
+        if (!cancelled)
+          setGeoError(
+            error instanceof Error ? error.message : "Could not load local boundaries. Retry.",
+          );
       } finally {
         if (!cancelled) setGeoLoading(false);
       }
@@ -1513,7 +1547,9 @@ export default function MapCanvas() {
         />
         {activeLayerDatasetId && <ImportedEventVenue data={layerData} />}
         {activeLayerDatasetId && showDots && <AllChoroplethDots layerData={layerData} />}
-        {activeLayerDatasetId && showNumbers && <ChoroplethNumbers layerData={layerData} level={mapAreaLevel} />}
+        {activeLayerDatasetId && showNumbers && (
+          <ChoroplethNumbers layerData={layerData} level={mapAreaLevel} />
+        )}
         <EarthquakeLayer />
         <GdacsLayer />
         <ReliefWebLayer />
@@ -1652,7 +1688,13 @@ export default function MapCanvas() {
             <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">
               {layerData.dataset.name}
             </p>
-            <DatasetCoverage data={layerData} level={mapAreaLevel} boundaries={loadedBoundaries.codes} loading={geoLoading || loadedBoundaries.level !== mapAreaLevel} error={!!geoError} />
+            <DatasetCoverage
+              data={layerData}
+              level={mapAreaLevel}
+              boundaries={loadedBoundaries.codes}
+              loading={geoLoading || loadedBoundaries.level !== mapAreaLevel}
+              error={!!geoError}
+            />
             <div className="flex items-center gap-1.5 mb-1">
               {CHOROPLETH_COLORS.map((c, i) => (
                 <div key={i} className="h-3 flex-1 rounded-sm" style={{ backgroundColor: c }} />

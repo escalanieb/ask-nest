@@ -17,7 +17,7 @@ import {
 } from "../../services/api/tipasApi";
 
 // Reset pages whenever dataset layer or area level changes
-const MAX_COLUMNS = 3;
+const MAX_COLUMNS = 6;
 
 export default function DatasetRecordsPanel() {
   const source = useEffectiveMapSource();
@@ -40,6 +40,7 @@ export default function DatasetRecordsPanel() {
     selectedTipasEventId,
     filters,
   ]);
+  const [showAllColumns, setShowAllColumns] = useState(false);
   const [pagination, setPagination] = useState({ context, page: 1 });
   const page = pagination.context === context ? pagination.page : 1;
   const setPage = (next: number | ((previous: number) => number)) =>
@@ -138,7 +139,7 @@ export default function DatasetRecordsPanel() {
             d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
           />
         </svg>
-        <p>Select a dataset layer or TIPAS event in the sidebar to view records.</p>
+        <p>Pick an event or list on the right to see its records here.</p>
       </div>
     );
   }
@@ -166,13 +167,15 @@ export default function DatasetRecordsPanel() {
   const displayFields = preferredKeys.length
     ? fieldDefs.filter((field) => preferredKeys.includes(field.key))
     : fieldDefs;
-  const columns =
-    !showTipasAttendees && fieldDefs.length > 0
-      ? [
-          ...displayFields.filter((f) => f.type !== "url"),
-          ...fieldDefs.filter((f) => f.type === "url"),
-        ].slice(0, MAX_COLUMNS)
-      : [];
+  const orderedFields = [
+    ...displayFields.filter((f) => f.type !== "url"),
+    ...displayFields.filter((f) => f.type === "url"),
+  ];
+  // Configured display fields first, then the dataset's own first fields, never raw JSON.
+  const fallbackFields = fieldDefs.filter((f) => !orderedFields.includes(f));
+  const allColumns = !showTipasAttendees ? [...orderedFields, ...fallbackFields] : [];
+  const columns = showAllColumns ? allColumns : allColumns.slice(0, MAX_COLUMNS);
+  const hiddenColumns = allColumns.length - columns.length;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -240,7 +243,7 @@ export default function DatasetRecordsPanel() {
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            No records for this area
+            No records match. Try removing a filter above the map.
           </div>
         ) : showTipasAttendees ? (
           <table className="w-full text-xs border-collapse">
@@ -299,7 +302,7 @@ export default function DatasetRecordsPanel() {
             </tbody>
           </table>
         ) : (
-          <table className="w-full text-xs border-collapse">
+          <table className="min-w-full text-xs border-collapse">
             <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
               <tr>
                 <th className="px-3 py-2 text-left font-semibold text-slate-500 text-[10px] uppercase tracking-wide w-8">
@@ -332,8 +335,10 @@ export default function DatasetRecordsPanel() {
                       </td>
                     ))
                   ) : (
-                    <td className="px-3 py-2 text-slate-600 font-mono text-[10px]">
-                      {JSON.stringify(row.data)}
+                    <td className="px-3 py-2 text-slate-600 text-[11px]">
+                      {Object.entries(row.data)
+                        .map(([k, v]) => `${k}: ${String(v ?? "—")}`)
+                        .join(" · ")}
                     </td>
                   )}
                 </tr>
@@ -342,6 +347,18 @@ export default function DatasetRecordsPanel() {
           </table>
         )}
       </div>
+
+      {!showTipasAttendees && (hiddenColumns > 0 || showAllColumns) && (
+        <div className="shrink-0 border-t border-slate-100 bg-white px-3 py-1 text-right">
+          <button
+            type="button"
+            className="text-[11px] font-semibold text-team underline"
+            onClick={() => setShowAllColumns((v) => !v)}
+          >
+            {showAllColumns ? "Show fewer columns" : `Show all columns (+${hiddenColumns})`}
+          </button>
+        </div>
+      )}
 
       {/* Footer */}
       {!isLoading && rows.length > 0 && totalPages > 1 && (

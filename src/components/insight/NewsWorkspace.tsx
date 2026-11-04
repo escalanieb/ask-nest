@@ -1,10 +1,5 @@
 import { useCallback, useDeferredValue, useMemo, useState } from "react";
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createColumnHelper,
   flexRender,
@@ -183,10 +178,7 @@ type FullNewsPayload = {
   sentiment: Sentiment;
   comment_count?: number;
 };
-type CreateNewsPayload =
-  | CreateSingleLinkPayload
-  | CreateBulkLinksPayload
-  | FullNewsPayload;
+type CreateNewsPayload = CreateSingleLinkPayload | CreateBulkLinksPayload | FullNewsPayload;
 
 function toFormState(item?: NewsItem | null): NewsFormState {
   if (!item) return emptyFormState;
@@ -197,11 +189,8 @@ function toFormState(item?: NewsItem | null): NewsFormState {
     linkEntries: [],
     summary: item.summary ?? "",
     reco_action: item.reco_action ?? "",
-    main_themes: Array.isArray(item.main_themes)
-      ? item.main_themes.join(", ")
-      : "",
-    overall_sentiment:
-      (item.sentiment?.overall_sentiment as SentimentTone) || "neutral",
+    main_themes: Array.isArray(item.main_themes) ? item.main_themes.join(", ") : "",
+    overall_sentiment: (item.sentiment?.overall_sentiment as SentimentTone) || "neutral",
     positive: item.sentiment?.positive ?? "",
     negative: item.sentiment?.negative ?? "",
     neutral: item.sentiment?.neutral ?? "",
@@ -229,12 +218,7 @@ function parseThemes(value: string) {
 }
 
 function getSentimentTone(value?: string | null): SentimentTone {
-  if (
-    value === "positive" ||
-    value === "negative" ||
-    value === "neutral" ||
-    value === "mixed"
-  ) {
+  if (value === "positive" || value === "negative" || value === "neutral" || value === "mixed") {
     return value as SentimentTone;
   }
   return "neutral";
@@ -334,16 +318,11 @@ export default function NewsWorkspace() {
   const [showAdvancedReport, setShowAdvancedReport] = useState(false);
   const deferredSearch = useDeferredValue(search.trim());
 
-  const handleSearchChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const nextValue = event.target.value;
-      setSearch(nextValue);
-      setPagination((current) =>
-        current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }
-      );
-    },
-    []
-  );
+  const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.value;
+    setSearch(nextValue);
+    setPagination((current) => (current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }));
+  }, []);
 
   const newsQuery = useQuery({
     queryKey: ["insight-news", deferredSearch, pagination.pageIndex, pagination.pageSize],
@@ -392,8 +371,7 @@ export default function NewsWorkspace() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) =>
-      insightFetch<{ message: string }>(`/news/${id}`, "DELETE"),
+    mutationFn: async (id: number) => insightFetch<{ message: string }>(`/news/${id}`, "DELETE"),
     onMutate: async (id: number) => {
       // Cancel in-flight refetches so they don't overwrite our optimistic removal
       await queryClient.cancelQueries({ queryKey: ["insight-news"] });
@@ -402,13 +380,10 @@ export default function NewsWorkspace() {
         queryKey: ["insight-news"],
       });
       // Immediately remove from every cached page — item disappears instantly
-      queryClient.setQueriesData<PaginatedNewsResponse>(
-        { queryKey: ["insight-news"] },
-        (old) => {
-          if (!old) return old;
-          return { ...old, data: old.data.filter((item) => item.id !== id) };
-        }
-      );
+      queryClient.setQueriesData<PaginatedNewsResponse>({ queryKey: ["insight-news"] }, (old) => {
+        if (!old) return old;
+        return { ...old, data: old.data.filter((item) => item.id !== id) };
+      });
       // Close dialog right away
       setDeleteTarget(null);
       return { previousData };
@@ -442,10 +417,8 @@ export default function NewsWorkspace() {
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       const toneMatch =
-        toneFilter === "all" ||
-        getSentimentTone(item.sentiment?.overall_sentiment) === toneFilter;
-      const sourceMatch =
-        sourceFilter === "all" || (item.source ?? "") === sourceFilter;
+        toneFilter === "all" || getSentimentTone(item.sentiment?.overall_sentiment) === toneFilter;
+      const sourceMatch = sourceFilter === "all" || (item.source ?? "") === sourceFilter;
       return toneMatch && sourceMatch;
     });
   }, [items, toneFilter, sourceFilter]);
@@ -478,7 +451,7 @@ export default function NewsWorkspace() {
       setSentimentTarget(null);
       openEditDialog(item);
     },
-    [openEditDialog]
+    [openEditDialog],
   );
 
   const handleEditorOpenChange = useCallback((open: boolean) => {
@@ -515,18 +488,14 @@ export default function NewsWorkspace() {
         size: 9999,
         minSize: 240,
         cell: (info) => {
-          const tone = getSentimentTone(
-            info.row.original.sentiment?.overall_sentiment
-          );
+          const tone = getSentimentTone(info.row.original.sentiment?.overall_sentiment);
           return (
             <div className="min-w-0 space-y-2">
               <p className="overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] font-medium leading-6 text-foreground">
                 {info.getValue()}
               </p>
               {info.row.original.sentiment && (
-                <Badge
-                  className={`w-fit rounded-full text-xs ${sentimentToneStyles[tone]}`}
-                >
+                <Badge className={`w-fit rounded-full text-xs ${sentimentToneStyles[tone]}`}>
                   {sentimentToneLabels[tone]}
                 </Badge>
               )}
@@ -539,9 +508,7 @@ export default function NewsWorkspace() {
         size: 120,
         minSize: 100,
         maxSize: 140,
-        cell: (info) => (
-          <StatusBadge status={getScrapingStatus(info.getValue())} />
-        ),
+        cell: (info) => <StatusBadge status={getScrapingStatus(info.getValue())} />,
       }),
       columnHelper.accessor("source", {
         header: "Source",
@@ -596,7 +563,7 @@ export default function NewsWorkspace() {
         ),
       }),
     ],
-    [openDetailsDialog, openExportDialog]
+    [openDetailsDialog, openExportDialog],
   );
 
   const table = useReactTable({
@@ -614,16 +581,16 @@ export default function NewsWorkspace() {
   const metrics = useMemo(() => {
     const total = items.length;
     const positive = items.filter(
-      (item) => getSentimentTone(item.sentiment?.overall_sentiment) === "positive"
+      (item) => getSentimentTone(item.sentiment?.overall_sentiment) === "positive",
     ).length;
     const neutral = items.filter(
-      (item) => getSentimentTone(item.sentiment?.overall_sentiment) === "neutral"
+      (item) => getSentimentTone(item.sentiment?.overall_sentiment) === "neutral",
     ).length;
     const negative = items.filter(
-      (item) => getSentimentTone(item.sentiment?.overall_sentiment) === "negative"
+      (item) => getSentimentTone(item.sentiment?.overall_sentiment) === "negative",
     ).length;
     const mixed = items.filter(
-      (item) => getSentimentTone(item.sentiment?.overall_sentiment) === "mixed"
+      (item) => getSentimentTone(item.sentiment?.overall_sentiment) === "mixed",
     ).length;
     return { total, positive, neutral, negative, mixed };
   }, [items]);
@@ -767,7 +734,7 @@ export default function NewsWorkspace() {
               onClick={() => {
                 setToneFilter(tone);
                 setPagination((current) =>
-                  current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }
+                  current.pageIndex === 0 ? current : { ...current, pageIndex: 0 },
                 );
               }}
               className="rounded-full px-4"
@@ -787,7 +754,7 @@ export default function NewsWorkspace() {
             onClick={() => {
               setSourceFilter("all");
               setPagination((current) =>
-                current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }
+                current.pageIndex === 0 ? current : { ...current, pageIndex: 0 },
               );
             }}
             className="rounded-full px-4"
@@ -801,7 +768,7 @@ export default function NewsWorkspace() {
               onClick={() => {
                 setSourceFilter(src);
                 setPagination((current) =>
-                  current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }
+                  current.pageIndex === 0 ? current : { ...current, pageIndex: 0 },
                 );
               }}
               className="rounded-full px-4"
@@ -829,9 +796,7 @@ export default function NewsWorkspace() {
         <div>
           <p className="text-sm text-muted-foreground">
             Showing{" "}
-            <span className="font-medium text-foreground">
-              {table.getRowModel().rows.length}
-            </span>{" "}
+            <span className="font-medium text-foreground">{table.getRowModel().rows.length}</span>{" "}
             of{" "}
             <span className="font-medium text-foreground">
               {newsQuery.data?.meta?.total ?? items.length}
@@ -877,8 +842,8 @@ export default function NewsWorkspace() {
                 </EmptyMedia>
                 <EmptyTitle>No news items yet</EmptyTitle>
                 <EmptyDescription>
-                  Use the create dialog to add the first story, or wait for n8n to push a
-                  fresh RSS item into the API.
+                  Use the create dialog to add the first story, or wait for n8n to push a fresh RSS
+                  item into the API.
                 </EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
@@ -924,9 +889,7 @@ export default function NewsWorkspace() {
                           key={cell.id}
                           style={{
                             width:
-                              cell.column.getSize() === 9999
-                                ? undefined
-                                : cell.column.getSize(),
+                              cell.column.getSize() === 9999 ? undefined : cell.column.getSize(),
                           }}
                           className="px-5 py-4 align-middle whitespace-normal"
                         >
@@ -997,8 +960,7 @@ export default function NewsWorkspace() {
               {editorMode === "create" ? "Add news item" : "Edit news item"}
             </DialogTitle>
             <DialogDescription>
-              Capture the title and link first, then attach the sentiment object and guidance
-              text.
+              Capture the title and link first, then attach the sentiment object and guidance text.
             </DialogDescription>
           </DialogHeader>
 
@@ -1009,7 +971,8 @@ export default function NewsWorkspace() {
                   <Label>Add links (Optional comment limit)</Label>
                   <p className="text-sm text-muted-foreground">
                     Enter each Facebook link. Optionally, specify a total comment count limit;
-                    otherwise, the count and reactions will be derived automatically from the scrape.
+                    otherwise, the count and reactions will be derived automatically from the
+                    scrape.
                   </p>
                   <div className="space-y-3">
                     {form.linkEntries.map((entry) => (
@@ -1027,9 +990,7 @@ export default function NewsWorkspace() {
                                 setForm((current) => ({
                                   ...current,
                                   linkEntries: current.linkEntries.map((item) =>
-                                    item.id === entry.id
-                                      ? { ...item, url: e.target.value }
-                                      : item
+                                    item.id === entry.id ? { ...item, url: e.target.value } : item,
                                   ),
                                 }))
                               }
@@ -1048,7 +1009,7 @@ export default function NewsWorkspace() {
                                   linkEntries: current.linkEntries.map((item) =>
                                     item.id === entry.id
                                       ? { ...item, totalComments: e.target.value }
-                                      : item
+                                      : item,
                                   ),
                                 }))
                               }
@@ -1078,7 +1039,7 @@ export default function NewsWorkspace() {
                               setForm((current) => ({
                                 ...current,
                                 linkEntries: current.linkEntries.filter(
-                                  (item) => item.id !== entry.id
+                                  (item) => item.id !== entry.id,
                                 ),
                               }))
                             }
@@ -1304,17 +1265,10 @@ export default function NewsWorkspace() {
             )}
 
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => setEditorOpen(false)}
-              >
+              <Button variant="outline" type="button" onClick={() => setEditorOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
                 {createMutation.isPending || updateMutation.isPending ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : editorMode === "create" ? (
@@ -1478,7 +1432,9 @@ export default function NewsWorkspace() {
                             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                               {sentimentTarget.sentiment.reaction_tone && (
                                 <div className="space-y-1">
-                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Reaction Tone</p>
+                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                                    Reaction Tone
+                                  </p>
                                   <Badge className="rounded-full font-medium capitalize">
                                     {sentimentTarget.sentiment.reaction_tone}
                                   </Badge>
@@ -1486,26 +1442,38 @@ export default function NewsWorkspace() {
                               )}
                               {sentimentTarget.sentiment.signal_alignment && (
                                 <div className="space-y-1">
-                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Signal Alignment</p>
-                                  <Badge variant="secondary" className="rounded-full font-medium capitalize">
+                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                                    Signal Alignment
+                                  </p>
+                                  <Badge
+                                    variant="secondary"
+                                    className="rounded-full font-medium capitalize"
+                                  >
                                     {sentimentTarget.sentiment.signal_alignment}
                                   </Badge>
                                 </div>
                               )}
                               {sentimentTarget.sentiment.dominant_reaction && (
                                 <div className="space-y-1">
-                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Dominant Reaction</p>
+                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                                    Dominant Reaction
+                                  </p>
                                   <span className="text-sm font-semibold capitalize text-foreground">
-                                    {sentimentTarget.sentiment.dominant_reaction} 
-                                    {sentimentTarget.sentiment.dominant_reaction_percentage !== undefined && (
-                                      <span className="ml-1 text-xs text-muted-foreground">({sentimentTarget.sentiment.dominant_reaction_percentage}%)</span>
+                                    {sentimentTarget.sentiment.dominant_reaction}
+                                    {sentimentTarget.sentiment.dominant_reaction_percentage !==
+                                      undefined && (
+                                      <span className="ml-1 text-xs text-muted-foreground">
+                                        ({sentimentTarget.sentiment.dominant_reaction_percentage}%)
+                                      </span>
                                     )}
                                   </span>
                                 </div>
                               )}
                               {sentimentTarget.sentiment.reaction_data_consistent !== undefined && (
                                 <div className="space-y-1 col-span-2 sm:col-span-1">
-                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Data Consistent</p>
+                                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                                    Data Consistent
+                                  </p>
                                   <span className="text-sm font-semibold flex items-center gap-1.5">
                                     {sentimentTarget.sentiment.reaction_data_consistent ? (
                                       <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
@@ -1523,7 +1491,9 @@ export default function NewsWorkspace() {
 
                             {sentimentTarget.sentiment.reaction_summary && (
                               <div className="space-y-1.5 rounded-2xl bg-muted/30 p-3.5 border border-border/40">
-                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Reaction Summary</p>
+                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                                  Reaction Summary
+                                </p>
                                 <p className="text-xs text-muted-foreground leading-relaxed italic">
                                   "{sentimentTarget.sentiment.reaction_summary}"
                                 </p>
@@ -1551,15 +1521,27 @@ export default function NewsWorkspace() {
                           },
                           {
                             label: "Total comments",
-                            value: String(sentimentTarget.sentiment?.total_comments ?? sentimentTarget.comment_count ?? 0),
+                            value: String(
+                              sentimentTarget.sentiment?.total_comments ??
+                                sentimentTarget.comment_count ??
+                                0,
+                            ),
                           },
                           {
                             label: "Reaction count",
-                            value: sentimentTarget.reaction_count !== null && sentimentTarget.reaction_count !== undefined ? String(sentimentTarget.reaction_count) : "-",
+                            value:
+                              sentimentTarget.reaction_count !== null &&
+                              sentimentTarget.reaction_count !== undefined
+                                ? String(sentimentTarget.reaction_count)
+                                : "-",
                           },
                           {
                             label: "View count",
-                            value: sentimentTarget.view_count !== null && sentimentTarget.view_count !== undefined ? String(sentimentTarget.view_count) : "-",
+                            value:
+                              sentimentTarget.view_count !== null &&
+                              sentimentTarget.view_count !== undefined
+                                ? String(sentimentTarget.view_count)
+                                : "-",
                           },
                         ] as const
                       ).map(({ label, value }) => (
@@ -1569,32 +1551,31 @@ export default function NewsWorkspace() {
                         </div>
                       ))}
 
-                      {sentimentTarget.reactions && Object.keys(sentimentTarget.reactions).length > 0 && (
-                        <div className="border-t border-border/70 pt-3 mt-3 space-y-2">
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                            Reactions Breakdown
-                          </p>
-                          <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                            {Object.entries(sentimentTarget.reactions).map(([reaction, count]) => (
-                              <div key={reaction} className="flex justify-between">
-                                <span className="capitalize">{reaction}</span>
-                                <span>{count}</span>
-                              </div>
-                            ))}
+                      {sentimentTarget.reactions &&
+                        Object.keys(sentimentTarget.reactions).length > 0 && (
+                          <div className="border-t border-border/70 pt-3 mt-3 space-y-2">
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                              Reactions Breakdown
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                              {Object.entries(sentimentTarget.reactions).map(
+                                ([reaction, count]) => (
+                                  <div key={reaction} className="flex justify-between">
+                                    <span className="capitalize">{reaction}</span>
+                                    <span>{count}</span>
+                                  </div>
+                                ),
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
                   </div>
                 </div>
               </div>
 
               <DialogFooter className="shrink-0 sm:items-center">
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={() => setSentimentTarget(null)}
-                >
+                <Button variant="outline" type="button" onClick={() => setSentimentTarget(null)}>
                   Close
                 </Button>
                 <Button
@@ -1633,8 +1614,8 @@ export default function NewsWorkspace() {
                 <AlertDialogTitle>Delete this news item?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This removes{" "}
-                  <span className="font-medium text-foreground">{deleteTarget.title}</span>{" "}
-                  from the dashboard.
+                  <span className="font-medium text-foreground">{deleteTarget.title}</span> from the
+                  dashboard.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1656,10 +1637,7 @@ export default function NewsWorkspace() {
       </AlertDialog>
 
       {/* ── Quick Export Dialog ── */}
-      <ExportDialog
-        news={exportTarget}
-        onClose={() => setExportTarget(null)}
-      />
+      <ExportDialog news={exportTarget} onClose={() => setExportTarget(null)} />
     </div>
   );
 }
