@@ -5,16 +5,14 @@ import { useAscStore } from "../stores/useAscStore";
 import { useMapStore } from "../stores/useMapStore";
 import { useFilterStore } from "../stores/useFilterStore";
 import { useDatasetLayerStore } from "../stores/useDatasetLayerStore";
-import { useWorkspaceStore } from "../stores/useWorkspaceStore";
+import { useTrayStore } from "../stores/useTrayStore";
 import { useRssStore } from "../stores/useRssStore";
 import { useVideoStore } from "../stores/useVideoStore";
 import { queryClient } from "./queryClient";
 import { changeSession } from "./session";
 
 function key(state: ReturnType<typeof useAuthStore.getState>) {
-  return state.token && state.user
-    ? accessContext(state.user)
-    : "anonymous";
+  return state.token && state.user ? accessContext(state.user) : "anonymous";
 }
 
 function reset(identity: string) {
@@ -29,12 +27,19 @@ function reset(identity: string) {
   useFilterStore.setState(useFilterStore.getInitialState());
   useDatasetLayerStore.setState(useDatasetLayerStore.getInitialState());
   useMapSourceStore.setState(useMapSourceStore.getInitialState());
-  useWorkspaceStore.setState(useWorkspaceStore.getInitialState());
+  useTrayStore.setState(useTrayStore.getInitialState());
   useRssStore.setState(useRssStore.getInitialState());
   useVideoStore.setState(useVideoStore.getInitialState());
   document.documentElement.style.removeProperty("--team-accent");
   document.documentElement.style.removeProperty("--team-on-accent");
   localStorage.setItem("ask-nest-session-owner", identity);
+}
+
+// The old draggable panel layout was retired; drop its saved copy so it does not linger.
+try {
+  localStorage.removeItem("workspace-layout");
+} catch {
+  /* storage unavailable */
 }
 
 const initialIdentity = key(useAuthStore.getState());

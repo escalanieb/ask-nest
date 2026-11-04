@@ -223,10 +223,9 @@ export default function VideoPanel() {
               <FacebookLogo className="h-8 w-8 text-blue-600" />
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Open the <span className="font-semibold text-slate-300">Video Links</span> section in
-              the sidebar
+              Pick a saved video link below to watch it here.
               <br />
-              and click a saved link to load it here.
+              Use “Save link” to add a YouTube or Facebook video.
             </p>
           </div>
         ) : (

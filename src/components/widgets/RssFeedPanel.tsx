@@ -42,7 +42,11 @@ export default function RssFeedPanel() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const effectiveFeedId = activeFeedId ?? allFeeds.find((feed) => feed.active && feed.is_shared)?.id ?? allFeeds.find((feed) => feed.active)?.id ?? null;
+  const effectiveFeedId =
+    activeFeedId ??
+    allFeeds.find((feed) => feed.active && feed.is_shared)?.id ??
+    allFeeds.find((feed) => feed.active)?.id ??
+    null;
 
   // Single mode: fetch active feed
   const {

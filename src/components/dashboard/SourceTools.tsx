@@ -1,16 +1,12 @@
-import DatasetFilterControls from "./DatasetFilterControls";
-import { useMapSourceStore, useEffectiveMapSource } from "../../stores/useMapSourceStore";
-import { canUseWidget } from "../../lib/teamAccess";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { psgcApi, type PsgcCityMunicipality } from "../../services/api/psgcApi";
 import { rssFeedApi, type RssFeed } from "../../services/api/rssFeedApi";
-import { fetchDatasets } from "../../services/api/datasetApi";
 import { disasterApi } from "../../services/api/disasterApi";
 import { useFilterStore } from "../../stores/useFilterStore";
-import { useMapStore, type MapAreaLevel } from "../../stores/useMapStore";
-import { useWorkspaceStore } from "../../stores/useWorkspaceStore";
+import { useMapStore } from "../../stores/useMapStore";
+import { useTrayStore } from "../../stores/useTrayStore";
 import { useRssStore } from "../../stores/useRssStore";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
@@ -87,7 +83,7 @@ function pad(n: number, width = 2) {
   return String(n).padStart(width, "0");
 }
 
-function ElectionCountdown() {
+export function ElectionCountdown() {
   const { months, weeks, days, hours, minutes, seconds, isPast } = useElectionCountdown();
 
   return (
@@ -157,63 +153,9 @@ function ElectionCountdown() {
 }
 
 // ---------------------------------------------------------------------------
-// Map Area Level Toggle
+// RSS Feed Settings (News tab, admins only)
 // ---------------------------------------------------------------------------
-const MAP_AREA_LEVELS: { id: MapAreaLevel; label: string }[] = [
-  { id: "region", label: "Region" },
-  { id: "province", label: "Province" },
-  { id: "municity", label: "Municities" },
-];
-
-function MapAreaToggle() {
-  const mapAreaLevel = useMapStore((s) => s.mapAreaLevel);
-  const setMapAreaLevel = useMapStore((s) => s.setMapAreaLevel);
-  const setSelectedLocation = useMapStore((s) => s.setSelectedLocation);
-  const setActiveProvince = useFilterStore((s) => s.setActiveProvince);
-
-  function handleChange(level: MapAreaLevel) {
-    if (level === mapAreaLevel) return;
-    setMapAreaLevel(level);
-    setSelectedLocation(null);
-    // Clear sub-region filters but keep activeRegion so municity/province
-    // can immediately load for the already-selected region.
-    setActiveProvince(null); // also cascades to clear activeCityMuni
-  }
-
-  return (
-    <AccordionSection title="Boundary level">
-      <div className="space-y-2 pt-1">
-        <div className="flex rounded-lg overflow-hidden border border-slate-200">
-          {MAP_AREA_LEVELS.map(({ id, label }, i) => (
-            <button
-              key={id}
-              onClick={() => handleChange(id)}
-              className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
-                i > 0 ? "border-l border-slate-200" : ""
-              } ${
-                mapAreaLevel === id
-                  ? "bg-team text-white"
-                  : "bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <p className="text-[10px] text-slate-400 leading-relaxed">
-          <span className="font-semibold text-slate-500">Historical boundaries:</span> this map
-          uses the compatible 2019 snapshot. Areas changed since then may be unavailable. Choose
-          a region to view its cities and municipalities.
-        </p>
-      </div>
-    </AccordionSection>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// RSS Feed Settings (sidebar section)
-// ---------------------------------------------------------------------------
-function RssFeedSettings() {
+export function RssFeedSettings() {
   const activeFeedId = useRssStore((s) => s.activeFeedId);
   const setActiveFeedId = useRssStore((s) => s.setActiveFeedId);
   const user = useAuthStore((s) => s.user);
@@ -265,7 +207,7 @@ function RssFeedSettings() {
   });
 
   return (
-    <AccordionSection title="RSS sources" defaultOpen={false}>
+    <AccordionSection title="Add or remove news sources" defaultOpen={false}>
       <div className="space-y-1 pt-1">
         {isLoading && <p className="py-1 text-[10px] text-slate-400">Loading feeds…</p>}
         {isError && <p className="py-1 text-[10px] text-red-400">Failed to load feeds.</p>}
@@ -386,7 +328,7 @@ function detectVideoPlatform(url: string): VideoPlatform | null {
 // ---------------------------------------------------------------------------
 // Video Link Manager
 // ---------------------------------------------------------------------------
-function VideoLinkManager() {
+export function VideoLinkManager() {
   const { savedLinks, addLink, removeLink, setPendingSource } = useVideoStore();
 
   const [showAdd, setShowAdd] = useState(false);
@@ -426,7 +368,7 @@ function VideoLinkManager() {
   }
 
   return (
-    <AccordionSection title="Video sources" defaultOpen={false}>
+    <AccordionSection title="Saved video links" defaultOpen={true}>
       <div className="space-y-1 pt-1">
         {savedLinks.length === 0 && !showAdd && (
           <p className="py-1 text-[10px] text-slate-400">No saved links yet.</p>
@@ -513,154 +455,6 @@ function VideoLinkManager() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Widget toggles
-// ---------------------------------------------------------------------------
-const WIDGETS = [
-  {
-    id: "analyticsPanel",
-    label: "Analytics",
-    icon: (
-      <svg
-        className="h-3.5 w-3.5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-        />
-      </svg>
-    ),
-  },
-  {
-    id: "rssFeedPanel",
-    label: "RSS Feeds",
-    icon: (
-      <svg
-        className="h-3.5 w-3.5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110 2 1 1 0 010-2z"
-        />
-      </svg>
-    ),
-  },
-  {
-    id: "recordsPanel",
-    label: "Records",
-    icon: (
-      <svg
-        className="h-3.5 w-3.5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-        />
-      </svg>
-    ),
-  },
-  {
-    id: "videoPanel",
-    label: "Video",
-    icon: (
-      <svg
-        className="h-3.5 w-3.5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-        />
-      </svg>
-    ),
-  },
-  {
-    id: "disasterPanel",
-    label: "Disasters",
-    icon: (
-      <svg
-        className="h-3.5 w-3.5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-        />
-      </svg>
-    ),
-  },
-] as const;
-
-function WidgetToggles() {
-  const capabilities = useAuthStore((s) => s.user?.capabilities);
-  const widgets = useWorkspaceStore((s) => s.widgets);
-  const toggleWidget = useWorkspaceStore((s) => s.toggleWidget);
-
-  return (
-    <AccordionSection title="Panels">
-      <div className="flex flex-wrap gap-2 pt-1">
-        {WIDGETS.filter(({ id }) =>
-          canUseWidget(
-            id.startsWith("rss")
-              ? "rss"
-              : id.startsWith("analytics")
-                ? "analytics"
-                : id.startsWith("records")
-                  ? "records"
-                  : "",
-            capabilities,
-          ),
-        ).map(({ id, label, icon }) => {
-          const active = widgets[id]?.visible ?? false;
-          return (
-            <button
-              key={id}
-              onClick={() => toggleWidget(id)}
-              className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${
-                active
-                  ? "border-team bg-team text-white hover:bg-team-strong"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800"
-              }`}
-            >
-              {icon}
-              {label}
-              <span
-                className={`ml-0.5 h-1.5 w-1.5 rounded-full ${active ? "bg-white/70" : "bg-slate-300"}`}
-              />
-            </button>
-          );
-        })}
-      </div>
-    </AccordionSection>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Filters
-// ---------------------------------------------------------------------------
 function FilterSelect({
   label,
   value,
@@ -670,58 +464,29 @@ function FilterSelect({
 }: {
   label: string;
   value: string;
-  onChange: (v: string) => void;
+  onChange: (value: string) => void;
   disabled?: boolean;
   children: ReactNode;
 }) {
-  const hasValue = value !== "";
   return (
-    <div className="space-y-0.5">
-      <label
-        className={`text-[9px] font-bold uppercase tracking-[0.18em] transition-colors ${
-          hasValue ? "text-team" : "text-slate-400"
-        }`}
-      >
+    <label className="block space-y-0.5">
+      <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
         {label}
-      </label>
-      <div
-        className={`relative border-b transition-colors ${
-          disabled
-            ? "border-slate-100 opacity-50"
-            : hasValue
-              ? "border-team"
-              : "border-slate-200 hover:border-slate-400"
-        }`}
+      </span>
+      <select
+        aria-label={label}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border-b border-slate-200 bg-transparent py-1.5 text-[11px] outline-none"
       >
-        <select
-          aria-label={label}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          className={`w-full appearance-none bg-transparent py-1.5 pl-0 pr-6 text-[11px] outline-none cursor-pointer disabled:cursor-not-allowed transition-colors ${
-            hasValue ? "text-team font-bold" : "text-slate-600"
-          }`}
-        >
-          {children}
-        </select>
-        {/* Chevron */}
-        <svg
-          className={`pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 h-3 w-3 transition-colors ${
-            hasValue ? "text-team" : "text-slate-400"
-          }`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2.5}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </div>
-    </div>
+        {children}
+      </select>
+    </label>
   );
 }
 
-function Filters() {
+export function Filters() {
   const {
     activeRegion,
     setActiveRegion,
@@ -918,179 +683,9 @@ function Filters() {
 }
 
 // ---------------------------------------------------------------------------
-// Map Display Toggles — choropleth / dots / numbers
-// ---------------------------------------------------------------------------
-function MapDisplayToggles() {
-  const showChoropleth = useMapStore((s) => s.showChoropleth);
-  const showDots = useMapStore((s) => s.showDots);
-  const showNumbers = useMapStore((s) => s.showNumbers);
-  const setShowChoropleth = useMapStore((s) => s.setShowChoropleth);
-  const setShowDots = useMapStore((s) => s.setShowDots);
-  const setShowNumbers = useMapStore((s) => s.setShowNumbers);
-
-  const source = useEffectiveMapSource();
-  const options = [
-    {
-      key: "choropleth",
-      label: "Area shading",
-      value: showChoropleth,
-      toggle: () => setShowChoropleth(!showChoropleth),
-    },
-    {
-      key: "dots",
-      label: "Data points",
-      value: showDots,
-      toggle: () => setShowDots(!showDots),
-    },
-    {
-      key: "numbers",
-      label: "Count Labels",
-      value: showNumbers,
-      toggle: () => setShowNumbers(!showNumbers),
-    },
-  ];
-
-  return (
-    <AccordionSection title="Map Display">
-      <div className="flex flex-wrap gap-2 pt-1">
-        {options
-          .filter((option) => source === "imported" || option.key === "choropleth")
-          .map(({ key, label, value, toggle }) => (
-            <button
-              key={key}
-              onClick={toggle}
-              className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${
-                value
-                  ? "border-team bg-team text-white hover:bg-team-strong"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-      </div>
-    </AccordionSection>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Dataset Layer Switcher — multi-select checkboxes
-// ---------------------------------------------------------------------------
-function DatasetLayerSwitcher() {
-  const { activeLayerDatasetIds, toggleLayer, setActiveLayer } = useDatasetLayerStore();
-  const [search, setSearch] = useState("");
-  const updateWidget = useWorkspaceStore((s) => s.updateWidget);
-
-  const { data: datasets = [], isLoading } = useQuery({
-    queryKey: ["datasets", "active"],
-    queryFn: () => fetchDatasets(true),
-    staleTime: 1000 * 60 * 2,
-  });
-
-  if (!isLoading && datasets.length === 0) return null;
-
-  const handleClearAll = () => {
-    setActiveLayer(null);
-    updateWidget("recordsPanel", { visible: false });
-  };
-
-  return (
-    <AccordionSection
-      title="Imported events and datasets"
-      defaultOpen={true}
-      action={
-        activeLayerDatasetIds.length > 0 ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleClearAll();
-            }}
-            className="text-[9px] font-bold uppercase tracking-[0.15em] text-team hover:text-team transition-colors"
-          >
-            Clear
-          </button>
-        ) : undefined
-      }
-    >
-      <div className="space-y-1.5 pt-1">
-        {isLoading && <p className="py-1 text-[10px] text-slate-400">Loading datasets…</p>}
-
-        <label className="block text-[11px]">
-          Find an event or dataset
-          <input
-            className="my-2 w-full rounded border p-2"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Name, category, organizer or status"
-          />
-        </label>
-        {datasets
-          .filter((ds) =>
-            [
-              ds.name,
-              ds.event_metadata?.date,
-              ds.event_metadata?.category,
-              ds.event_metadata?.organizer,
-              ds.event_metadata?.status,
-            ]
-              .join(" ")
-              .toLowerCase()
-              .includes(search.toLowerCase()),
-          )
-          .map((ds) => {
-            const checked = activeLayerDatasetIds.includes(ds.id);
-            return (
-              <button
-                key={ds.id}
-                onClick={() => {
-                  toggleLayer(ds.id, ds.psgc_level);
-                  if (!checked) {
-                    updateWidget("recordsPanel", { visible: true });
-                  } else {
-                    const remaining = activeLayerDatasetIds.filter((x) => x !== ds.id);
-                    if (remaining.length === 0) {
-                      updateWidget("recordsPanel", { visible: false });
-                    }
-                  }
-                }}
-                className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition-all ${
-                  checked
-                    ? "border-team bg-team text-white"
-                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                <div className="min-w-0">
-                  <span className="block truncate text-[11px] font-semibold">{ds.name}</span>
-                  <span
-                    className={`text-[9px] ${checked ? "text-team-foreground/80" : "text-slate-400"}`}
-                  >
-                    {ds.event_metadata?.date ?? ds.entity_type} · {ds.psgc_level}
-                    {checked && activeLayerDatasetIds[0] === ds.id ? " · Primary map dataset" : ""}
-                  </span>
-                </div>
-                {checked && (
-                  <svg
-                    className="ml-2 h-3.5 w-3.5 shrink-0 text-white"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2.5}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
-      </div>
-    </AccordionSection>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Disaster Layers — layer toggles + count badges + widget shortcut
 // ---------------------------------------------------------------------------
-function DisasterLayers() {
+export function DisasterLayers() {
   const {
     earthquakesEnabled,
     toggleEarthquakes,
@@ -1103,8 +698,6 @@ function DisasterLayers() {
     heatmapEnabled,
     toggleHeatmap,
   } = useDisasterStore();
-
-  const { toggleWidget } = useWorkspaceStore();
 
   // Poll counts endpoint (public — no auth required)
   const { data: counts } = useQuery({
@@ -1165,40 +758,8 @@ function DisasterLayers() {
     },
   ];
 
-  const totalCount = Object.values(byType).reduce((a, b) => a + b, 0);
-
   return (
-    <AccordionSection title="Disaster Layers" defaultOpen={false}>
-      {/* Open DisasterPanel widget shortcut */}
-      <div className="mb-2 pt-1">
-        <button
-          onClick={() => toggleWidget("disasterPanel")}
-          className="flex w-full items-center justify-between rounded-lg border border-team bg-team px-2.5 py-2 text-left text-[11px] font-semibold text-white hover:bg-team-strong transition-colors"
-        >
-          <div className="flex items-center gap-1.5">
-            <svg
-              className="h-3.5 w-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </svg>
-            View All Events
-          </div>
-          {totalCount > 0 && (
-            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[9px] font-bold">
-              {totalCount}
-            </span>
-          )}
-        </button>
-      </div>
-
+    <AccordionSection title="Show on the map" defaultOpen={true}>
       <div className="space-y-1.5">
         {layers.map(({ key, label, sublabel, value, toggle, live, countType }) => {
           const count = countType ? (byType[countType] ?? 0) : null;
@@ -1261,7 +822,7 @@ function DisasterLayers() {
 // ---------------------------------------------------------------------------
 // TIPAS Layer Switcher
 // ---------------------------------------------------------------------------
-function TipasLayerSwitcher() {
+export function TipasLayerSwitcher() {
   const state = useFilterStore();
   const {
     data: events = [],
@@ -1332,9 +893,7 @@ function TipasLayerSwitcher() {
         </p>
         <button
           className="underline font-semibold"
-          onClick={() =>
-            useWorkspaceStore.getState().updateWidget("recordsPanel", { visible: true })
-          }
+          onClick={() => useTrayStore.getState().setTab("results")}
         >
           Open records
         </button>
@@ -1345,86 +904,5 @@ function TipasLayerSwitcher() {
         )}
       </div>
     </AccordionSection>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main export
-// ---------------------------------------------------------------------------
-export default function SidebarFilters() {
-  const capabilities = useAuthStore((s) => s.user?.capabilities);
-  const source = useEffectiveMapSource();
-  const setSource = useMapSourceStore((s) => s.setSource);
-  return (
-    <>
-      <AccordionSection title="Map data" defaultOpen={true}>
-        <div className="flex gap-2 p-2">
-          {capabilities?.includes("datasets.use") && !capabilities.includes("tipas.use") && (
-            <span className="p-2 text-xs font-semibold">Imported data</span>
-          )}
-          {capabilities?.includes("tipas.use") && !capabilities.includes("datasets.use") && (
-            <span className="p-2 text-xs font-semibold">TIPAS</span>
-          )}
-          {capabilities?.includes("datasets.use") && capabilities.includes("tipas.use") && (
-            <button
-              aria-pressed={source === "imported"}
-              className={
-                source === "imported"
-                  ? "rounded bg-team text-white p-2 text-xs"
-                  : "rounded border p-2 text-xs"
-              }
-              onClick={() => setSource("imported")}
-            >
-              Imported data
-            </button>
-          )}
-          {capabilities?.includes("tipas.use") && capabilities.includes("datasets.use") && (
-            <button
-              aria-pressed={source === "tipas"}
-              className={
-                source === "tipas"
-                  ? "rounded bg-team text-white p-2 text-xs"
-                  : "rounded border p-2 text-xs"
-              }
-              onClick={() => setSource("tipas")}
-            >
-              TIPAS
-            </button>
-          )}
-        </div>
-        <p className="px-3 pb-2 text-[11px] text-slate-500">
-          One primary source controls the map, legend and records.
-        </p>
-      </AccordionSection>
-      {source === "none" && (
-        <p className="p-3 text-xs text-slate-500">
-          No primary data source is enabled for your team.
-        </p>
-      )}
-      {source === "none" && (
-        <p className="p-3 text-xs text-slate-500">
-          No primary data source is enabled for your team.
-        </p>
-      )}
-      {source === "imported" && <DatasetLayerSwitcher />}
-      {source === "tipas" && <TipasLayerSwitcher />}
-      <AccordionSection title="Filters" defaultOpen={true}>
-        {source === "imported" && <DatasetFilterControls />}
-        <Filters />
-      </AccordionSection>
-      <AccordionSection title="Appearance" defaultOpen={false}>
-        <MapDisplayToggles />
-        <MapAreaToggle />
-      </AccordionSection>
-      <AccordionSection title="Additional layers" defaultOpen={false}>
-        <DisasterLayers />
-      </AccordionSection>
-      <AccordionSection title="Panels and sources" defaultOpen={false}>
-        <WidgetToggles />
-        {capabilities?.includes("rss.use") && <RssFeedSettings />}
-        <VideoLinkManager />
-      </AccordionSection>
-      <ElectionCountdown />
-    </>
   );
 }
