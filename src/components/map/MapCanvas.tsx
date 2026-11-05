@@ -7,6 +7,12 @@ import {
 } from "../../lib/datasetLayer";
 import DatasetCoverage from "./DatasetCoverage";
 import { createBoundaryLoader, boundaryAttribution } from "../../services/mapBoundaries";
+import {
+  TIPAS_GEO_VERSION,
+  TIPAS_PLACEMENT_VERSION,
+  createTipasPlacer,
+  type TipasPlacement,
+} from "../../services/tipasPlacement";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useEffect, useRef, useState, useCallback, type JSX } from "react";
 import {
@@ -57,6 +63,8 @@ L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 const PH_CENTER: [number, number] = [12.8797, 121.774];
 
 const loadBoundaries = createBoundaryLoader(fetch, `${import.meta.env.BASE_URL}maps/ph-2019/`);
+// TIPAS pins are placed independently of the displayed boundary level / centroidMap.
+const placeTipasEvent = createTipasPlacer(loadBoundaries);
 
 const GEO_LEVEL_TYPES = {
   region: "Region",
@@ -824,7 +832,7 @@ function ImportedEventVenue({ data }: { data: LayerResponse | undefined }) {
   );
 }
 
-function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
+function TipasEventsLayer() {
   const canUseTipas = useAuthStore((s) => !!s.user?.capabilities?.includes("tipas.use"));
   const tipasEventsSelected = useFilterStore((s) => s.showTipasEvents);
   const source = useEffectiveMapSource();
@@ -835,7 +843,7 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
 
   const { data: events = [] } = useQuery({
-    queryKey: ["tipas-events", geoVersion],
+    queryKey: ["tipas-events"],
     queryFn: fetchTipasEvents,
     enabled: showTipasEvents,
     staleTime: 1000 * 60 * 5,
@@ -849,27 +857,34 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
       (!prefix || event.psgc_code?.startsWith(prefix)),
   );
 
-  // Group events by their resolved psgc_code to handle multiple events in one location
-  const groupedEvents: Record<string, typeof events> = {};
+  const codes = [...new Set(filteredEvents.map((e) => e.psgc_code).filter(Boolean))].sort();
+  const { data: placements } = useQuery({
+    queryKey: ["tipas-placements", TIPAS_GEO_VERSION, TIPAS_PLACEMENT_VERSION, codes],
+    queryFn: async () => {
+      const out: Record<string, TipasPlacement | null> = {};
+      await Promise.all(
+        codes.map(async (c) => {
+          out[c as string] = await placeTipasEvent(c);
+        }),
+      );
+      return out;
+    },
+    enabled: showTipasEvents && codes.length > 0,
+    staleTime: Infinity,
+  });
+
+  // Group events by the resolved area so overlapping fallbacks share one marker.
+  // Events with unmapped codes are omitted from the map (not evidence of no event).
+  const groupedEvents: Record<string, { pos: TipasPlacement; events: typeof events }> = {};
   for (const evt of filteredEvents) {
-    if (evt.psgc_code) {
-      groupedEvents[evt.psgc_code] ??= [];
-      groupedEvents[evt.psgc_code].push(evt);
-    }
+    const pos = evt.psgc_code ? placements?.[evt.psgc_code] : null;
+    if (!pos) continue;
+    (groupedEvents[`${pos.areaCode}:${pos.accuracy}`] ??= { pos, events: [] }).events.push(evt);
   }
 
   return (
     <>
-      {Object.entries(groupedEvents).map(([psgcCode, cityEvents]) => {
-        let pos = centroidMap.get(psgcCode);
-
-        if (!pos)
-          pos =
-            centroidMap.get(psgcCode.slice(0, 4) + "00000") ??
-            centroidMap.get(psgcCode.slice(0, 2) + "0000000");
-
-        if (!pos) return null;
-
+      {Object.entries(groupedEvents).map(([psgcCode, { pos, events: cityEvents }]) => {
         const count = cityEvents.length;
 
         // Custom icon displaying the number of events if > 1
@@ -946,7 +961,7 @@ function TipasEventsLayer({ geoVersion }: { geoVersion: number }) {
                       )}
                       <div style={{ fontSize: "11px", color: "#334155" }} className="space-y-1">
                         <p>
-                          Approximate area location:{" "}
+                          Approximate {pos.accuracy}-level location:{" "}
                           <span className="font-semibold text-slate-700">
                             {evt.location ?? "Unknown"}
                           </span>
@@ -1556,7 +1571,7 @@ export default function MapCanvas() {
         <VolcanoLayer />
         <TyphoonLayer />
         <FloodLayer />
-        <TipasEventsLayer geoVersion={geoVersion} />
+        <TipasEventsLayer />
         <MapPanZoomController />
         <MapInstanceCapture />
       </MapContainer>
