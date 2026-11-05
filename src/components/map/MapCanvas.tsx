@@ -849,8 +849,6 @@ function TipasEventsLayer() {
     staleTime: 1000 * 60 * 5,
   });
 
-  if (!showTipasEvents) return null;
-
   const filteredEvents = events.filter(
     (event) =>
       (!selectedTipasEventId || event.id === selectedTipasEventId) &&
@@ -872,6 +870,8 @@ function TipasEventsLayer() {
     enabled: showTipasEvents && codes.length > 0,
     staleTime: Infinity,
   });
+
+  if (!showTipasEvents) return null;
 
   // Group events by the resolved area so overlapping fallbacks share one marker.
   // Events with unmapped codes are omitted from the map (not evidence of no event).
