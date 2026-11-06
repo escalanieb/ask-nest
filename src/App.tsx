@@ -7,6 +7,7 @@ import { useAuthStore } from "./stores/useAuthStore";
 import { canManageDatasets } from "./lib/datasetPermissions";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Launcher = lazy(() => import("./pages/Launcher"));
 const Login = lazy(() => import("./pages/Login"));
 const TalaCallbackPage = lazy(() => import("./pages/TalaCallbackPage"));
 const GuidedImportPage = lazy(() => import("./pages/datasets/GuidedImportPage"));
@@ -87,7 +88,8 @@ export default function App() {
 
             {/* Authenticated — AppShell provides sidebar + auth guard */}
             <Route element={<AppShell />}>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<Launcher />} />
+              <Route path="/map" element={<Dashboard />} />
               {/* Dataset management — admins and data managers */}
               <Route element={<RequireFeature capability="datasets.use" />}>
                 <Route element={<RequireDatasetManager />}>

@@ -100,7 +100,7 @@ function GuidedImportWorkspace() {
     useFilterStore.getState().resetFilters();
     useMapStore.getState().setMapAreaLevel("region");
     useMapStore.getState().setShowChoropleth(true);
-    navigate("/");
+    navigate("/map");
   }
 
   return (
