@@ -9,6 +9,10 @@ export interface BuiltInApp {
   /** Internal routes use the router; everything else opens in a new tab. */
   internal: boolean;
   icon?: AppIconKey;
+  /** One line shown under the label on the launcher. */
+  description: string;
+  /** Tile colour on the launcher. */
+  color: string;
   /** Team capability required to see the tile. */
   capability?: string;
   /** Also requires an admin / data manager role. */
@@ -18,18 +22,39 @@ export interface BuiltInApp {
 // Built-in tools behave like preinstalled phone apps: defined here, never
 // removable. Gates must match the route guards in App.tsx.
 export const BUILT_IN_APPS: readonly BuiltInApp[] = [
-  { id: "map", label: "Map", href: "/map", internal: true, icon: "map" },
+  {
+    id: "map",
+    description: "See where people and events are across the Philippines",
+    color: "#0f766e",
+    label: "Map",
+    href: "/map",
+    internal: true,
+    icon: "map",
+  },
   {
     id: "insight",
+    description: "Newsroom monitoring and media insights",
+    color: "#b45309",
     label: "Insight",
     href: "/insight",
     internal: true,
     icon: "insight",
     capability: "insight.use",
   },
-  { id: "asc", label: "ASC GPT", href: "/asc", internal: true, icon: "asc", capability: "ai.use" },
+  {
+    id: "asc",
+    description: "Ask the team's AI assistant",
+    color: "#7c3aed",
+    label: "ASC GPT",
+    href: "/asc",
+    internal: true,
+    icon: "asc",
+    capability: "ai.use",
+  },
   {
     id: "datasets",
+    description: "Import and manage events, lists and records",
+    color: "#2563eb",
     label: "Datasets",
     href: "/datasets",
     internal: true,
@@ -37,17 +62,36 @@ export const BUILT_IN_APPS: readonly BuiltInApp[] = [
     capability: "datasets.use",
     datasetManagerOnly: true,
   },
-  { id: "tala", label: "TALA", href: "https://tala.asc-nest.org/", internal: false, icon: "tala" },
+  {
+    id: "tala",
+    description: "Sign-in and team directory",
+    color: "#be185d",
+    label: "TALA",
+    href: "https://tala.asc-nest.org/",
+    internal: false,
+    icon: "tala",
+  },
   {
     id: "tipas",
+    description: "Event locations and attendee distribution",
+    color: "#0369a1",
     label: "TIPAS",
     href: "https://tipas.asc-nest.org/",
     internal: false,
     capability: "tipas.use",
   },
-  { id: "nexus", label: "NEXUS", href: "https://nexus.asc-nest.org/", internal: false },
+  {
+    id: "nexus",
+    description: "Connected tools and workflows",
+    color: "#4f46e5",
+    label: "NEXUS",
+    href: "https://nexus.asc-nest.org/",
+    internal: false,
+  },
   {
     id: "senate-watch",
+    description: "Follow Senate activity",
+    color: "#475569",
     label: "Senate Watch",
     href: "https://senate-watch.asc-nest.org/",
     internal: false,
