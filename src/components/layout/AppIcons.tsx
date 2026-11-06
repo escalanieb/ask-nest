@@ -114,33 +114,40 @@ export function AppGlyph({ icon, label }: { icon?: AppIconKey; label: string }) 
   return <>{icon ? GLYPHS[icon]() : <LetterIcon label={label} />}</>;
 }
 
-/** Large rounded tile for the launcher. Custom apps get a coloured letter. */
+const ASSET_ICONS: readonly AppIconKey[] = ["insight", "tala"];
+
+/** Rounded launcher tile: white glyph (or letter, for custom apps) on a colour. */
 export function AppTile({
   icon,
   label,
+  color,
   custom,
 }: {
   icon?: AppIconKey;
   label: string;
+  color?: string;
   custom?: boolean;
 }) {
-  if (custom || !icon) {
+  const base =
+    "flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl shadow-sm ring-1 ring-black/5";
+  // Insight and TALA ship full-colour artwork with its own background.
+  if (!custom && icon && ASSET_ICONS.includes(icon)) {
     return (
-      <span
-        className="flex h-16 w-16 items-center justify-center rounded-2xl text-3xl font-bold text-white shadow-sm"
-        style={{ backgroundColor: letterColor(label) }}
-        aria-hidden="true"
-      >
-        {label.trim()[0]?.toUpperCase() ?? "?"}
+      <span className={`${base} bg-white [&_svg]:h-full [&_svg]:w-full`} aria-hidden="true">
+        {GLYPHS[icon]()}
       </span>
     );
   }
+  const background = color ?? letterColor(label);
   return (
     <span
-      className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900 text-slate-100 shadow-sm [&_svg]:h-8 [&_svg]:w-8"
+      className={`${base} text-xl font-bold text-white [&_svg]:h-6 [&_svg]:w-6`}
+      style={{
+        backgroundImage: `linear-gradient(135deg, ${background}, color-mix(in srgb, ${background}, black 30%))`,
+      }}
       aria-hidden="true"
     >
-      {GLYPHS[icon]()}
+      {custom || !icon ? (label.trim()[0]?.toUpperCase() ?? "?") : GLYPHS[icon]()}
     </span>
   );
 }
