@@ -32,7 +32,8 @@ export async function sessionFetch(
   try {
     const response = await fetch(input, { ...init, signal });
     assertSession(expected);
-    if (!response.body) {
+    // Null-body statuses (e.g. a 204 from DELETE) cannot be rebuilt with a stream.
+    if (!response.body || [204, 205, 304].includes(response.status)) {
       controllers.delete(controller);
       return response;
     }
