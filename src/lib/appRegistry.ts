@@ -88,14 +88,6 @@ export const BUILT_IN_APPS: readonly BuiltInApp[] = [
     href: "https://nexus.asc-nest.org/",
     internal: false,
   },
-  {
-    id: "senate-watch",
-    description: "Follow Senate activity",
-    color: "#475569",
-    label: "Senate Watch",
-    href: "https://senate-watch.asc-nest.org/",
-    internal: false,
-  },
 ];
 
 interface AccessUser {
