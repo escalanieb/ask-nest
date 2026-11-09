@@ -39,6 +39,7 @@ export default function ExploreSidebar() {
 
   return (
     <>
+      <ElectionCountdown />
       {both && (
         <div
           className="flex gap-2 border-b border-slate-200 p-3"
@@ -82,7 +83,6 @@ export default function ExploreSidebar() {
           <Filters />
         </>
       )}
-      <ElectionCountdown />
     </>
   );
 }
