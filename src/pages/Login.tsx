@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TalaLoginButton } from "@tala/sso-react";
 import { useAuthStore } from "../stores/useAuthStore";
@@ -15,6 +15,19 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // null = still checking. The password form stays hidden unless the server allows it.
+  const [passwordLogin, setPasswordLogin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_BASE}/auth/config`, { headers: { Accept: "application/json" } })
+      .then((res) => (res.ok ? res.json() : { password_login: false }))
+      .then((json) => !cancelled && setPasswordLogin(json?.password_login === true))
+      .catch(() => !cancelled && setPasswordLogin(false));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,61 +67,71 @@ export default function Login() {
           <p className="text-sm text-slate-500">Sign in to continue</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wide">
-              Email
-            </label>
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        {passwordLogin && (
+          <>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wide">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wide">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wide">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
 
-          {error && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
+              {error && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {error}
+                </p>
+              )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 rounded-lg bg-team hover:bg-team-strong text-white text-sm font-semibold transition-colors disabled:opacity-50"
-          >
-            {loading ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2 rounded-lg bg-team hover:bg-team-strong text-white text-sm font-semibold transition-colors disabled:opacity-50"
+              >
+                {loading ? "Signing in…" : "Sign in"}
+              </button>
+            </form>
 
-        {/* Divider */}
-        <div className="relative my-5">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-slate-200" />
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-white px-2 text-slate-400">or</span>
-          </div>
-        </div>
+            {/* Divider */}
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-white px-2 text-slate-400">or</span>
+              </div>
+            </div>
+          </>
+        )}
+
+        {error && !passwordLogin && (
+          <p className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {error}
+          </p>
+        )}
 
         {/* TALA SSO */}
         <TalaLoginButton
@@ -118,9 +141,11 @@ export default function Login() {
           className="w-full justify-center border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
         />
 
-        <p className="mt-6 text-center text-xs text-slate-400">
-          Use your admin or viewer account credentials.
-        </p>
+        {passwordLogin && (
+          <p className="mt-6 text-center text-xs text-slate-400">
+            Use your admin or viewer account credentials.
+          </p>
+        )}
       </div>
     </div>
   );
