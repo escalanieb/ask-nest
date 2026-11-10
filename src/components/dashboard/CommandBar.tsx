@@ -4,7 +4,6 @@ import { useTrayStore, type TrayTab } from "../../stores/useTrayStore";
 import { useActiveTrayTab } from "../../hooks/useActiveTrayTab";
 import { useAuthStore } from "../../stores/useAuthStore";
 import NestLogo from "../NestLogo";
-
 const TOOLS: { tab: TrayTab; label: string; capability?: string }[] = [
   { tab: "news", label: "News", capability: "rss.use" },
   { tab: "video", label: "Video" },

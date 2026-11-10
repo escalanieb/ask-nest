@@ -14,6 +14,7 @@ import { useAuthStore } from "../stores/useAuthStore";
 import { isSafeHref, visibleBuiltIns } from "../lib/appRegistry";
 import { AppTile } from "../components/layout/AppIcons";
 import AppFormDialog from "../components/launcher/AppFormDialog";
+import DevTeamSwitcher from "../components/dashboard/DevTeamSwitcher";
 import { useTeamAppMutations, useTeamApps } from "../hooks/useTeamApps";
 import { appsErrorMessage, type TeamApp } from "../services/api/appsApi";
 
@@ -134,12 +135,15 @@ export default function Launcher() {
     >
       <div className="mx-auto max-w-5xl px-6 py-12 sm:px-10">
         <header className="mb-10">
-          {user?.team?.name && (
-            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm">
-              <span className="h-2 w-2 rounded-full bg-team" aria-hidden="true" />
-              {user.team.name}
-            </span>
-          )}
+          <div className="flex flex-wrap items-center gap-3">
+            {user?.team?.name && (
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm">
+                <span className="h-2 w-2 rounded-full bg-team" aria-hidden="true" />
+                {user.team.name}
+              </span>
+            )}
+            <DevTeamSwitcher />
+          </div>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
             {greeting()}
             {firstName ? `, ${firstName}` : ""}
