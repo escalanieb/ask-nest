@@ -43,7 +43,7 @@ export default function DevTeamSwitcher() {
       });
       useAuthStore.setState({ user: profile });
       // Reload so every query, sidebar link and accent colour follows the new team.
-      window.location.assign("/");
+      window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not switch team.");
       setBusy(false);

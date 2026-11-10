@@ -4,8 +4,6 @@ import { useTrayStore, type TrayTab } from "../../stores/useTrayStore";
 import { useActiveTrayTab } from "../../hooks/useActiveTrayTab";
 import { useAuthStore } from "../../stores/useAuthStore";
 import NestLogo from "../NestLogo";
-import DevTeamSwitcher from "./DevTeamSwitcher";
-
 const TOOLS: { tab: TrayTab; label: string; capability?: string }[] = [
   { tab: "news", label: "News", capability: "rss.use" },
   { tab: "video", label: "Video" },
@@ -64,7 +62,6 @@ export default function CommandBar() {
           <span aria-hidden="true">↑</span> Import dataset
         </Link>
       )}
-      <DevTeamSwitcher />
       <div className="mx-1 h-6 w-px bg-slate-200" />
 
       {/* User badge */}
