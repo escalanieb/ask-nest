@@ -12,6 +12,9 @@ interface FilterState {
   setActiveCityMuni: (c: string | null) => void;
   activeProvince: string | null;
   setActiveProvince: (p: string | null) => void;
+  /** Barangay inside the active city. Used by the Political explorer; other views never set it. */
+  activeBarangay: string | null;
+  setActiveBarangay: (b: string | null) => void;
   // TIPAS Integration Layer Filters
   showTipasEvents: boolean;
   setShowTipasEvents: (v: boolean) => void;
@@ -28,19 +31,24 @@ export const useFilterStore = create<FilterState>((set) => ({
   activeRegion: null,
   setActiveRegion: (r) => {
     useDatasetLayerStore.getState().setChoroplethSelection(null);
-    set({ activeRegion: r, activeProvince: null, activeCityMuni: null });
+    set({ activeRegion: r, activeProvince: null, activeCityMuni: null, activeBarangay: null });
   },
   activeStatus: null,
   setActiveStatus: (s) => set({ activeStatus: s }),
   activeCityMuni: null,
   setActiveCityMuni: (c) => {
     useDatasetLayerStore.getState().setChoroplethSelection(null);
-    set({ activeCityMuni: c });
+    set({ activeCityMuni: c, activeBarangay: null });
   },
   activeProvince: null,
   setActiveProvince: (p) => {
     useDatasetLayerStore.getState().setChoroplethSelection(null);
-    set({ activeProvince: p, activeCityMuni: null });
+    set({ activeProvince: p, activeCityMuni: null, activeBarangay: null });
+  },
+  activeBarangay: null,
+  setActiveBarangay: (b) => {
+    useDatasetLayerStore.getState().setChoroplethSelection(null);
+    set({ activeBarangay: b });
   },
   showTipasEvents: false,
   setShowTipasEvents: (v) => set({ showTipasEvents: v }),
@@ -55,6 +63,7 @@ export const useFilterStore = create<FilterState>((set) => ({
       activeStatus: null,
       activeCityMuni: null,
       activeProvince: null,
+      activeBarangay: null,
       showTipasEvents: false,
       showTipasAttendees: false,
       selectedTipasEventId: null,

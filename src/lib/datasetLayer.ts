@@ -15,6 +15,24 @@ export function datasetBoundaryCoverage(
   return { withBoundary, withoutBoundary };
 }
 
+/**
+ * Barangay-level records against the barangay shapes of one city. City-level records
+ * (codes ending in 000) are not barangay records and are ignored.
+ */
+export function barangayCoverage(
+  points: readonly Pick<LayerDataPoint, "psgc_code" | "count">[],
+  shapes: ReadonlySet<string>,
+) {
+  let withShape = 0;
+  let withoutShape = 0;
+  for (const point of points) {
+    if (point.psgc_code.endsWith("000")) continue;
+    if (shapes.has(point.psgc_code)) withShape += point.count;
+    else withoutShape += point.count;
+  }
+  return { withShape, withoutShape };
+}
+
 export function datasetBoundaryCodes(
   collection: GeoJSON.FeatureCollection,
   level: "region" | "province" | "municity",

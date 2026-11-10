@@ -15,6 +15,15 @@ export function capabilityForPath(path: string): string | null {
   );
 }
 
+export const POLITICAL_SLUG = "political";
+
+/** Only the Political team (with dataset access) gets the area-first explorer sidebar. */
+export function usesPoliticalExplorer(
+  user: { team?: { slug?: string }; capabilities?: readonly string[] } | null | undefined,
+): boolean {
+  return user?.team?.slug === POLITICAL_SLUG && !!user.capabilities?.includes("datasets.use");
+}
+
 export function canUseWidget(type: string, capabilities: readonly string[] = []): boolean {
   const capability = (
     { analytics: "analytics.use", rss: "rss.use", records: "datasets.use" } as Record<

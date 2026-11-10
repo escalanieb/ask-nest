@@ -56,6 +56,7 @@ export default function DatasetFormPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [entityType, setEntityType] = useState<EntityType>("person");
+  const [dataType, setDataType] = useState("");
   const [psgcLevel, setPsgcLevel] = useState<PsgcLevel>("city");
   const [allowDuplicates, setAllowDuplicates] = useState(false);
   const [fields, setFields] = useState<FieldDefinition[]>([emptyField()]);
@@ -73,6 +74,7 @@ export default function DatasetFormPage() {
       setName(existing.name);
       setDescription(existing.description ?? "");
       setEntityType(existing.entity_type);
+      setDataType(existing.data_type ?? "");
       setPsgcLevel(existing.psgc_level);
       setAllowDuplicates(existing.allow_duplicates);
       setFields(existing.field_definitions);
@@ -145,6 +147,7 @@ export default function DatasetFormPage() {
       name: name.trim(),
       description: description.trim() || undefined,
       entity_type: entityType,
+      data_type: dataType.trim() || null,
       psgc_level: psgcLevel,
       match_key_fields: matchKeys,
       field_definitions: fields.map((f) => ({
@@ -297,6 +300,16 @@ export default function DatasetFormPage() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Barangay Residents"
                     autoFocus
+                  />
+                </Field>
+
+                <Field label="Data Type">
+                  <input
+                    className="input"
+                    value={dataType}
+                    maxLength={80}
+                    onChange={(e) => setDataType(e.target.value)}
+                    placeholder="e.g. Vloggers, SK Chairpersons (optional)"
                   />
                 </Field>
 

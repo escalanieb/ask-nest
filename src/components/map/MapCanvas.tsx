@@ -7,6 +7,7 @@ import {
 } from "../../lib/datasetLayer";
 import DatasetCoverage from "./DatasetCoverage";
 import { createBoundaryLoader, boundaryAttribution } from "../../services/mapBoundaries";
+import BarangayLayer, { BarangayNotice } from "./BarangayLayer";
 import {
   TIPAS_GEO_VERSION,
   TIPAS_PLACEMENT_VERSION,
@@ -1572,9 +1573,11 @@ export default function MapCanvas() {
         <TyphoonLayer />
         <FloodLayer />
         <TipasEventsLayer />
+        <BarangayLayer />
         <MapPanZoomController />
         <MapInstanceCapture />
       </MapContainer>
+      <BarangayNotice />
 
       {/* Loading overlay */}
       {geoLoading && (

@@ -1,7 +1,8 @@
 import { useExplore } from "../../hooks/useExplore";
+import { noShapeNote } from "../../lib/exploreSummary";
 
 export default function SummaryBar() {
-  const { datasetId, sentence, chips, removeChip, clearAll } = useExplore();
+  const { datasetId, sentence, chips, removeChip, clearAll, unmatched } = useExplore();
 
   return (
     <div
@@ -9,6 +10,9 @@ export default function SummaryBar() {
       aria-live="polite"
     >
       <p className="text-sm font-medium text-slate-700">{sentence}</p>
+      {datasetId && unmatched ? (
+        <p className="text-xs text-amber-800">{noShapeNote(unmatched)}</p>
+      ) : null}
       {datasetId &&
         chips.map((chip) => (
           <span

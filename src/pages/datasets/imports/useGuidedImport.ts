@@ -22,7 +22,12 @@ import type {
   ImportSession,
   LocationReview,
 } from "../../../services/api/importSessionApi";
-import { configurationForFile, essentialProblem, importError } from "../../../lib/guidedImport";
+import {
+  configurationForFile,
+  detailsProblem,
+  essentialProblem,
+  importError,
+} from "../../../lib/guidedImport";
 import { assertSession, sessionGeneration } from "../../../lib/session";
 
 interface Flow {
@@ -282,6 +287,8 @@ export function useGuidedImport(datasets: Dataset[]) {
           : !flow.config.name?.trim())
       )
         throw new Error("Complete the required name and event date before continuing.");
+      if (flow.step === 1 && detailsProblem(flow.config))
+        throw new Error(detailsProblem(flow.config));
       if (flow.step === 2 && essentialProblem(flow.config))
         throw new Error(essentialProblem(flow.config));
       if (flow.step === 3 && (!flow.locations || !flow.locationFresh))

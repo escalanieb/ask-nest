@@ -181,6 +181,19 @@ export default function ImportDetailsStep({
             />
           </label>
           <label className="text-sm font-medium text-slate-700">
+            Data type <span className="text-red-600">*</span>
+            <input
+              className={inputClass}
+              value={config.data_type ?? ""}
+              maxLength={80}
+              placeholder="e.g. Vloggers, SK Chairpersons"
+              onChange={(e) => onChange({ ...config, data_type: e.target.value })}
+            />
+            <span className="mt-1 block text-xs font-normal text-slate-500">
+              Shown in the “What do you want to see?” list.
+            </span>
+          </label>
+          <label className="text-sm font-medium text-slate-700">
             Record type
             <select
               className={inputClass}

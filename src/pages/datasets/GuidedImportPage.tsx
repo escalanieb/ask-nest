@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { fetchBatches, fetchDatasets } from "../../services/api/datasetApi";
 import { fetchImportSessions } from "../../services/api/importSessionApi";
-import { importSteps, essentialProblem } from "../../lib/guidedImport";
+import { importSteps, essentialProblem, detailsProblem } from "../../lib/guidedImport";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useMapSourceStore } from "../../stores/useMapSourceStore";
 import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
@@ -73,6 +73,7 @@ function GuidedImportWorkspace() {
     !!flow.file &&
     !!flow.inspection &&
     (flow.step !== 0 || flow.sheets) &&
+    (flow.step !== 1 || !flow.config || !detailsProblem(flow.config)) &&
     (flow.step !== 2 || (!!flow.config && !essentialProblem(flow.config))) &&
     (flow.step !== 3 ||
       (flow.locationFresh &&
