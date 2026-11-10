@@ -13,6 +13,7 @@ export interface GuidedConfiguration {
   name?: string;
   description?: string;
   entity_type?: Dataset["entity_type"];
+  data_type?: string;
   metadata: EventMetadata;
   psgc_level: PsgcLevel;
   sheet: string;

@@ -1,6 +1,6 @@
 import type { DatasetFilterValues, FilterDefinition } from "../services/api/datasetApi.ts";
 
-export type AreaLevel = "region" | "province" | "city";
+export type AreaLevel = "region" | "province" | "city" | "barangay";
 
 export interface AreaPart {
   level: AreaLevel;
@@ -81,8 +81,15 @@ export function summarySentence(input: {
   total: number | null;
   area: AreaPart[];
   chipCount: number;
+  /** Political explorer: name the data type instead of quoting a dataset, e.g. "17 SK Chairpersons". */
+  dataTypeLabel?: string | null;
 }): string {
   if (!input.datasetName) return "Pick an event or list to begin.";
+  if (input.dataTypeLabel) {
+    const place = deepestArea(input.area);
+    const count = input.total === null ? "" : `${input.total.toLocaleString()} `;
+    return `Showing ${count}${input.dataTypeLabel}${place ? ` in ${place.name}` : " across the Philippines"}.`;
+  }
   const count = input.total === null ? "" : `${input.total.toLocaleString()} `;
   const noun = input.total === 1 ? "record" : "records";
   const place = deepestArea(input.area);
@@ -94,4 +101,12 @@ export function summarySentence(input: {
 /** First three importer-marked filters are quick filters; the rest are "More filters". */
 export function splitQuickFilters<T>(definitions: T[], quick = 3): { quick: T[]; more: T[] } {
   return { quick: definitions.slice(0, quick), more: definitions.slice(quick) };
+}
+
+/** Honest note when some barangay records cannot be drawn: they stay in the table and counts. */
+export function noShapeNote(count: number | null): string {
+  if (!count) return "";
+  return count === 1
+    ? "1 record has no barangay shape on the map."
+    : `${count.toLocaleString()} records have no barangay shape on the map.`;
 }

@@ -1,4 +1,6 @@
 import { useEffectiveMapSource } from "../../stores/useMapSourceStore";
+import { useExplore } from "../../hooks/useExplore";
+import { deepestArea } from "../../lib/exploreSummary";
 import { geographicPrefix } from "../../lib/datasetQuery";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useState } from "react";
@@ -32,6 +34,7 @@ export default function DatasetRecordsPanel() {
   const showTipasAttendees = source === "tipas" && canUseTipas && tipasAttendeesSelected;
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
 
+  const selectedArea = deepestArea(useExplore().area);
   const psgcPrefix = choroplethSelection?.prefix ?? geographicPrefix(geoFilters);
   const context = JSON.stringify([
     activeLayerDatasetId,
@@ -158,7 +161,7 @@ export default function DatasetRecordsPanel() {
   const total = showTipasAttendees ? (tipasRecords?.total ?? 0) : (records?.total ?? 0);
   const rows = showTipasAttendees ? (tipasRecords?.data ?? []) : (records?.data ?? []);
   const title = showTipasAttendees ? "TIPAS Event Attendees" : (dataset?.name ?? "Loading…");
-  const areaLabel = choroplethSelection?.name ?? "All Areas";
+  const areaLabel = choroplethSelection?.name ?? selectedArea?.name ?? "All Areas";
   const perPage = 20;
   const totalPages = Math.ceil(total / perPage);
 

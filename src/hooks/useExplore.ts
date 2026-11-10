@@ -1,11 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchDataset, fetchMapPanelRecords } from "../services/api/datasetApi";
+import { fetchDataset, fetchDatasetLayer, fetchMapPanelRecords } from "../services/api/datasetApi";
 import type { DatasetFilterValues } from "../services/api/datasetApi";
 import { psgcApi } from "../services/api/psgcApi";
 import { useDatasetLayerStore } from "../stores/useDatasetLayerStore";
 import { useFilterStore } from "../stores/useFilterStore";
 import { useMapStore } from "../stores/useMapStore";
 import { useEffectiveMapSource } from "../stores/useMapSourceStore";
+import { useAuthStore } from "../stores/useAuthStore";
+import { POLITICAL_SLUG } from "../lib/teamAccess";
+import { barangayCode } from "../lib/barangayCode";
+import { barangayCoverage } from "../lib/datasetLayer";
+import { BarangayShapesUnavailable } from "../services/mapBoundaries";
+import { useBarangayShapes } from "./useBarangayShapes";
 import { geographicPrefix } from "../lib/datasetQuery";
 import {
   areaChip,
@@ -45,8 +51,9 @@ export function useExplore() {
   );
   const allFilters = useDatasetLayerStore((s) => s.filtersByDataset);
   const setDatasetFilters = useDatasetLayerStore((s) => s.setDatasetFilters);
-  const { activeRegion, activeProvince, activeCityMuni } = useFilterStore();
-  const prefix = geographicPrefix({ activeRegion, activeProvince, activeCityMuni });
+  const { activeRegion, activeProvince, activeCityMuni, activeBarangay } = useFilterStore();
+  const political = useAuthStore((s) => s.user?.team?.slug === POLITICAL_SLUG);
+  const prefix = geographicPrefix({ activeRegion, activeProvince, activeCityMuni, activeBarangay });
   const filters: DatasetFilterValues = datasetId ? (allFilters[datasetId] ?? {}) : {};
 
   const { data: dataset } = useQuery({
@@ -72,6 +79,12 @@ export function useExplore() {
     enabled: !!activeRegion && !!activeCityMuni,
     staleTime: 1000 * 60 * 10,
   });
+  const { data: barangays } = useQuery({
+    queryKey: ["psgc-barangays", activeCityMuni],
+    queryFn: () => psgcApi.barangaysByCityMunicipality(activeCityMuni!),
+    enabled: !!activeCityMuni && !!activeBarangay,
+    staleTime: 1000 * 60 * 10,
+  });
   // Same key as the Results table, so the count is shared, not fetched twice.
   const { data: page } = useQuery({
     queryKey: ["map-panel-records", datasetId, prefix, 1, filters],
@@ -79,6 +92,22 @@ export function useExplore() {
     enabled: !!datasetId,
     staleTime: 1000 * 30,
   });
+
+  // Barangay records with no shape on the map (Political explorer, inside a selected city).
+  // Same query key as the map layer, so the data is fetched once and shared.
+  const shapes = useBarangayShapes();
+  const { data: layer } = useQuery({
+    queryKey: ["layer", datasetId, filters, prefix],
+    queryFn: () => fetchDatasetLayer(datasetId!, filters, prefix),
+    enabled: political && !!datasetId && !!activeCityMuni,
+    staleTime: 1000 * 60 * 5,
+  });
+  const shapesSettled = !!shapes.data || shapes.error instanceof BarangayShapesUnavailable;
+  const unmatched =
+    political && layer && shapesSettled
+      ? barangayCoverage(layer.layer_data, new Set((shapes.data?.features ?? []).map(barangayCode)))
+          .withoutShape
+      : null;
 
   const area: AreaPart[] = [];
   if (activeRegion)
@@ -105,6 +134,12 @@ export function useExplore() {
           (c) => c.code === activeCityMuni,
         )?.name ?? "Selected city",
     });
+  if (activeBarangay)
+    area.push({
+      level: "barangay",
+      code: activeBarangay,
+      name: barangays?.find((b) => b.code === activeBarangay)?.name ?? "Selected barangay",
+    });
 
   const chips: SummaryChip[] = [];
   const place = areaChip(area);
@@ -126,11 +161,13 @@ export function useExplore() {
     filters,
     chips,
     total,
+    unmatched,
     sentence: summarySentence({
       datasetName: dataset?.name ?? null,
       total,
       area,
       chipCount: chips.length,
+      dataTypeLabel: political ? dataset?.data_type?.trim() || dataset?.name || null : null,
     }),
     removeChip,
     clearAll: clearAllNarrowing,

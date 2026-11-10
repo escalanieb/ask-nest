@@ -2,6 +2,7 @@ Philippine administrative boundary snapshot (historical 2019 directory)
 
 Source: https://github.com/faeldon/philippines-json-maps/tree/8eeead560246863c8c820c31ca6fbca81a279477/2019
 Medium-resolution source GeoJSON; retained administrative properties, coordinates rounded to six decimal places.
+Barangay files (barangays/): same pinned commit, reduced to city code, barangay code and name; source features with no shape or no barangay code are left out.
 Map processing: Copyright James Faeldon, MIT (see LICENSE.txt).
 Underlying boundaries: credit NAMRIA and PSA, through OCHA's Philippines COD-AB, CC BY-IGO 3.0.
 https://data.humdata.org/dataset/cod-ab-phl

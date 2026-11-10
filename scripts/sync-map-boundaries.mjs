@@ -6,11 +6,17 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const output = path.join(root, "public/maps/ph-2019");
 const manifestPath = path.join(root, "src/data/philippineBoundaries.json");
+// Served as a static file (fetched only when a city is selected), not bundled with the app.
+const barangayManifestPath = path.join(output, "barangays/index.json");
 const repository = "faeldon/philippines-json-maps";
 // Last known compatible legacy property/code schema; never follow a moving branch.
 const revision = "8eeead560246863c8c820c31ca6fbca81a279477";
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const code = /^PH\d{9}$/;
+// Barangay pack limits (measured in the Phase 1 source review; see docs/plans/2026-11-10-barangay-boundaries.md).
+const MAX_BARANGAY_FILE_BYTES = 250 * 1024;
+const MAX_BARANGAY_PACK_BYTES = 18 * 1024 * 1024;
+const EXPECTED_BARANGAY_SOURCES = 1647;
 
 function validate(collection, field) {
   if (
@@ -37,21 +43,35 @@ function validate(collection, field) {
 
 async function check() {
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  const barangayIndex = await readFile(barangayManifestPath);
+  if (digest(barangayIndex) !== manifest.barangayIndex?.sha256)
+    throw new Error("Checksum mismatch: barangays/index.json");
+  const barangayManifest = JSON.parse(barangayIndex);
+  const barangays = Object.values(barangayManifest.barangays);
   const entries = [
     manifest.regions,
     ...Object.values(manifest.provinces),
     ...Object.values(manifest.municipalities),
+    ...barangays,
   ];
   let bytes = 0;
+  let barangayBytes = 0;
   for (const entry of entries) {
     const buffer = await readFile(path.join(output, entry.file));
     if (digest(buffer) !== entry.sha256) throw new Error(`Checksum mismatch: ${entry.file}`);
     if (validate(JSON.parse(buffer), entry.codeField) !== entry.featureCount)
       throw new Error(`Feature count changed: ${entry.file}`);
+    if (entry.codeField === "ADM4_PCODE") {
+      if (buffer.length > MAX_BARANGAY_FILE_BYTES)
+        throw new Error(`Barangay file exceeds ${MAX_BARANGAY_FILE_BYTES} bytes: ${entry.file}`);
+      barangayBytes += buffer.length;
+    }
     bytes += buffer.length;
   }
+  if (barangayBytes > MAX_BARANGAY_PACK_BYTES)
+    throw new Error(`Barangay pack exceeds ${MAX_BARANGAY_PACK_BYTES} bytes: ${barangayBytes}`);
   console.log(
-    `Verified ${entries.length} local boundary files; ${(bytes / 1024 / 1024).toFixed(2)} MiB; all checksums and feature IDs match.`,
+    `Verified ${entries.length} local boundary files (${barangays.length} barangay, ${(barangayBytes / 1024 / 1024).toFixed(2)} MiB); ${(bytes / 1024 / 1024).toFixed(2)} MiB total; all checksums and feature IDs match.`,
   );
 }
 
@@ -72,8 +92,8 @@ async function download(url) {
   throw failure;
 }
 
-function compact(collection) {
-  const properties = [
+function compact(collection, only) {
+  const properties = only ?? [
     "ADM0_EN",
     "ADM0_PCODE",
     "ADM1_EN",
@@ -82,6 +102,8 @@ function compact(collection) {
     "ADM2_PCODE",
     "ADM3_EN",
     "ADM3_PCODE",
+    "ADM4_EN",
+    "ADM4_PCODE",
     "date",
     "validOn",
   ];
@@ -120,10 +142,14 @@ async function sync() {
   const sources = tree.tree.filter(
     (entry) =>
       entry.type === "blob" &&
-      /^2019\/geojson\/(regions|provinces|municties)\/medres\/[^/]+\.json$/.test(entry.path),
+      /^2019\/geojson\/(regions|provinces|municties|barangays)\/medres\/[^/]+\.json$/.test(
+        entry.path,
+      ),
   );
-  if (sources.length !== 106)
-    throw new Error(`Expected 106 compatible boundary files; found ${sources.length}`);
+  if (sources.length !== 106 + EXPECTED_BARANGAY_SOURCES)
+    throw new Error(
+      `Expected ${106 + EXPECTED_BARANGAY_SOURCES} compatible boundary files; found ${sources.length}`,
+    );
   const files = new Array(sources.length);
   let next = 0;
   await Promise.all(
@@ -143,22 +169,57 @@ async function sync() {
           throw new Error(`Upstream blob verification failed: ${source.path}`);
         const level = source.path.split("/")[2];
         const field =
-          level === "regions" ? "ADM1_PCODE" : level === "provinces" ? "ADM2_PCODE" : "ADM3_PCODE";
+          level === "regions"
+            ? "ADM1_PCODE"
+            : level === "provinces"
+              ? "ADM2_PCODE"
+              : level === "barangays"
+                ? "ADM4_PCODE"
+                : "ADM3_PCODE";
         const collection = JSON.parse(original);
-        validate(collection, field);
-        const data = compact(collection);
+        let droppedFeatures = 0;
+        if (level === "barangays") {
+          // The source lists some barangays without a shape; keep them out of the pack, count them.
+          // Also dropped: non-barangay polygons (e.g. forest land) that carry no barangay code.
+          const before = collection.features.length;
+          collection.features = collection.features.filter(
+            (f) => f.geometry?.coordinates?.length && code.test(f.properties?.ADM4_PCODE ?? ""),
+          );
+          droppedFeatures = before - collection.features.length;
+          if (!collection.features.length) {
+            files[index] = {
+              skipped: true,
+              level,
+              parent: source.path.match(/-ph(\d{9})\./)?.[1],
+              dropped: droppedFeatures,
+            };
+            continue;
+          }
+        }
+        try {
+          validate(collection, field);
+        } catch (error) {
+          throw new Error(`${error.message} in ${source.path}`);
+        }
+        const data = compact(
+          collection,
+          level === "barangays" ? ["ADM3_PCODE", "ADM4_PCODE", "ADM4_EN"] : undefined,
+        );
         const featureCount = validate(data, field);
         const parent = source.path.match(/-ph(\d{9})\./)?.[1];
         const file =
           level === "regions"
             ? "regions.json"
-            : `${level === "provinces" ? "provinces" : "municipalities"}-${parent}.json`;
+            : level === "barangays"
+              ? `barangays/barangays-${parent}.json`
+              : `${level === "provinces" ? "provinces" : "municipalities"}-${parent}.json`;
         if (level !== "regions" && !parent)
           throw new Error(`Unexpected source name: ${source.path}`);
         const bytes = Buffer.from(JSON.stringify(data) + "\n");
-        const regionCodes = [
-          ...new Set(data.features.map((f) => f.properties.ADM1_PCODE.slice(2))),
-        ];
+        const regionCodes =
+          level === "barangays"
+            ? []
+            : [...new Set(data.features.map((f) => f.properties.ADM1_PCODE.slice(2)))];
         files[index] = {
           bytes,
           level,
@@ -171,6 +232,7 @@ async function sync() {
             sha256: digest(bytes),
             sourcePath: source.path,
             sourceBlob: source.sha,
+            ...(level === "barangays" ? { droppedFeatures } : {}),
           },
         };
       }
@@ -190,8 +252,24 @@ async function sync() {
     provinces: {},
     municipalities: {},
   };
+  const barangayManifest = {
+    schemaVersion: 1,
+    vintage: "2019",
+    resolution: "medres",
+    coordinateDecimals: 6,
+    repository: `https://github.com/${repository}`,
+    revision,
+    barangays: {},
+    // Cities whose source barangays have no shapes at all: the map says so instead of failing.
+    withoutShapes: [],
+  };
   for (const file of files) {
-    if (file.level === "regions") manifest.regions = file.entry;
+    if (file.skipped) barangayManifest.withoutShapes.push(file.parent);
+    else if (file.level === "barangays") {
+      // Slimmer entries: the source path follows from the parent code, and barangays are never filtered by region.
+      const { sourcePath: _path, regionCodes: _regions, ...slim } = file.entry;
+      barangayManifest.barangays[file.parent] = slim;
+    } else if (file.level === "regions") manifest.regions = file.entry;
     else
       manifest[file.level === "provinces" ? "provinces" : "municipalities"][file.parent] =
         file.entry;
@@ -199,18 +277,25 @@ async function sync() {
   if (
     !manifest.regions ||
     Object.keys(manifest.provinces).length !== 18 ||
-    Object.keys(manifest.municipalities).length !== 87
+    Object.keys(manifest.municipalities).length !== 87 ||
+    Object.keys(barangayManifest.barangays).length + barangayManifest.withoutShapes.length !==
+      EXPECTED_BARANGAY_SOURCES
   )
     throw new Error("Incomplete boundary manifest");
   // All downloads/validation finish before any application assets are changed.
   await mkdir(output, { recursive: true });
   await mkdir(path.dirname(manifestPath), { recursive: true });
-  for (const file of files) await writeFile(path.join(output, file.entry.file), file.bytes);
+  await mkdir(path.join(output, "barangays"), { recursive: true });
+  for (const file of files)
+    if (!file.skipped) await writeFile(path.join(output, file.entry.file), file.bytes);
   await writeFile(path.join(output, "LICENSE.txt"), license);
   await writeFile(
     path.join(output, "NOTICE.txt"),
-    `Philippine administrative boundary snapshot (historical 2019 directory)\n\nSource: https://github.com/${repository}/tree/${revision}/2019\nMedium-resolution source GeoJSON; retained administrative properties, coordinates rounded to six decimal places.\nMap processing: Copyright James Faeldon, MIT (see LICENSE.txt).\nUnderlying boundaries: credit NAMRIA and PSA, through OCHA's Philippines COD-AB, CC BY-IGO 3.0.\nhttps://data.humdata.org/dataset/cod-ab-phl\nhttps://creativecommons.org/licenses/by/3.0/igo/\n\nThis compatibility snapshot preserves the application's historical nine-digit PSGC joins.\nIt does not represent current administrative divisions. Some features contain earlier source validity dates.\nDo not substitute a new vintage without validating code correspondence and feature-property changes.\n`,
+    `Philippine administrative boundary snapshot (historical 2019 directory)\n\nSource: https://github.com/${repository}/tree/${revision}/2019\nMedium-resolution source GeoJSON; retained administrative properties, coordinates rounded to six decimal places.\nBarangay files (barangays/): same pinned commit, reduced to city code, barangay code and name; source features with no shape or no barangay code are left out.\nMap processing: Copyright James Faeldon, MIT (see LICENSE.txt).\nUnderlying boundaries: credit NAMRIA and PSA, through OCHA's Philippines COD-AB, CC BY-IGO 3.0.\nhttps://data.humdata.org/dataset/cod-ab-phl\nhttps://creativecommons.org/licenses/by/3.0/igo/\n\nThis compatibility snapshot preserves the application's historical nine-digit PSGC joins.\nIt does not represent current administrative divisions. Some features contain earlier source validity dates.\nDo not substitute a new vintage without validating code correspondence and feature-property changes.\n`,
   );
+  const barangayBytes = Buffer.from(JSON.stringify(barangayManifest) + "\n");
+  manifest.barangayIndex = { file: "barangays/index.json", sha256: digest(barangayBytes) };
+  await writeFile(barangayManifestPath, barangayBytes);
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
   await check();
 }

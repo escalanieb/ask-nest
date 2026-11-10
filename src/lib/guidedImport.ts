@@ -93,6 +93,7 @@ export function configurationForFile(
     name: previous?.name ?? dataset?.name ?? metadata.name,
     description: previous?.description ?? dataset?.description ?? "",
     entity_type: previous?.entity_type ?? dataset?.entity_type ?? "person",
+    data_type: previous?.data_type ?? dataset?.data_type ?? dataset?.name ?? "",
     psgc_level: previous?.psgc_level ?? dataset?.psgc_level ?? "city",
     sheet: inspection.sheet,
     header_row: inspection.header_row,
@@ -107,6 +108,13 @@ export function configurationForFile(
       dataset?.layer_config ?? { aggregate_function: "count", color_field: "", tooltip_fields: [] },
     allow_duplicates: dataset?.allow_duplicates ?? previous?.allow_duplicates ?? false,
   };
+}
+
+/** Details step: a general dataset needs a plain "Data type" label (e.g. Vloggers). */
+export function detailsProblem(config: GuidedConfiguration): string {
+  if (config.type === "general" && !(config.data_type ?? "").trim())
+    return "Say what kind of data this is, for example “Vloggers” or “SK Chairpersons”.";
+  return "";
 }
 
 export function essentialProblem(config: GuidedConfiguration): string {

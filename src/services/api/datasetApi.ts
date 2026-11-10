@@ -42,6 +42,8 @@ export interface Dataset {
   name: string;
   description: string | null;
   entity_type: EntityType;
+  /** Plain label such as "Vloggers". Null on older datasets: use the dataset name instead. */
+  data_type?: string | null;
   psgc_level: PsgcLevel;
   match_key_fields: string[];
   field_definitions: FieldDefinition[];
@@ -59,6 +61,7 @@ export interface DatasetPayload {
   name: string;
   description?: string;
   entity_type: EntityType;
+  data_type?: string | null;
   psgc_level: PsgcLevel;
   match_key_fields: string[];
   field_definitions: FieldDefinition[];
@@ -319,6 +322,20 @@ export async function downloadDatasetFile(path: string, filename: string): Promi
 export async function fetchDatasets(activeOnly = false): Promise<Dataset[]> {
   const qs = activeOnly ? "?active_only=true" : "";
   return apiFetch<Dataset[]>(`/datasets${qs}`);
+}
+
+export interface DataTypeOption {
+  key: string;
+  label: string;
+  record_count: number;
+  datasets: { id: number; name: string; psgc_level: PsgcLevel; record_count: number }[];
+}
+
+/** Data types that have records inside the area (all areas when no prefix). */
+export async function fetchDataTypes(psgcPrefix?: string): Promise<DataTypeOption[]> {
+  const qs = psgcPrefix ? `?psgc_prefix=${encodeURIComponent(psgcPrefix)}` : "";
+  const res = await apiFetch<{ data_types: DataTypeOption[] }>(`/datasets/data-types${qs}`);
+  return res.data_types;
 }
 
 export async function fetchDataset(id: number): Promise<Dataset> {

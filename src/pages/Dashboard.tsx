@@ -1,6 +1,9 @@
 import { lazy, Suspense } from "react";
 import CommandBar from "../components/dashboard/CommandBar";
 import ExploreSidebar from "../components/explore/ExploreSidebar";
+import PoliticalSidebar from "../components/explore/PoliticalSidebar";
+import { useAuthStore } from "../stores/useAuthStore";
+import { usesPoliticalExplorer } from "../lib/teamAccess";
 import StatusBar from "../components/dashboard/StatusBar";
 import SummaryBar from "../components/dashboard/SummaryBar";
 import BottomTray from "../components/dashboard/BottomTray";
@@ -10,6 +13,7 @@ import MapStyleControl from "../components/map/MapStyleControl";
 const MapCanvas = lazy(() => import("../components/map/MapCanvas"));
 
 export default function Dashboard() {
+  const political = useAuthStore((s) => usesPoliticalExplorer(s.user));
   return (
     <div className="flex h-full flex-col bg-slate-50 overflow-hidden">
       {/* Navigation Bar */}
@@ -58,7 +62,7 @@ export default function Dashboard() {
         {/* Right sidebar — spans full height of content area */}
         <aside className="flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="overflow-y-auto flex-1">
-            <ExploreSidebar />
+            {political ? <PoliticalSidebar /> : <ExploreSidebar />}
           </div>
         </aside>
       </div>

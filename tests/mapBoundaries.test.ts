@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { boundaryEntries, createBoundaryLoader } from "../src/services/mapBoundaries.ts";
+import {
+  BarangayShapesUnavailable,
+  boundaryEntries,
+  createBoundaryLoader,
+} from "../src/services/mapBoundaries.ts";
 
 async function localFetch(input: string | URL | Request) {
   const url = new URL(String(input), "http://localhost");
@@ -56,4 +60,44 @@ test("a missing child file rejects a whole load instead of silently drawing part
   const load = createBoundaryLoader(fetcher as typeof fetch);
   await assert.rejects(load("municity", "130000000"), /404/);
   await assert.rejects(load("municity", "999999999"), /No compatible/);
+});
+
+test("barangay shapes load per city, keep nine-digit codes and never invent a missing city", async () => {
+  const load = createBoundaryLoader(localFetch as typeof fetch);
+  const quezonCity = await load("barangay", undefined, undefined, "137404000");
+  assert.ok(quezonCity.features.length > 100);
+  assert.ok(
+    quezonCity.features.every(
+      (f) =>
+        /^PH\d{9}$/.test(f.properties?.ADM4_PCODE) &&
+        f.properties?.ADM3_PCODE === "PH137404000" &&
+        ["Polygon", "MultiPolygon"].includes(f.geometry.type),
+    ),
+  );
+  assert.ok(quezonCity.features.some((f) => f.properties?.ADM4_PCODE === "PH137404001"));
+  // Source has barangays for this city but none with a shape; unknown codes are never guessed.
+  for (const city of ["012801000", "999999999", undefined]) {
+    await assert.rejects(
+      load("barangay", undefined, undefined, city),
+      (error) => error instanceof BarangayShapesUnavailable,
+    );
+  }
+  assert.deepEqual(boundaryEntries("barangay"), []);
+});
+
+test("every packed barangay file stays inside the size budget and matches its manifest", async () => {
+  const manifest = JSON.parse(
+    await readFile(new URL("../public/maps/ph-2019/barangays/index.json", import.meta.url), "utf8"),
+  );
+  const entries = Object.values(manifest.barangays) as { file: string; featureCount: number }[];
+  assert.ok(entries.length > 1600);
+  assert.equal(entries.length + manifest.withoutShapes.length, 1647);
+  let total = 0;
+  for (const entry of entries) {
+    const bytes = (await readFile(new URL(`../public/maps/ph-2019/${entry.file}`, import.meta.url)))
+      .length;
+    assert.ok(bytes <= 250 * 1024, entry.file);
+    total += bytes;
+  }
+  assert.ok(total <= 18 * 1024 * 1024);
 });
