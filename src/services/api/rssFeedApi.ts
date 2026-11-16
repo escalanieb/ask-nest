@@ -22,6 +22,10 @@ export interface RssItem {
   link: string;
   published: string | null;
   summary: string;
+  /** Full plain text with line breaks (absent from older backends). */
+  content?: string;
+  /** The page or outlet that posted it, e.g. "Philippine News Agency". */
+  author?: string | null;
   image: string | null;
 }
 

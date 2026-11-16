@@ -18,9 +18,12 @@ import { useRssFeedMutations, useRssFeeds, useRssItems } from "../../hooks/useRs
 import { isSafeHref } from "../../lib/appRegistry";
 import {
   filterItems,
+  hourlyActivity,
   mergeFeedItems,
+  outletOf,
   rssErrorMessage,
   timeAgo,
+  topOutlets,
   type ReaderItem,
 } from "../../lib/rssReader";
 import type { RssFeed, RssFetchResult } from "../../services/api/rssFeedApi";
@@ -56,6 +59,9 @@ export default function RssPage() {
 
   const loaded = itemQueries.flatMap((q) => (q.data ? [q.data as RssFetchResult] : []));
   const items = filterItems(mergeFeedItems(loaded), query);
+  // The NEWS panel shows the clicked article, or the newest one until something is clicked.
+  const [openLink, setOpenLink] = useState<string | null>(null);
+  const current = items.find((item) => item.link === openLink) ?? items[0] ?? null;
   const loading = itemQueries.some((q) => q.isLoading);
   const fetching = itemQueries.some((q) => q.isFetching);
   const failed = fetchIds.filter((_, i) => itemQueries[i]?.isError);
@@ -91,7 +97,7 @@ export default function RssPage() {
         {/* Feed list */}
         <aside
           aria-label="Feeds"
-          className="flex w-72 shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-slate-200 bg-white p-3"
+          className="flex w-60 shrink-0 flex-col overflow-x-hidden xl:w-72 overflow-y-auto border-r border-slate-200 bg-white p-3"
         >
           <FeedButton
             label="All feeds"
@@ -211,8 +217,15 @@ export default function RssPage() {
             </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            <div className="mx-auto grid max-w-3xl gap-3">
+          <div className="flex min-h-0 flex-1">
+            {/* Middle: the open article on top, numbers below */}
+            <div className="flex min-w-0 flex-1 flex-col gap-4 p-5">
+              <ReaderPanel item={current} showFeed={!selected} />
+              <NumbersPanel items={items} loading={loading} asOf={newest} />
+            </div>
+
+            {/* Right: article list */}
+            <div className="grid w-80 shrink-0 content-start gap-3 overflow-y-auto border-l border-slate-200 p-4 xl:w-104">
               {failedNames.length > 0 && (
                 <p
                   role="alert"
@@ -235,7 +248,13 @@ export default function RssPage() {
               />
 
               {items.slice(0, visible).map((item) => (
-                <ArticleCard key={item.link} item={item} showSource={!selected} />
+                <ArticleCard
+                  key={item.link}
+                  item={item}
+                  showSource={!selected}
+                  open={item.link === current?.link}
+                  onOpen={() => setOpenLink(item.link)}
+                />
               ))}
 
               {items.length > visible && (
@@ -329,7 +348,7 @@ function FeedButton({
       ].join(" ")}
     >
       <span
-        className={`line-clamp-2 break-words text-sm font-medium leading-snug ${muted ? "text-slate-400" : ""}`}
+        className={`line-clamp-2 wrap-break-word text-sm font-medium leading-snug ${muted ? "text-slate-400" : ""}`}
       >
         {selected && (
           <span className="mr-2 inline-block h-2 w-2 rounded-full bg-team" aria-hidden="true" />
@@ -396,13 +415,80 @@ function EmptyState(props: {
   return <p className="py-16 text-center text-sm text-slate-500">{message}</p>;
 }
 
-function ArticleCard({ item, showSource }: { item: ReaderItem; showSource: boolean }) {
+// Feed content is external: only ever render http(s) links and images.
+const safeImage = (item: ReaderItem) => (item.image && isSafeHref(item.image) ? item.image : null);
+
+function ArticleCard({
+  item,
+  showSource,
+  open,
+  onOpen,
+}: {
+  item: ReaderItem;
+  showSource: boolean;
+  open: boolean;
+  onOpen: () => void;
+}) {
   const [imageFailed, setImageFailed] = useState(false);
+  const image = imageFailed ? null : safeImage(item);
+  const meta = [showSource ? item.feedName : outletOf(item), timeAgo(item.published)].filter(
+    Boolean,
+  );
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-current={open ? "true" : undefined}
+      className={[
+        "flex w-full gap-3 rounded-xl border bg-white p-3 text-left shadow-sm transition",
+        open
+          ? "border-team ring-1 ring-team"
+          : "border-slate-200 hover:border-slate-300 hover:shadow-md",
+      ].join(" ")}
+    >
+      {image && (
+        <img
+          src={image}
+          alt=""
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setImageFailed(true)}
+          className="h-16 w-20 shrink-0 rounded-lg object-cover"
+        />
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[11px] text-slate-400">{meta.join(" · ")}</span>
+        <span className="mt-0.5 line-clamp-3 text-sm font-semibold leading-snug text-slate-800">
+          {item.title}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function ReaderPanel({ item, showFeed }: { item: ReaderItem | null; showFeed: boolean }) {
   const [copied, setCopied] = useState(false);
-  // Feed content is external: only ever render http(s) links and images.
+  const [failedImage, setFailedImage] = useState<string | null>(null);
+
+  if (!item)
+    return (
+      <section
+        aria-label="News"
+        className="flex min-h-0 flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/60 text-sm text-slate-400"
+      >
+        Select an article to read it here.
+      </section>
+    );
+
   const href = isSafeHref(item.link) ? item.link : undefined;
-  const image = item.image && isSafeHref(item.image) && !imageFailed ? item.image : null;
-  const meta = [showSource ? item.feedName : null, timeAgo(item.published)].filter(Boolean);
+  const image = safeImage(item);
+  const outlet = outletOf(item);
+  const body = item.content?.trim() || item.summary;
+  const published = item.published ? new Date(item.published) : null;
+  const meta = [outlet, showFeed && outlet !== item.feedName ? item.feedName : null].filter(
+    Boolean,
+  );
 
   const copy = () => {
     if (!href) return;
@@ -413,46 +499,175 @@ function ArticleCard({ item, showSource }: { item: ReaderItem; showSource: boole
   };
 
   return (
-    <article className="group relative flex gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-team hover:shadow-md">
-      {image && (
-        <img
-          src={image}
-          alt=""
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          onError={() => setImageFailed(true)}
-          className="h-20 w-28 shrink-0 rounded-lg object-cover"
-        />
-      )}
-      <div className="min-w-0 flex-1">
-        {meta.length > 0 && <p className="text-xs text-slate-400">{meta.join(" · ")}</p>}
-        <h2 className="mt-0.5 text-[15px] font-semibold leading-snug text-slate-800">
-          {href ? (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="after:absolute after:inset-0 after:rounded-2xl group-hover:text-team-strong focus-visible:outline-none"
+    <section
+      aria-label="News"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+    >
+      {/* key resets scroll to the top when another article opens */}
+      <div key={item.link} className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <p className="text-xs font-medium text-slate-500">
+          {meta.join(" · ")}
+          {published && !Number.isNaN(published.getTime()) && (
+            <time
+              dateTime={item.published ?? undefined}
+              title={published.toLocaleString()}
+              className="text-slate-400"
             >
-              {item.title}
-            </a>
-          ) : (
-            item.title
+              {" · "}
+              {timeAgo(item.published)}
+            </time>
           )}
-        </h2>
-        {item.summary && (
-          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-slate-500">{item.summary}</p>
+        </p>
+        <h2 className="mt-1 text-lg font-semibold leading-snug text-slate-900">{item.title}</h2>
+        {image && failedImage !== image && (
+          <img
+            src={image}
+            alt=""
+            referrerPolicy="no-referrer"
+            onError={() => setFailedImage(image)}
+            className="mt-4 max-h-80 w-full rounded-xl bg-slate-100 object-contain"
+          />
+        )}
+        {body && (
+          <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-slate-700">
+            {body}
+          </p>
         )}
       </div>
       {href && (
-        <button
-          type="button"
-          onClick={copy}
-          className="relative z-10 self-start rounded-md px-2 py-1 text-xs font-medium text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:opacity-100 group-hover:opacity-100"
-        >
-          {copied ? "Copied!" : "Copy link"}
-        </button>
+        <div className="flex shrink-0 items-center gap-2 border-t border-slate-100 px-6 py-3">
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-full bg-team px-4 py-1.5 text-sm font-medium text-team-foreground hover:bg-team-strong"
+          >
+            Open original post ↗
+          </a>
+          <Button variant="outline" size="sm" onClick={copy}>
+            {copied ? "Copied!" : "Copy link"}
+          </Button>
+        </div>
       )}
-    </article>
+    </section>
+  );
+}
+
+const MIN_HOURS = 6;
+const MAX_HOURS = 24;
+const hourLabel = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: "numeric" });
+
+function NumbersPanel({
+  items,
+  loading,
+  asOf,
+}: {
+  items: readonly ReaderItem[];
+  loading: boolean;
+  /** When the feeds were last fetched; the timeline ends at this hour. */
+  asOf: number;
+}) {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const outlets = topOutlets(items, 6);
+  const maxOutlet = Math.max(1, ...outlets.map((o) => o.count));
+
+  // Feeds only return their latest posts, so size the timeline to the time they cover.
+  const dated = items.map((i) => (i.published ? Date.parse(i.published) : NaN));
+  const oldest = Math.min(...dated.filter((t) => !Number.isNaN(t)));
+  const spanHours = Number.isFinite(oldest) ? Math.ceil((asOf - oldest) / 3_600_000) + 1 : 0;
+  const hours = Math.min(MAX_HOURS, Math.max(MIN_HOURS, spanHours));
+  const buckets = hourlyActivity(items, hours, asOf);
+  const maxBucket = Math.max(1, ...buckets.map((b) => b.count));
+  const shown = buckets.reduce((sum, b) => sum + b.count, 0);
+  const tip = hovered !== null ? buckets[hovered] : null;
+
+  return (
+    <section
+      aria-label="Numbers"
+      className="grid h-60 shrink-0 grid-cols-2 gap-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
+    >
+      {/* Top outlets */}
+      <div className="flex min-w-0 flex-col">
+        <h3 className="text-sm font-semibold text-slate-800">Top outlets</h3>
+        <p className="text-xs text-slate-400">
+          {items.length > 0 ? `Who posted the latest ${items.length} articles` : " "}
+        </p>
+        {loading && items.length === 0 ? (
+          <p className="m-auto text-xs text-slate-400">Loading…</p>
+        ) : outlets.length === 0 ? (
+          <p className="m-auto text-xs text-slate-400">No articles yet.</p>
+        ) : (
+          <ul className="mt-3 grid min-h-0 gap-1.5 overflow-y-auto">
+            {outlets.map((outlet) => (
+              <li
+                key={outlet.name}
+                title={`${outlet.name}: ${outlet.count} post${outlet.count === 1 ? "" : "s"}`}
+                className="grid grid-cols-[minmax(0,9rem)_1fr_2rem] items-center gap-2 text-xs"
+              >
+                <span className="truncate text-slate-600">{outlet.name}</span>
+                <span className="h-2.5 rounded-r bg-slate-100">
+                  <span
+                    className="block h-full rounded-r bg-team"
+                    style={{ width: `${(outlet.count / maxOutlet) * 100}%` }}
+                  />
+                </span>
+                <span className="text-right font-medium tabular-nums text-slate-700">
+                  {outlet.count}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Activity timeline */}
+      <div className="flex min-w-0 flex-col">
+        <h3 className="text-sm font-semibold text-slate-800">Posts per hour</h3>
+        <p className="text-xs text-slate-400">
+          {asOf > 0 ? `Last ${hours} hours · ${shown} post${shown === 1 ? "" : "s"}` : " "}
+        </p>
+        {asOf === 0 ? (
+          <p className="m-auto text-xs text-slate-400">
+            {loading ? "Loading…" : "No articles yet."}
+          </p>
+        ) : (
+          <div className="relative mt-3 flex min-h-0 flex-1 flex-col">
+            {tip && (
+              <div className="pointer-events-none absolute -top-1 right-0 z-10 rounded-md bg-slate-900 px-2 py-1 text-[11px] text-white shadow">
+                {hourLabel(tip.start)}–{hourLabel(tip.start + 3_600_000)} · {tip.count} post
+                {tip.count === 1 ? "" : "s"}
+              </div>
+            )}
+            <div
+              role="img"
+              aria-label={`Posts per hour: ${buckets.map((b) => `${hourLabel(b.start)} ${b.count}`).join(", ")}`}
+              className="flex min-h-0 flex-1 items-end gap-0.5 border-b border-slate-200"
+              onMouseLeave={() => setHovered(null)}
+            >
+              {buckets.map((bucket, i) => (
+                <div
+                  key={bucket.start}
+                  onMouseEnter={() => setHovered(i)}
+                  className="flex h-full flex-1 items-end"
+                >
+                  <div
+                    className={`w-full rounded-t ${hovered === i ? "bg-team-strong" : "bg-team"}`}
+                    style={{
+                      height: bucket.count
+                        ? `${Math.max(4, (bucket.count / maxBucket) * 100)}%`
+                        : 0,
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="mt-1 flex justify-between text-[10px] text-slate-400">
+              <span>{hourLabel(buckets[0].start)}</span>
+              <span>{hourLabel(buckets[buckets.length - 1].start)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
