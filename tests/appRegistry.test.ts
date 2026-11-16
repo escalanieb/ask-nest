@@ -25,6 +25,11 @@ test("capability-gated tools need their capability", () => {
   assert.deepEqual(ids(user), ["map", "insight", "asc", "tala", "tipas", "nexus", "senate-watch"]);
 });
 
+test("RSS Feeds tile needs the rss capability", () => {
+  assert.ok(!ids({ role: "admin", capabilities: [] }).includes("rss"));
+  assert.ok(ids({ role: "viewer", capabilities: ["rss.use"] }).includes("rss"));
+});
+
 test("Datasets needs capability and a manager role", () => {
   assert.ok(!ids({ role: "viewer", capabilities: ["datasets.use"] }).includes("datasets"));
   assert.ok(!ids({ role: "admin", capabilities: [] }).includes("datasets"));

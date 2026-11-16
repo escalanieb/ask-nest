@@ -17,6 +17,7 @@ const DatasetUploadPage = lazy(() => import("./pages/datasets/DatasetUploadPage"
 const DatasetRecordsPage = lazy(() => import("./pages/datasets/DatasetRecordsPage"));
 const InsightPage = lazy(() => import("./pages/insight/InsightPage"));
 const AscPage = lazy(() => import("./pages/asc/AscPage"));
+const RssPage = lazy(() => import("./pages/rss/RssPage"));
 
 const BOOT_MS = 1800;
 
@@ -112,6 +113,11 @@ export default function App() {
               {/* ASC AI assistant — any authenticated user */}
               <Route element={<RequireFeature capability="ai.use" />}>
                 <Route path="/asc" element={<AscPage />} />
+              </Route>
+
+              {/* RSS reader — any member of a team with RSS enabled; admins manage feeds */}
+              <Route element={<RequireFeature capability="rss.use" />}>
+                <Route path="/rss" element={<RssPage />} />
               </Route>
             </Route>
 
