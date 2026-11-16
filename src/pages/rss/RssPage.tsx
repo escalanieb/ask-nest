@@ -225,7 +225,7 @@ export default function RssPage() {
             </div>
 
             {/* Right: article list */}
-            <div className="grid w-80 shrink-0 content-start gap-3 overflow-y-auto border-l border-slate-200 p-4 xl:w-104">
+            <div className="grid w-80 shrink-0 grid-cols-1 content-start gap-3 overflow-x-hidden overflow-y-auto border-l border-slate-200 p-4 xl:w-104">
               {failedNames.length > 0 && (
                 <p
                   role="alert"
@@ -441,7 +441,7 @@ function ArticleCard({
       onClick={onOpen}
       aria-current={open ? "true" : undefined}
       className={[
-        "flex w-full gap-3 rounded-xl border bg-white p-3 text-left shadow-sm transition",
+        "flex w-full min-w-0 gap-3 rounded-xl border bg-white p-3 text-left shadow-sm transition",
         open
           ? "border-team ring-1 ring-team"
           : "border-slate-200 hover:border-slate-300 hover:shadow-md",
