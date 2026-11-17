@@ -10,11 +10,22 @@ export interface RssFeed {
   can_manage: boolean;
 }
 
+export interface RssFeedInput {
+  name: string;
+  url: string;
+  category?: string;
+  active?: boolean;
+}
+
 export interface RssItem {
   title: string;
   link: string;
   published: string | null;
   summary: string;
+  /** Full plain text with line breaks (absent from older backends). */
+  content?: string;
+  /** The page or outlet that posted it, e.g. "Philippine News Agency". */
+  author?: string | null;
   image: string | null;
 }
 
@@ -28,9 +39,16 @@ export const rssFeedApi = {
 
   fetch: (id: number): Promise<RssFetchResult> => apiFetch<RssFetchResult>(`/rss/fetch?id=${id}`),
 
-  create: (data: { name: string; url: string; category?: string }): Promise<RssFeed> =>
+  create: (data: RssFeedInput): Promise<RssFeed> =>
     apiFetch<RssFeed>("/rss/feeds", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: Partial<RssFeedInput>): Promise<RssFeed> =>
+    apiFetch<RssFeed>(`/rss/feeds/${id}`, {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }),

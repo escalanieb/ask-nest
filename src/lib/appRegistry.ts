@@ -1,6 +1,6 @@
 import { canManageDatasets } from "./datasetPermissions.ts";
 
-export type AppIconKey = "map" | "datasets" | "insight" | "asc" | "tala";
+export type AppIconKey = "map" | "datasets" | "insight" | "asc" | "rss" | "tala";
 
 export interface BuiltInApp {
   id: string;
@@ -50,6 +50,16 @@ export const BUILT_IN_APPS: readonly BuiltInApp[] = [
     internal: true,
     icon: "asc",
     capability: "ai.use",
+  },
+  {
+    id: "rss",
+    description: "Latest articles from your team's news sources",
+    color: "#ea580c",
+    label: "RSS Feeds",
+    href: "/rss",
+    internal: true,
+    icon: "rss",
+    capability: "rss.use",
   },
   {
     id: "datasets",
