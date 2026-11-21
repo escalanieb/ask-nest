@@ -5,6 +5,7 @@ import type { PsgcBarangay, PsgcCityMunicipality } from "../../services/api/psgc
 import { useFilterStore } from "../../stores/useFilterStore";
 import { useMapStore } from "../../stores/useMapStore";
 import { clearArea } from "../../hooks/useExplore";
+import AreaDropdowns, { type AreaDropdownsProps } from "./AreaDropdowns";
 
 interface Option {
   code: string;
@@ -15,7 +16,11 @@ interface Option {
  * One box for "where": a breadcrumb plus a searchable list of the next level
  * down (Region, then Province, then City). Clicking the map also fills it.
  */
-export default function AreaPicker({ withBarangay = false }: { withBarangay?: boolean }) {
+export default function AreaPicker(props: { withBarangay?: boolean } | AreaDropdownsProps) {
+  return "mode" in props ? <AreaDropdowns {...props} /> : <AreaSearch {...props} />;
+}
+
+function AreaSearch({ withBarangay = false }: { withBarangay?: boolean }) {
   const { activeRegion, activeProvince, activeCityMuni, activeBarangay } = useFilterStore();
   const setActiveBarangay = useFilterStore((s) => s.setActiveBarangay);
   const setActiveRegion = useFilterStore((s) => s.setActiveRegion);

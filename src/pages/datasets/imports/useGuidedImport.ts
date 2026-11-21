@@ -289,8 +289,13 @@ export function useGuidedImport(datasets: Dataset[]) {
         throw new Error("Complete the required name and event date before continuing.");
       if (flow.step === 1 && detailsProblem(flow.config))
         throw new Error(detailsProblem(flow.config));
-      if (flow.step === 2 && essentialProblem(flow.config))
-        throw new Error(essentialProblem(flow.config));
+      if (flow.step === 2) {
+        const problem = essentialProblem(
+          flow.config,
+          datasets.find((d) => d.id === flow.target)?.political_entry,
+        );
+        if (problem) throw new Error(problem);
+      }
       if (flow.step === 3 && (!flow.locations || !flow.locationFresh))
         throw new Error("Check location matches before preparing your review.");
       if (flow.step === 3 && flow.config.type === "event" && !flow.singleEvent)

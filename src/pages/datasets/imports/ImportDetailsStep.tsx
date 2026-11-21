@@ -17,6 +17,7 @@ export default function ImportDetailsStep({
 }) {
   const metadata = (key: keyof GuidedConfiguration["metadata"], value: string | number | null) =>
     onChange({ ...config, metadata: { ...config.metadata, [key]: value } });
+  const selected = datasets.find((d) => d.id === target);
   return (
     <div className="space-y-6">
       <label className="block text-sm font-semibold text-slate-700">
@@ -79,7 +80,7 @@ export default function ImportDetailsStep({
       )}
       {target && (
         <p className="rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-          {datasets.find((d) => d.id === target)?.allow_duplicates
+          {selected?.allow_duplicates
             ? "This dataset allows duplicates. Each accepted row adds a record; existing records are not matched or removed."
             : "New identifiers add records. Existing identifiers are checked for changes. Records absent from your file stay in this dataset."}
         </p>
@@ -171,43 +172,45 @@ export default function ImportDetailsStep({
           </details>
         </>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-medium text-slate-700">
-            Dataset name <span className="text-red-600">*</span>
-            <input
-              className={inputClass}
-              value={config.name ?? ""}
-              onChange={(e) => onChange({ ...config, name: e.target.value })}
-            />
-          </label>
-          <label className="text-sm font-medium text-slate-700">
-            Data type <span className="text-red-600">*</span>
-            <input
-              className={inputClass}
-              value={config.data_type ?? ""}
-              maxLength={80}
-              placeholder="e.g. Vloggers, SK Chairpersons"
-              onChange={(e) => onChange({ ...config, data_type: e.target.value })}
-            />
-            <span className="mt-1 block text-xs font-normal text-slate-500">
-              Shown in the “What do you want to see?” list.
-            </span>
-          </label>
-          <label className="text-sm font-medium text-slate-700">
-            Record type
-            <select
-              className={inputClass}
-              value={config.entity_type ?? "person"}
-              onChange={(e) =>
-                onChange({ ...config, entity_type: e.target.value as Dataset["entity_type"] })
-              }
-            >
-              {["person", "establishment", "location", "event"].map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+        !selected?.political_entry && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="text-sm font-medium text-slate-700">
+              Dataset name <span className="text-red-600">*</span>
+              <input
+                className={inputClass}
+                value={config.name ?? ""}
+                onChange={(e) => onChange({ ...config, name: e.target.value })}
+              />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Data type <span className="text-red-600">*</span>
+              <input
+                className={inputClass}
+                value={config.data_type ?? ""}
+                maxLength={80}
+                placeholder="e.g. Vloggers, SK Chairpersons"
+                onChange={(e) => onChange({ ...config, data_type: e.target.value })}
+              />
+              <span className="mt-1 block text-xs font-normal text-slate-500">
+                Shown in the “What do you want to see?” list.
+              </span>
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Record type
+              <select
+                className={inputClass}
+                value={config.entity_type ?? "person"}
+                onChange={(e) =>
+                  onChange({ ...config, entity_type: e.target.value as Dataset["entity_type"] })
+                }
+              >
+                {["person", "establishment", "location", "event"].map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )
       )}
       <p className="text-xs leading-5 text-slate-500">
         These are draft settings. Your dataset and records change only when you select “Import

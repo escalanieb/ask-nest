@@ -32,9 +32,11 @@ export interface LayerConfig {
   tooltip_fields: TooltipField[];
   filter_fields?: string[];
   filter_definitions?: FilterDefinition[];
+  show_on_map?: boolean;
 }
 
 export interface Dataset {
+  political_entry?: boolean;
   event_key?: string | null;
   event_metadata?: EventMetadata | null;
   import_config?: ImportConfiguration | null;
@@ -328,13 +330,48 @@ export interface DataTypeOption {
   key: string;
   label: string;
   record_count: number;
-  datasets: { id: number; name: string; psgc_level: PsgcLevel; record_count: number }[];
+  table_only?: boolean;
+  datasets: {
+    id: number;
+    name: string;
+    psgc_level: PsgcLevel;
+    record_count: number;
+    table_only?: boolean;
+  }[];
 }
 
-/** Data types that have records inside the area (all areas when no prefix). */
+export interface PoliticalDataTypeField {
+  label: string;
+  type: "text" | "number" | "date" | "choice";
+  required: boolean;
+  options?: string[];
+}
+
+export interface PoliticalDataTypePayload {
+  name: string;
+  show_on_map: boolean;
+  psgc_level: PsgcLevel | null;
+  fields: PoliticalDataTypeField[];
+  choice_options?: Record<string, string[]>;
+}
+
+export function savePoliticalDataType(
+  payload: PoliticalDataTypePayload,
+  id?: number,
+): Promise<Dataset> {
+  return apiFetch(`/datasets/data-types${id ? `/${id}` : ""}`, {
+    method: id ? "PUT" : "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function fetchDataTypes(psgcPrefix?: string): Promise<DataTypeOption[]> {
-  const qs = psgcPrefix ? `?psgc_prefix=${encodeURIComponent(psgcPrefix)}` : "";
-  const res = await apiFetch<{ data_types: DataTypeOption[] }>(`/datasets/data-types${qs}`);
+  const qs = new URLSearchParams({
+    workspace: "1",
+    ...(psgcPrefix ? { psgc_prefix: psgcPrefix } : {}),
+  });
+  const res = await apiFetch<{ data_types: DataTypeOption[] }>(`/datasets/data-types?${qs}`);
   return res.data_types;
 }
 
@@ -488,6 +525,26 @@ export async function updateRecord(
       ...(psgcCode !== undefined ? { psgc_code: psgcCode } : {}),
     }),
   });
+}
+
+export function savePoliticalRecord(
+  datasetId: number,
+  recordId: number | undefined,
+  data: Record<string, unknown>,
+  psgcCode?: string | null,
+): Promise<DatasetRecord> {
+  return apiFetch(`/datasets/${datasetId}/records${recordId ? `/${recordId}/workspace` : ""}`, {
+    method: recordId ? "PATCH" : "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data, psgc_code: psgcCode }),
+  });
+}
+
+export function deletePoliticalRecord(
+  datasetId: number,
+  recordId: number,
+): Promise<{ message: string }> {
+  return apiFetch(`/datasets/${datasetId}/records/${recordId}`, { method: "DELETE" });
 }
 
 export async function updateRecordStatus(

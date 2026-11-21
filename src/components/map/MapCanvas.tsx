@@ -1,5 +1,6 @@
 import { currentMapSource, useEffectiveMapSource } from "../../stores/useMapSourceStore";
 import { geographicPrefix, datasetLayerKey } from "../../lib/datasetQuery";
+import { usesPoliticalExplorer } from "../../lib/teamAccess";
 import {
   buildDatasetLayer,
   summarizeDatasetArea,
@@ -37,11 +38,12 @@ import type { ChoroplethSelection } from "../../stores/useDatasetLayerStore";
 import { useDisasterStore } from "../../stores/useDisasterStore";
 import { useTrayStore } from "../../stores/useTrayStore";
 import {
+  fetchDataset,
   fetchDatasetLayer,
   fetchMapPanelRecords,
   filterQuery,
 } from "../../services/api/datasetApi";
-import type { LayerDataPoint, LayerResponse } from "../../services/api/datasetApi";
+import type { Dataset, LayerDataPoint, LayerResponse } from "../../services/api/datasetApi";
 import { disasterApi } from "../../services/api/disasterApi";
 import type { DisasterEvent } from "../../services/api/disasterApi";
 import {
@@ -62,6 +64,11 @@ delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIcon
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 
 const PH_CENTER: [number, number] = [12.8797, 121.774];
+const PH_OVERVIEW_ZOOM = 5;
+const PH_BOUNDS: L.LatLngBoundsExpression = [
+  [4.3, 114],
+  [22, 127.5],
+];
 
 const loadBoundaries = createBoundaryLoader(fetch, `${import.meta.env.BASE_URL}maps/ph-2019/`);
 // TIPAS pins are placed independently of the displayed boundary level / centroidMap.
@@ -611,11 +618,12 @@ function FloodLayer() {
 }
 
 // Registers map click handler for background deselect
-function MapInstanceCapture() {
+function MapInstanceCapture({ political }: { political: boolean }) {
   useMapEvents({
     click() {
       useMapStore.getState().setSelectedLocation(null);
       useFilterStore.getState().setActiveRegion(null);
+      if (political) useMapStore.getState().setMapAreaLevel("region");
       useDatasetLayerStore.getState().setChoroplethSelection(null);
     },
   });
@@ -762,7 +770,15 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
     currentMapSource() === "imported" ? useDatasetLayerStore.getState().activeLayerDatasetId : null;
   if (!layerId || !showChoropleth) return defaultStyle;
 
-  const cached = queryClient.getQueryData<LayerResponse>(datasetLayerKey(layerId));
+  const political = usesPoliticalExplorer(useAuthStore.getState().user);
+  const dataset = queryClient.getQueryData<Dataset>(["dataset", layerId]);
+  if (political && (!dataset?.is_active || (dataset.political_entry && dataset.layer_config.show_on_map === false))) {
+    return defaultStyle;
+  }
+  const key = political
+    ? ["layer", layerId, {}, geographicPrefix(useFilterStore.getState())]
+    : datasetLayerKey(layerId);
+  const cached = queryClient.getQueryData<LayerResponse>(key);
   if (!cached?.layer_data.length) return defaultStyle;
 
   const m = buildDatasetLayer(cached, level);
@@ -1020,12 +1036,15 @@ function TipasEventsLayer() {
 // ---------------------------------------------------------------------------
 import { useMap } from "react-leaflet";
 
-function MapPanZoomController() {
+function MapPanZoomController({ political }: { political: boolean }) {
   const map = useMap();
   const selectedLocation = useMapStore((s) => s.selectedLocation);
+  const showOverview = useFilterStore((s) => political && !s.activeRegion);
 
   useEffect(() => {
-    if (selectedLocation?.lat && selectedLocation?.lng) {
+    if (showOverview) {
+      map.setView(PH_CENTER, PH_OVERVIEW_ZOOM, { animate: false });
+    } else if (selectedLocation?.lat && selectedLocation?.lng) {
       // Zoom levels: 8 for Region, 9 for Province, 11 for City/Municity
       const zoomLevel =
         selectedLocation.type === "Region" ? 8 : selectedLocation.type === "Province" ? 9 : 11;
@@ -1037,12 +1056,12 @@ function MapPanZoomController() {
     return () => {
       if (map.getPane("mapPane")) map.stop();
     };
-  }, [selectedLocation, map]);
+  }, [selectedLocation, map, showOverview]);
 
   return null;
 }
 
-export default function MapCanvas() {
+export default function MapCanvas({ political = false }: { political?: boolean }) {
   const selectedLocation = useMapStore((s) => s.selectedLocation);
   const setSelectedLocation = useMapStore((s) => s.setSelectedLocation);
   const mapAreaLevel = useMapStore((s) => s.mapAreaLevel);
@@ -1057,10 +1076,12 @@ export default function MapCanvas() {
 
   // Sync active dropdown selection to selectedLocation (which sets lat/lng for map flying)
   useEffect(() => {
+    const selectedLevel = activeCityMuni ? "municity" : activeProvince ? "province" : "region";
+    const targetLevel = political ? selectedLevel : mapAreaLevel;
     const targetCode =
-      mapAreaLevel === "municity"
+      targetLevel === "municity"
         ? activeCityMuni
-        : mapAreaLevel === "province"
+        : targetLevel === "province"
           ? activeProvince
           : activeRegion;
 
@@ -1074,24 +1095,38 @@ export default function MapCanvas() {
       setSelectedLocation({
         psgcCode: targetCode,
         name: "Selected Location",
-        type:
-          mapAreaLevel === "region"
-            ? "Region"
-            : mapAreaLevel === "province"
-              ? "Province"
-              : "City/Municipality",
+        type: GEO_LEVEL_TYPES[targetLevel],
         lat: pos.lat,
         lng: pos.lng,
       });
     }
-  }, [activeCityMuni, activeProvince, activeRegion, mapAreaLevel, geoVersion, setSelectedLocation]);
+  }, [
+    activeCityMuni,
+    activeProvince,
+    activeRegion,
+    mapAreaLevel,
+    geoVersion,
+    political,
+    setSelectedLocation,
+  ]);
 
   const canUseDatasets = useAuthStore((s) => !!s.user?.capabilities?.includes("datasets.use"));
   const selectedDatasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
   const source = useEffectiveMapSource();
-  const activeLayerDatasetId = source === "imported" && canUseDatasets ? selectedDatasetId : null;
+  const { data: politicalDataset } = useQuery({
+    queryKey: ["dataset", selectedDatasetId],
+    queryFn: () => fetchDataset(selectedDatasetId!),
+    enabled: political && !!selectedDatasetId,
+    staleTime: 1000 * 60 * 5,
+  });
+  const tableOnly =
+    political && politicalDataset?.political_entry && politicalDataset.layer_config.show_on_map === false;
+  const activeLayerDatasetId =
+    source === "imported" && canUseDatasets && !tableOnly && (!political || politicalDataset?.is_active)
+      ? selectedDatasetId
+      : null;
   const allFilters = useDatasetLayerStore((s) => s.filtersByDataset);
-  const datasetFilters = activeLayerDatasetId ? (allFilters[activeLayerDatasetId] ?? {}) : {};
+  const datasetFilters = activeLayerDatasetId && !political ? (allFilters[activeLayerDatasetId] ?? {}) : {};
   const geoFilters = useFilterStore();
   const datasetPrefix = geographicPrefix(geoFilters);
   const choroplethSelection = useDatasetLayerStore((s) => s.choroplethSelection);
@@ -1110,7 +1145,19 @@ export default function MapCanvas() {
   const [loadKey, setLoadKey] = useState(0);
 
   // Draggable popup position (set when a choropleth area is clicked)
-  const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
+  const [dragPosition, setDragPosition] = useState<{
+    selection: ChoroplethSelection;
+    x: number;
+    y: number;
+  } | null>(null);
+  const popupPos = choroplethSelection && (
+    dragPosition?.selection === choroplethSelection
+      ? dragPosition
+      : {
+          x: Math.max(8, choroplethSelection.x - 120),
+          y: Math.max(8, choroplethSelection.y - 200),
+        }
+  );
   const dragState = useRef<{
     startX: number;
     startY: number;
@@ -1151,7 +1198,6 @@ export default function MapCanvas() {
   const tipasDistribution = datasetPrefix
     ? unfilteredTipasDistribution.filter((point) => point.psgc_code.startsWith(datasetPrefix))
     : unfilteredTipasDistribution;
-  const tipasMap = new Map(tipasDistribution.map((d) => [d.psgc_code, d.count]));
   const tipasMaxVal = tipasMaximum(tipasDistribution, mapAreaLevel);
 
   const layerMap = useCallback((): Map<string, LayerDataPoint> => {
@@ -1173,6 +1219,7 @@ export default function MapCanvas() {
     enabled: !!activeLayerDatasetId && !!areaPrefix,
     staleTime: 30_000,
   });
+  const popupCount = activeLayerDatasetId ? areaRecords?.total : choroplethSelection?.count;
 
   // Geography clicks may fetch a different subset after the popup opens.
   useEffect(() => {
@@ -1186,19 +1233,6 @@ export default function MapCanvas() {
       useDatasetLayerStore.getState().setChoroplethSelection({ ...selection, ...details });
     }
   }, [layerData, layerLoading, activeLayerDatasetId, choroplethSelection?.prefix]);
-
-  // Initialise popup position when a new selection is made
-  useEffect(() => {
-    if (choroplethSelection) {
-      // Offset slightly from click point so cursor is on the drag handle
-      setPopupPos({
-        x: Math.max(8, choroplethSelection.x - 120),
-        y: Math.max(8, choroplethSelection.y - 200),
-      });
-    } else {
-      setPopupPos(null);
-    }
-  }, [choroplethSelection]);
 
   // Re-apply styles when selectedLocation, layer data, or TIPAS distribution changes
   useEffect(() => {
@@ -1228,8 +1262,8 @@ export default function MapCanvas() {
               ? code.substring(0, 4)
               : code;
         let count = 0;
-        for (const [key, val] of tipasMap.entries()) {
-          if (key.startsWith(prefix)) count += val;
+        for (const point of tipasDistribution) {
+          if (point.psgc_code.startsWith(prefix)) count += point.count;
         }
 
         if (count === 0) {
@@ -1268,6 +1302,7 @@ export default function MapCanvas() {
     geoVersion,
     showTipasAttendees,
     tipasDistribution,
+    tipasMaxVal,
   ]);
 
   // Load GeoJSON whenever level or (for municity) activeRegion changes
@@ -1502,7 +1537,7 @@ export default function MapCanvas() {
           x: e.containerPoint.x,
           y: e.containerPoint.y,
         } satisfies ChoroplethSelection);
-      } else if (dsId) {
+      } else if (dsId && !political) {
         const cached = queryClient.getQueryData<LayerResponse>(datasetLayerKey(dsId));
         // Aggregate all records whose psgc_code starts with the area prefix
         const prefix =
@@ -1544,7 +1579,10 @@ export default function MapCanvas() {
     <div className="relative h-full w-full">
       <MapContainer
         center={PH_CENTER}
-        zoom={6}
+        zoom={political ? PH_OVERVIEW_ZOOM : 6}
+        minZoom={political ? PH_OVERVIEW_ZOOM : undefined}
+        maxBounds={political ? PH_BOUNDS : undefined}
+        maxBoundsViscosity={political ? 1 : undefined}
         className="h-full w-full"
         zoomControl={true}
         attributionControl={true}
@@ -1574,10 +1612,15 @@ export default function MapCanvas() {
         <FloodLayer />
         <TipasEventsLayer />
         <BarangayLayer />
-        <MapPanZoomController />
-        <MapInstanceCapture />
+        <MapPanZoomController political={political} />
+        <MapInstanceCapture political={political} />
       </MapContainer>
       <BarangayNotice />
+      {tableOnly && (
+        <p role="status" className="absolute left-4 right-4 top-16 z-[800] w-fit rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow">
+          This data type isn't shown on the map.
+        </p>
+      )}
 
       {/* Loading overlay */}
       {geoLoading && (
@@ -1727,120 +1770,116 @@ export default function MapCanvas() {
       )}
 
       {/* ── Draggable choropleth detail popup ── */}
-      {choroplethSelection &&
-        popupPos &&
-        (() => {
-          const count = activeLayerDatasetId ? areaRecords?.total : choroplethSelection.count;
-          return (
-            <div
-              className="absolute z-[900] w-72 rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 select-none overflow-hidden"
-              style={{ left: popupPos.x, top: popupPos.y }}
-              onPointerDown={(e) => {
-                // Only drag on the card itself, not interactive children
-                if ((e.target as HTMLElement).closest("a,button")) return;
-                dragState.current = {
-                  startX: e.clientX,
-                  startY: e.clientY,
-                  origX: popupPos.x,
-                  origY: popupPos.y,
-                };
-                e.currentTarget.setPointerCapture(e.pointerId);
-              }}
-              onPointerMove={(e) => {
-                if (!dragState.current) return;
-                setPopupPos({
-                  x: dragState.current.origX + (e.clientX - dragState.current.startX),
-                  y: dragState.current.origY + (e.clientY - dragState.current.startY),
-                });
-              }}
-              onPointerCancel={() => {
-                dragState.current = null;
-              }}
-              onPointerUp={() => {
-                dragState.current = null;
-              }}
+      {!political && choroplethSelection && popupPos && (
+        <div
+          className="absolute z-[900] w-72 rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 select-none overflow-hidden"
+          style={{ left: popupPos.x, top: popupPos.y }}
+          onPointerDown={(e) => {
+            // Only drag on the card itself, not interactive children
+            if ((e.target as HTMLElement).closest("a,button")) return;
+            dragState.current = {
+              startX: e.clientX,
+              startY: e.clientY,
+              origX: popupPos.x,
+              origY: popupPos.y,
+            };
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }}
+          onPointerMove={(e) => {
+            if (!dragState.current) return;
+            setDragPosition({
+              selection: choroplethSelection,
+              x: dragState.current.origX + (e.clientX - dragState.current.startX),
+              y: dragState.current.origY + (e.clientY - dragState.current.startY),
+            });
+          }}
+          onPointerCancel={() => {
+            dragState.current = null;
+          }}
+          onPointerUp={() => {
+            dragState.current = null;
+          }}
+        >
+          {/* Drag handle / header */}
+          <div className="flex items-center gap-2 bg-team px-4 py-3 cursor-grab active:cursor-grabbing">
+            <svg
+              className="h-3.5 w-3.5 text-team shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
             >
-              {/* Drag handle / header */}
-              <div className="flex items-center gap-2 bg-team px-4 py-3 cursor-grab active:cursor-grabbing">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8 9h.01M8 15h.01M16 9h.01M16 15h.01M12 9h.01M12 15h.01"
+              />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-white truncate">
+                {choroplethSelection.name}
+              </p>
+              {layerData && (
+                <p className="text-[9px] text-team truncate">{layerData.dataset.name}</p>
+              )}
+            </div>
+            <button
+              aria-label="Close area details"
+              onClick={() => setChoroplethSelection(null)}
+              className="shrink-0 rounded-full p-1 text-team hover:bg-team-soft0 hover:text-white transition-colors"
+            >
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="px-4 pt-3 pb-1">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                Total Records
+              </span>
+              <span className="text-2xl font-bold text-team tabular-nums">
+                {activeLayerDatasetId && areaCountError ? (
+                  <button className="text-xs underline" onClick={() => retryAreaCount()}>
+                    Retry count
+                  </button>
+                ) : (
+                  (popupCount?.toLocaleString() ?? "…")
+                )}
+              </span>
+            </div>
+          </div>
+
+          {/* Footer — link to records */}
+          {activeLayerDatasetId && (
+            <div className="px-4 pb-3">
+              <Link
+                to={`/datasets/${activeLayerDatasetId}/records${filterQuery(datasetFilters, choroplethSelection.prefix)}`}
+                className="flex items-center justify-center gap-1.5 rounded-lg bg-team-soft border border-team px-3 py-2 text-xs font-semibold text-team hover:bg-team-soft transition-colors"
+              >
+                View all records
                 <svg
-                  className="h-3.5 w-3.5 text-team shrink-0"
+                  className="h-3.5 w-3.5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                   strokeWidth={2}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M8 9h.01M8 15h.01M16 9h.01M16 15h.01M12 9h.01M12 15h.01"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-white truncate">
-                    {choroplethSelection.name}
-                  </p>
-                  {layerData && (
-                    <p className="text-[9px] text-team truncate">{layerData.dataset.name}</p>
-                  )}
-                </div>
-                <button
-                  aria-label="Close area details"
-                  onClick={() => setChoroplethSelection(null)}
-                  className="shrink-0 rounded-full p-1 text-team hover:bg-team-soft0 hover:text-white transition-colors"
-                >
-                  <svg
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2.5}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Stats */}
-              <div className="px-4 pt-3 pb-1">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                    Total Records
-                  </span>
-                  <span className="text-2xl font-bold text-team tabular-nums">
-                    {activeLayerDatasetId && areaCountError ? (
-                      <button className="text-xs underline" onClick={() => retryAreaCount()}>
-                        Retry count
-                      </button>
-                    ) : (
-                      (count?.toLocaleString() ?? "…")
-                    )}
-                  </span>
-                </div>
-              </div>
-
-              {/* Footer — link to records */}
-              {activeLayerDatasetId && (
-                <div className="px-4 pb-3">
-                  <Link
-                    to={`/datasets/${activeLayerDatasetId}/records${filterQuery(datasetFilters, choroplethSelection.prefix)}`}
-                    className="flex items-center justify-center gap-1.5 rounded-lg bg-team-soft border border-team px-3 py-2 text-xs font-semibold text-team hover:bg-team-soft transition-colors"
-                  >
-                    View all records
-                    <svg
-                      className="h-3.5 w-3.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
-                </div>
-              )}
+              </Link>
             </div>
-          );
-        })()}
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -48,6 +48,8 @@ function GuidedImportWorkspace() {
     enabled: !!flow.target,
   });
   const pending = batches.data?.data.find((b) => b.status === "pending");
+  const target = datasets.data?.find((d) => d.id === flow.target);
+  const requiresLocation = !!target?.political_entry && target.layer_config.show_on_map !== false;
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
   }, [flow.step]);
@@ -63,7 +65,9 @@ function GuidedImportWorkspace() {
     "Choose your file and check a few rows before continuing.",
     "Tell us what these records represent. Suggested details are yours to review.",
     "Start with the columns we need. Everything else can stay simple.",
-    "Keep your records, even when some locations cannot be mapped.",
+    requiresLocation
+      ? "Match a location for each row before importing."
+      : "Keep your records, even when some locations cannot be mapped.",
     "See exactly what will change before anything is published.",
     "Your import has completed. Here is what changed.",
   ][flow.step];
@@ -74,11 +78,12 @@ function GuidedImportWorkspace() {
     !!flow.inspection &&
     (flow.step !== 0 || flow.sheets) &&
     (flow.step !== 1 || !flow.config || !detailsProblem(flow.config)) &&
-    (flow.step !== 2 || (!!flow.config && !essentialProblem(flow.config))) &&
+    (flow.step !== 2 ||
+      (!!flow.config && !essentialProblem(flow.config, target?.political_entry))) &&
     (flow.step !== 3 ||
       (flow.locationFresh &&
         !!flow.locations &&
-        (!flow.locations.unknown_rows || flow.unknown) &&
+        (requiresLocation || !flow.locations.unknown_rows || flow.unknown) &&
         (flow.config?.type !== "event" || flow.singleEvent)));
   const canCommit =
     !busy &&

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { configurationForFile, essentialProblem, importError } from "../src/lib/guidedImport.ts";
+import type { Dataset } from "../src/services/api/datasetApi.ts";
 
 const inspection = {
   sheet: "Attendees",
@@ -41,6 +42,31 @@ test("saved compatible mappings and event metadata survive reselection", () => {
   assert.equal(resumed.metadata.id, previous.metadata.id);
   assert.equal(resumed.metadata.name, "Reviewed event");
   assert.equal(resumed.columns[1].filter, true);
+});
+
+test("guided imports into a Political type match its existing fields without requiring an ID", () => {
+  const target = {
+    political_entry: true,
+    name: "Campaign Volunteers",
+    data_type: "Campaign Volunteers",
+    entity_type: "location",
+    psgc_level: "barangay",
+    match_key_fields: [],
+    allow_duplicates: true,
+    field_definitions: [{ key: "full_name", label: "Full Name", type: "text", required: true }],
+    layer_config: {
+      aggregate_function: "count",
+      color_field: "",
+      tooltip_fields: [],
+      show_on_map: false,
+    },
+  } as Dataset;
+  const config = configurationForFile(inspection, "volunteers.xlsx", target);
+  assert.equal(config.columns[0].role, "ignore");
+  assert.equal(config.columns[1].key, "full_name");
+  assert.equal(config.columns[1].required, true);
+  assert.equal(essentialProblem(config, true), "");
+  assert.match(essentialProblem(config), /record identifier/);
 });
 
 test("import errors use actionable server validation and expiry explanations", () => {

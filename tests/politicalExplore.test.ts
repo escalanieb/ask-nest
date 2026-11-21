@@ -11,6 +11,7 @@ import { usesPoliticalExplorer } from "../src/lib/teamAccess.ts";
 import { barangayCode } from "../src/lib/barangayCode.ts";
 import { areaChip, noShapeNote, summarySentence } from "../src/lib/exploreSummary.ts";
 import { barangayCoverage } from "../src/lib/datasetLayer.ts";
+import { selectArea, selectedLocationCode, emptyArea } from "../src/lib/politicalArea.ts";
 
 const options = [
   {
@@ -65,6 +66,21 @@ test("barangay selection narrows the prefix to that barangay", () => {
   assert.equal(geographicPrefix(base), "137404");
   assert.equal(geographicPrefix({ ...base, activeBarangay: "137404001" }), "137404001");
   assert.equal(geographicPrefix({ ...base, activeBarangay: null }), "137404");
+});
+
+test("record locations require the configured level and allow no location for table-only types", () => {
+  const region = selectArea(emptyArea, "region", "130000000");
+  const city = selectArea(region, "city", "137404000");
+  const barangay = selectArea(city, "barangay", "137404001");
+  assert.equal(selectedLocationCode(emptyArea, null), null);
+  assert.equal(selectedLocationCode(region, null), "130000000");
+  assert.equal(selectedLocationCode(region, "city"), null);
+  assert.equal(selectedLocationCode(city, "city"), "137404000");
+  assert.equal(selectedLocationCode(barangay, null), "137404001");
+  assert.deepEqual(selectArea(barangay, "region", "070000000"), {
+    ...emptyArea,
+    region: "070000000",
+  });
 });
 
 test("political summary names the data type and deepest area", () => {

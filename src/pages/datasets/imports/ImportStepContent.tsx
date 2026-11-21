@@ -36,6 +36,8 @@ export default function ImportStepContent({
     startOver,
   } = controller;
   const selected = datasets.find((d) => d.id === flow.target);
+  const requiresLocation =
+    !!selected?.political_entry && selected.layer_config.show_on_map !== false;
   const templates = useQuery({ queryKey: ["import-templates"], queryFn: fetchImportTemplates });
   const [template, setTemplate] = useState("");
   function applyTemplate() {
@@ -152,7 +154,8 @@ export default function ImportStepContent({
             config={flow.config}
             locations={flow.locations}
             fresh={flow.locationFresh}
-            fixedLevel={!!selected?.records_count}
+            fixedLevel={selected?.political_entry ? requiresLocation : !!selected?.records_count}
+            requiresLocation={requiresLocation}
             unknown={flow.unknown}
             onUnknown={(unknown) => patch({ unknown })}
             onChange={change}
