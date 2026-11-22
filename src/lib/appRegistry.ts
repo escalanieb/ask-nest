@@ -90,14 +90,14 @@ export const BUILT_IN_APPS: readonly BuiltInApp[] = [
     internal: false,
     capability: "tipas.use",
   },
-  {
-    id: "nexus",
-    description: "Connected tools and workflows",
-    color: "#4f46e5",
-    label: "NEXUS",
-    href: "https://nexus.asc-nest.org/",
-    internal: false,
-  },
+  // {
+  //   id: "nexus",
+  //   description: "Connected tools and workflows",
+  //   color: "#4f46e5",
+  //   label: "NEXUS",
+  //   href: "https://nexus.asc-nest.org/",
+  //   internal: false,
+  // },
 ];
 
 interface AccessUser {
