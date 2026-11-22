@@ -81,6 +81,8 @@ export interface DatasetRecord {
   record_number?: string;
   dataset_id: number;
   psgc_code: string | null;
+  /** Workspace lists only: the place name for psgc_code, when it is known. */
+  location_label?: string | null;
   location_source?: Record<string, string> | null;
   location_reason?: string | null;
   data: Record<string, unknown>;
