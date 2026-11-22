@@ -87,9 +87,9 @@ export function ElectionCountdown() {
   const { months, weeks, days, hours, minutes, seconds, isPast } = useElectionCountdown();
 
   return (
-    <div className="shrink-0 border-b border-slate-200 bg-gradient-to-br from-team-strong via-team to-team px-5 py-5">
+    <div className="flex h-full min-w-0 flex-col justify-center overflow-hidden bg-gradient-to-br from-team-strong via-team to-team px-4 py-3">
       {/* Header row */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-2 flex items-center justify-between">
         <div>
           <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-team-foreground/80 mb-0.5">
             Countdown to
@@ -106,7 +106,7 @@ export function ElectionCountdown() {
       ) : (
         <>
           {/* Primary row: months / weeks / days */}
-          <div className="grid grid-cols-3 gap-2 mb-2">
+          <div className="mb-1.5 grid grid-cols-3 gap-1.5">
             {[
               { v: months, l: "Months" },
               { v: weeks, l: "Weeks" },
@@ -114,9 +114,9 @@ export function ElectionCountdown() {
             ].map(({ v, l }) => (
               <div
                 key={l}
-                className="flex flex-col items-center rounded-xl bg-white/10 py-3 ring-1 ring-white/10"
+                className="flex flex-col items-center rounded-xl bg-white/10 py-2 ring-1 ring-white/10"
               >
-                <span className="text-3xl font-bold tabular-nums text-white leading-none">
+                <span className="text-2xl font-bold tabular-nums text-white leading-none">
                   {pad(v)}
                 </span>
                 <span className="mt-1 text-[9px] font-semibold uppercase tracking-widest text-team-foreground/80">
@@ -127,7 +127,7 @@ export function ElectionCountdown() {
           </div>
 
           {/* Secondary row: hours / minutes / seconds */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             {[
               { v: hours, l: "Hours" },
               { v: minutes, l: "Minutes" },
@@ -135,7 +135,7 @@ export function ElectionCountdown() {
             ].map(({ v, l }) => (
               <div
                 key={l}
-                className="flex flex-col items-center rounded-lg bg-white/5 py-1.5 ring-1 ring-white/5"
+                className="flex flex-col items-center rounded-lg bg-white/5 py-1 ring-1 ring-white/5"
               >
                 <span className="text-lg font-bold tabular-nums text-white/90 leading-none">
                   {pad(v)}
