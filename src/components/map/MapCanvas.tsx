@@ -1001,7 +1001,7 @@ function TipasEventsLayer() {
                           onClick={() => {
                             useFilterStore.getState().setSelectedTipasEventId(evt.id);
                             useFilterStore.getState().setShowTipasAttendees(true);
-                            useTrayStore.getState().setTab("results");
+                            useTrayStore.getState().show("results");
                           }}
                           style={{
                             width: "100%",
