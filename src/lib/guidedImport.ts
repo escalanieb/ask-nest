@@ -38,7 +38,15 @@ export function configurationForFile(
     dataset?.layer_config.filter_definitions?.map((f) => [f.key, f.type]) ?? [],
   );
   const tooltipKeys = new Set(dataset?.layer_config.tooltip_fields.map((f) => f.field) ?? []);
+  const headers = inspection.columns.map(({ source }) => source);
+  const isWorkspaceExport =
+    /^Record number(?: \(ask-nest(?: [0-9]+)?\))?$/i.test(headers[0] ?? "") &&
+    headers[1] === "psgc_code" &&
+    headers.slice(-3).join(",") === "location_status,location_source,location_reason";
   const columns = suggestedColumns(inspection, saved).map((column): ImportColumn => {
+    if (isWorkspaceExport && column.source === headers[0]) {
+      return { ...column, role: "ignore", required: false, filter: false, popup: false };
+    }
     if (!dataset || dataset.event_key || savedSources.has(column.source)) return column;
     const field = fields.get(normalize(column.source));
     return field
