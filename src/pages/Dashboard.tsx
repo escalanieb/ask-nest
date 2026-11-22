@@ -19,17 +19,14 @@ export default function Dashboard() {
   return (
     <div className="flex h-full flex-col bg-slate-50 overflow-hidden">
       {/* Navigation Bar */}
-      <CommandBar showTrayTools={!datasetWorkspace} />
+      <CommandBar />
 
       {/* Main content — left column (map + tray) + right sidebar */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left column: map on top (2/3), panel tray on bottom (1/3) */}
-        <div
-          className={`flex min-w-0 flex-col overflow-hidden ${datasetWorkspace ? "w-1/3 shrink-0" : "flex-1"}`}
-        >
+        {/* Left column: one-third wide for every team; summary bar above the map */}
+        <div className="flex w-1/3 min-w-0 shrink-0 flex-col overflow-hidden">
           {!datasetWorkspace && <SummaryBar />}
-          {/* Map — takes 2/3 of vertical space */}
-          <main className="relative overflow-hidden" style={{ flex: 2 }}>
+          <main className="relative min-h-0 flex-1 overflow-hidden">
             {/* Isolated stacking context keeps Leaflet z-indices contained */}
             <div className="absolute inset-0 [isolation:isolate]">
               <Suspense
@@ -59,15 +56,16 @@ export default function Dashboard() {
               </Suspense>
             </div>
           </main>
-
-          {!datasetWorkspace && <BottomTray />}
         </div>
 
-        {/* Right sidebar — spans full height of content area */}
-        <aside
-          className={`flex min-w-0 flex-col border-l border-slate-200 bg-white shadow-sm overflow-hidden ${datasetWorkspace ? "flex-1" : "w-[380px] shrink-0"}`}
-        >
-          {datasetWorkspace && <ElectionCountdown />}
+        {/* Right panel: countdown and tray share the top row, sidebar below */}
+        <aside className="flex min-w-0 flex-1 flex-col overflow-hidden border-l border-slate-200 bg-white shadow-sm">
+          <div className="grid h-52 shrink-0 grid-cols-2 border-b-2 border-slate-300">
+            <ElectionCountdown />
+            <div className="min-w-0 border-l border-slate-200">
+              <BottomTray />
+            </div>
+          </div>
           <div className="min-h-0 overflow-y-auto flex-1">
             {datasetWorkspace ? <DatasetWorkspaceSidebar /> : <ExploreSidebar />}
           </div>

@@ -1,6 +1,6 @@
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useEffectiveMapSource, useMapSourceStore } from "../../stores/useMapSourceStore";
-import { ElectionCountdown, Filters, TipasLayerSwitcher } from "../dashboard/SourceTools";
+import { Filters, TipasLayerSwitcher } from "../dashboard/SourceTools";
 import AreaPicker from "./AreaPicker";
 import NarrowFilters from "./NarrowFilters";
 import PickDataset from "./PickDataset";
@@ -14,7 +14,6 @@ export default function ExploreSidebar() {
 
   return (
     <>
-      <ElectionCountdown />
       {both && (
         <div
           className="flex gap-2 border-b border-slate-200 p-3"

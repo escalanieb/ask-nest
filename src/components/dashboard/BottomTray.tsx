@@ -1,6 +1,6 @@
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useTrayStore } from "../../stores/useTrayStore";
-import { TRAY_TABS, useActiveTrayTab } from "../../hooks/useActiveTrayTab";
+import { useActiveTrayTab, useTrayTabs } from "../../hooks/useActiveTrayTab";
 import AnalyticsPanel from "../widgets/AnalyticsPanel";
 import DisasterPanel from "../widgets/DisasterPanel";
 import RssFeedPanel from "../widgets/RssFeedPanel";
@@ -25,18 +25,14 @@ export default function BottomTray() {
   const active = useActiveTrayTab();
   const setTab = useTrayStore((s) => s.setTab);
   const user = useAuthStore((s) => s.user);
-  const capabilities = user?.capabilities;
-  const tabs = TRAY_TABS.filter((t) => !t.capability || capabilities?.includes(t.capability));
+  const tabs = useTrayTabs();
 
   return (
-    <div
-      className="flex shrink-0 flex-col overflow-hidden border-t-2 border-slate-300 bg-white"
-      style={{ flex: 1 }}
-    >
+    <div className="flex h-full min-w-0 flex-col overflow-hidden bg-white">
       <div
         role="tablist"
         aria-label="Panels"
-        className="flex shrink-0 gap-1 border-b border-slate-200 bg-slate-50 px-2 pt-1.5"
+        className="flex shrink-0 gap-1 overflow-x-auto border-b border-slate-200 bg-slate-50 px-2 pt-1.5"
       >
         {tabs.map((t) => (
           <button
@@ -45,7 +41,7 @@ export default function BottomTray() {
             type="button"
             aria-selected={active === t.id}
             onClick={() => setTab(t.id)}
-            className={`rounded-t-md px-4 py-1.5 text-xs font-semibold ${
+            className={`shrink-0 rounded-t-md px-3 py-1.5 text-xs font-semibold ${
               active === t.id
                 ? "border border-b-white border-slate-200 bg-white text-team"
                 : "text-slate-500 hover:text-slate-700"
