@@ -192,7 +192,7 @@ export default function RecordTable({ dataset, area, prefix, unmatched, onEdit }
                   </th>
                 ))}
                 <th scope="col" className={cellClass}>
-                  Location (PSGC)
+                  Location
                 </th>
                 <th scope="col" className={cellClass}>
                   Status
@@ -235,7 +235,9 @@ export default function RecordTable({ dataset, area, prefix, unmatched, onEdit }
                       {String(record.data[field.key] ?? "—")}
                     </td>
                   ))}
-                  <td className={cellClass}>{record.psgc_code ?? "No location"}</td>
+                  <td className={cellClass} title={record.psgc_code ?? undefined}>
+                    {record.location_label ?? record.psgc_code ?? "No location"}
+                  </td>
                   <td className={cellClass}>
                     {record.status === "inactive" ? "Inactive" : "Active"}
                   </td>
