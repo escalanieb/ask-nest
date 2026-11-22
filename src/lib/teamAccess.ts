@@ -15,13 +15,13 @@ export function capabilityForPath(path: string): string | null {
   );
 }
 
-export const POLITICAL_SLUG = "political";
-
-/** Only the Political team (with dataset access) gets the area-first explorer sidebar. */
-export function usesPoliticalExplorer(
-  user: { team?: { slug?: string }; capabilities?: readonly string[] } | null | undefined,
+export function usesDatasetWorkspace(
+  user: { capabilities?: readonly string[] } | null | undefined,
 ): boolean {
-  return user?.team?.slug === POLITICAL_SLUG && !!user.capabilities?.includes("datasets.use");
+  return (
+    !!user?.capabilities?.includes("datasets.use") &&
+    user.capabilities.includes("dataset-workspace.use")
+  );
 }
 
 export function canUseWidget(type: string, capabilities: readonly string[] = []): boolean {

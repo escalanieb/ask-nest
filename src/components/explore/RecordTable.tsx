@@ -76,7 +76,7 @@ export default function RecordTable({ dataset, area, prefix, unmatched, onEdit }
     ...(appliedSearch ? { search: appliedSearch } : {}),
   };
   const results = useQuery({
-    queryKey: ["political-records", dataset.id, prefix, appliedSearch, page],
+    queryKey: ["dataset-workspace-records", dataset.id, prefix, appliedSearch, page],
     queryFn: () =>
       fetchRecords(dataset.id, { ...params, per_page: String(PAGE_SIZE), page: String(page) }),
   });

@@ -7,7 +7,7 @@ import {
   selectionIsStale,
 } from "../src/lib/politicalExplore.ts";
 import { geographicPrefix } from "../src/lib/geographicPrefix.ts";
-import { usesPoliticalExplorer } from "../src/lib/teamAccess.ts";
+import { usesDatasetWorkspace } from "../src/lib/teamAccess.ts";
 import { barangayCode } from "../src/lib/barangayCode.ts";
 import { areaChip, noShapeNote, summarySentence } from "../src/lib/exploreSummary.ts";
 import { barangayCoverage } from "../src/lib/datasetLayer.ts";
@@ -31,16 +31,15 @@ const options = [
   },
 ];
 
-test("only the Political team with dataset access gets the political explorer", () => {
-  const caps = ["datasets.use"];
-  assert.equal(usesPoliticalExplorer({ team: { slug: "political" }, capabilities: caps }), true);
-  assert.equal(usesPoliticalExplorer({ team: { slug: "political" }, capabilities: [] }), false);
+test("the dataset workspace requires both dataset and workspace access", () => {
   assert.equal(
-    usesPoliticalExplorer({ team: { slug: "communications" }, capabilities: caps }),
-    false,
+    usesDatasetWorkspace({ capabilities: ["datasets.use", "dataset-workspace.use"] }),
+    true,
   );
-  assert.equal(usesPoliticalExplorer({ capabilities: caps }), false);
-  assert.equal(usesPoliticalExplorer(null), false);
+  assert.equal(usesDatasetWorkspace({ capabilities: ["datasets.use"] }), false);
+  assert.equal(usesDatasetWorkspace({ capabilities: ["dataset-workspace.use"] }), false);
+  assert.equal(usesDatasetWorkspace({ capabilities: [] }), false);
+  assert.equal(usesDatasetWorkspace(null), false);
 });
 
 test("labels show the data type with its count", () => {

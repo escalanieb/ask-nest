@@ -1,6 +1,6 @@
 import { currentMapSource, useEffectiveMapSource } from "../../stores/useMapSourceStore";
 import { geographicPrefix, datasetLayerKey } from "../../lib/datasetQuery";
-import { usesPoliticalExplorer } from "../../lib/teamAccess";
+import { usesDatasetWorkspace } from "../../lib/teamAccess";
 import {
   buildDatasetLayer,
   summarizeDatasetArea,
@@ -618,12 +618,12 @@ function FloodLayer() {
 }
 
 // Registers map click handler for background deselect
-function MapInstanceCapture({ political }: { political: boolean }) {
+function MapInstanceCapture({ datasetWorkspace }: { datasetWorkspace: boolean }) {
   useMapEvents({
     click() {
       useMapStore.getState().setSelectedLocation(null);
       useFilterStore.getState().setActiveRegion(null);
-      if (political) useMapStore.getState().setMapAreaLevel("region");
+      if (datasetWorkspace) useMapStore.getState().setMapAreaLevel("region");
       useDatasetLayerStore.getState().setChoroplethSelection(null);
     },
   });
@@ -770,12 +770,12 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
     currentMapSource() === "imported" ? useDatasetLayerStore.getState().activeLayerDatasetId : null;
   if (!layerId || !showChoropleth) return defaultStyle;
 
-  const political = usesPoliticalExplorer(useAuthStore.getState().user);
+  const datasetWorkspace = usesDatasetWorkspace(useAuthStore.getState().user);
   const dataset = queryClient.getQueryData<Dataset>(["dataset", layerId]);
-  if (political && (!dataset?.is_active || (dataset.political_entry && dataset.layer_config.show_on_map === false))) {
+  if (datasetWorkspace && (!dataset?.is_active || (dataset.political_entry && dataset.layer_config.show_on_map === false))) {
     return defaultStyle;
   }
-  const key = political
+  const key = datasetWorkspace
     ? ["layer", layerId, {}, geographicPrefix(useFilterStore.getState())]
     : datasetLayerKey(layerId);
   const cached = queryClient.getQueryData<LayerResponse>(key);
@@ -1036,10 +1036,10 @@ function TipasEventsLayer() {
 // ---------------------------------------------------------------------------
 import { useMap } from "react-leaflet";
 
-function MapPanZoomController({ political }: { political: boolean }) {
+function MapPanZoomController({ datasetWorkspace }: { datasetWorkspace: boolean }) {
   const map = useMap();
   const selectedLocation = useMapStore((s) => s.selectedLocation);
-  const showOverview = useFilterStore((s) => political && !s.activeRegion);
+  const showOverview = useFilterStore((s) => datasetWorkspace && !s.activeRegion);
 
   useEffect(() => {
     if (showOverview) {
@@ -1061,7 +1061,7 @@ function MapPanZoomController({ political }: { political: boolean }) {
   return null;
 }
 
-export default function MapCanvas({ political = false }: { political?: boolean }) {
+export default function MapCanvas({ datasetWorkspace = false }: { datasetWorkspace?: boolean }) {
   const selectedLocation = useMapStore((s) => s.selectedLocation);
   const setSelectedLocation = useMapStore((s) => s.setSelectedLocation);
   const mapAreaLevel = useMapStore((s) => s.mapAreaLevel);
@@ -1077,7 +1077,7 @@ export default function MapCanvas({ political = false }: { political?: boolean }
   // Sync active dropdown selection to selectedLocation (which sets lat/lng for map flying)
   useEffect(() => {
     const selectedLevel = activeCityMuni ? "municity" : activeProvince ? "province" : "region";
-    const targetLevel = political ? selectedLevel : mapAreaLevel;
+    const targetLevel = datasetWorkspace ? selectedLevel : mapAreaLevel;
     const targetCode =
       targetLevel === "municity"
         ? activeCityMuni
@@ -1106,27 +1106,27 @@ export default function MapCanvas({ political = false }: { political?: boolean }
     activeRegion,
     mapAreaLevel,
     geoVersion,
-    political,
+    datasetWorkspace,
     setSelectedLocation,
   ]);
 
   const canUseDatasets = useAuthStore((s) => !!s.user?.capabilities?.includes("datasets.use"));
   const selectedDatasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
   const source = useEffectiveMapSource();
-  const { data: politicalDataset } = useQuery({
+  const { data: workspaceDataset } = useQuery({
     queryKey: ["dataset", selectedDatasetId],
     queryFn: () => fetchDataset(selectedDatasetId!),
-    enabled: political && !!selectedDatasetId,
+    enabled: datasetWorkspace && !!selectedDatasetId,
     staleTime: 1000 * 60 * 5,
   });
   const tableOnly =
-    political && politicalDataset?.political_entry && politicalDataset.layer_config.show_on_map === false;
+    datasetWorkspace && workspaceDataset?.political_entry && workspaceDataset.layer_config.show_on_map === false;
   const activeLayerDatasetId =
-    source === "imported" && canUseDatasets && !tableOnly && (!political || politicalDataset?.is_active)
+    source === "imported" && canUseDatasets && !tableOnly && (!datasetWorkspace || workspaceDataset?.is_active)
       ? selectedDatasetId
       : null;
   const allFilters = useDatasetLayerStore((s) => s.filtersByDataset);
-  const datasetFilters = activeLayerDatasetId && !political ? (allFilters[activeLayerDatasetId] ?? {}) : {};
+  const datasetFilters = activeLayerDatasetId && !datasetWorkspace ? (allFilters[activeLayerDatasetId] ?? {}) : {};
   const geoFilters = useFilterStore();
   const datasetPrefix = geographicPrefix(geoFilters);
   const choroplethSelection = useDatasetLayerStore((s) => s.choroplethSelection);
@@ -1537,7 +1537,7 @@ export default function MapCanvas({ political = false }: { political?: boolean }
           x: e.containerPoint.x,
           y: e.containerPoint.y,
         } satisfies ChoroplethSelection);
-      } else if (dsId && !political) {
+      } else if (dsId && !datasetWorkspace) {
         const cached = queryClient.getQueryData<LayerResponse>(datasetLayerKey(dsId));
         // Aggregate all records whose psgc_code starts with the area prefix
         const prefix =
@@ -1579,10 +1579,10 @@ export default function MapCanvas({ political = false }: { political?: boolean }
     <div className="relative h-full w-full">
       <MapContainer
         center={PH_CENTER}
-        zoom={political ? PH_OVERVIEW_ZOOM : 6}
-        minZoom={political ? PH_OVERVIEW_ZOOM : undefined}
-        maxBounds={political ? PH_BOUNDS : undefined}
-        maxBoundsViscosity={political ? 1 : undefined}
+        zoom={datasetWorkspace ? PH_OVERVIEW_ZOOM : 6}
+        minZoom={datasetWorkspace ? PH_OVERVIEW_ZOOM : undefined}
+        maxBounds={datasetWorkspace ? PH_BOUNDS : undefined}
+        maxBoundsViscosity={datasetWorkspace ? 1 : undefined}
         className="h-full w-full"
         zoomControl={true}
         attributionControl={true}
@@ -1612,8 +1612,8 @@ export default function MapCanvas({ political = false }: { political?: boolean }
         <FloodLayer />
         <TipasEventsLayer />
         <BarangayLayer />
-        <MapPanZoomController political={political} />
-        <MapInstanceCapture political={political} />
+        <MapPanZoomController datasetWorkspace={datasetWorkspace} />
+        <MapInstanceCapture datasetWorkspace={datasetWorkspace} />
       </MapContainer>
       <BarangayNotice />
       {tableOnly && (
@@ -1770,7 +1770,7 @@ export default function MapCanvas({ political = false }: { political?: boolean }
       )}
 
       {/* ── Draggable choropleth detail popup ── */}
-      {!political && choroplethSelection && popupPos && (
+      {!datasetWorkspace && choroplethSelection && popupPos && (
         <div
           className="absolute z-[900] w-72 rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 select-none overflow-hidden"
           style={{ left: popupPos.x, top: popupPos.y }}

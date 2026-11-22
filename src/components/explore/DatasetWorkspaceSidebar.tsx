@@ -23,7 +23,7 @@ type View =
 
 const secondaryButton = "rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold";
 
-export default function PoliticalSidebar() {
+export default function DatasetWorkspaceSidebar() {
   const areaFilters = useFilterStore();
   const selection: PoliticalArea = {
     region: areaFilters.activeRegion,
@@ -80,7 +80,7 @@ export default function PoliticalSidebar() {
     void cache.invalidateQueries({ queryKey: ["data-types"] });
     void cache.invalidateQueries({ queryKey: ["datasets"] });
     if (id) {
-      cache.removeQueries({ queryKey: ["political-records", id], type: "inactive" });
+      cache.removeQueries({ queryKey: ["dataset-workspace-records", id], type: "inactive" });
       void cache.invalidateQueries({ queryKey: ["map-panel-records", id] });
       void cache.invalidateQueries({ queryKey: ["layer", id] });
       void cache.invalidateQueries({ queryKey: ["dataset", id] });
