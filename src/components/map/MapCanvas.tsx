@@ -69,6 +69,8 @@ const PH_BOUNDS: L.LatLngBoundsExpression = [
   [4.3, 114],
   [22, 127.5],
 ];
+// The country itself, used to frame the whole-country view at any container size.
+const PH_FIT_BOUNDS = L.latLngBounds([4.5, 116.6], [21.3, 126.8]);
 
 const loadBoundaries = createBoundaryLoader(fetch, `${import.meta.env.BASE_URL}maps/ph-2019/`);
 // TIPAS pins are placed independently of the displayed boundary level / centroidMap.
@@ -772,7 +774,10 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
 
   const datasetWorkspace = usesDatasetWorkspace(useAuthStore.getState().user);
   const dataset = queryClient.getQueryData<Dataset>(["dataset", layerId]);
-  if (datasetWorkspace && (!dataset?.is_active || (dataset.political_entry && dataset.layer_config.show_on_map === false))) {
+  if (
+    datasetWorkspace &&
+    (!dataset?.is_active || (dataset.political_entry && dataset.layer_config.show_on_map === false))
+  ) {
     return defaultStyle;
   }
   const key = datasetWorkspace
@@ -1039,11 +1044,53 @@ import { useMap } from "react-leaflet";
 function MapPanZoomController({ datasetWorkspace }: { datasetWorkspace: boolean }) {
   const map = useMap();
   const selectedLocation = useMapStore((s) => s.selectedLocation);
-  const showOverview = useFilterStore((s) => datasetWorkspace && !s.activeRegion);
+  const hasLocation = !!(selectedLocation?.lat && selectedLocation?.lng);
+  // The whole country shows until an area is chosen.
+  const showOverview = useFilterStore((s) =>
+    datasetWorkspace ? !s.activeRegion : !s.activeRegion && !hasLocation,
+  );
+  const overviewRef = useRef(showOverview);
+
+  // Leaflet clamps the fit to the current zoom floor, so lift it before measuring.
+  const countryZoom = useCallback(() => {
+    if (datasetWorkspace) map.setMinZoom(0);
+    return map.getBoundsZoom(PH_FIT_BOUNDS);
+  }, [map, datasetWorkspace]);
+
+  const fitCountry = useCallback(() => {
+    if (!map.getContainer().clientWidth || !map.getContainer().clientHeight) return;
+    map.invalidateSize({ animate: false });
+    const zoom = countryZoom();
+    if (datasetWorkspace) map.setMinZoom(zoom);
+    map.setView(PH_FIT_BOUNDS.getCenter(), zoom, { animate: false });
+  }, [map, datasetWorkspace, countryZoom]);
+
+  useEffect(() => {
+    overviewRef.current = showOverview;
+  }, [showOverview]);
+
+  // Re-measure whenever the container changes size, such as when the panel dock opens.
+  useEffect(() => {
+    const el = map.getContainer();
+    const observer = new ResizeObserver(() => {
+      if (!el.clientWidth || !el.clientHeight) return;
+      if (overviewRef.current) {
+        fitCountry();
+      } else {
+        map.invalidateSize({ animate: false });
+        if (datasetWorkspace) {
+          const floor = countryZoom();
+          map.setMinZoom(floor);
+        }
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [map, datasetWorkspace, fitCountry, countryZoom]);
 
   useEffect(() => {
     if (showOverview) {
-      map.setView(PH_CENTER, PH_OVERVIEW_ZOOM, { animate: false });
+      fitCountry();
     } else if (selectedLocation?.lat && selectedLocation?.lng) {
       // Zoom levels: 8 for Region, 9 for Province, 11 for City/Municity
       const zoomLevel =
@@ -1056,7 +1103,7 @@ function MapPanZoomController({ datasetWorkspace }: { datasetWorkspace: boolean 
     return () => {
       if (map.getPane("mapPane")) map.stop();
     };
-  }, [selectedLocation, map, showOverview]);
+  }, [selectedLocation, map, showOverview, fitCountry]);
 
   return null;
 }
@@ -1120,13 +1167,19 @@ export default function MapCanvas({ datasetWorkspace = false }: { datasetWorkspa
     staleTime: 1000 * 60 * 5,
   });
   const tableOnly =
-    datasetWorkspace && workspaceDataset?.political_entry && workspaceDataset.layer_config.show_on_map === false;
+    datasetWorkspace &&
+    workspaceDataset?.political_entry &&
+    workspaceDataset.layer_config.show_on_map === false;
   const activeLayerDatasetId =
-    source === "imported" && canUseDatasets && !tableOnly && (!datasetWorkspace || workspaceDataset?.is_active)
+    source === "imported" &&
+    canUseDatasets &&
+    !tableOnly &&
+    (!datasetWorkspace || workspaceDataset?.is_active)
       ? selectedDatasetId
       : null;
   const allFilters = useDatasetLayerStore((s) => s.filtersByDataset);
-  const datasetFilters = activeLayerDatasetId && !datasetWorkspace ? (allFilters[activeLayerDatasetId] ?? {}) : {};
+  const datasetFilters =
+    activeLayerDatasetId && !datasetWorkspace ? (allFilters[activeLayerDatasetId] ?? {}) : {};
   const geoFilters = useFilterStore();
   const datasetPrefix = geographicPrefix(geoFilters);
   const choroplethSelection = useDatasetLayerStore((s) => s.choroplethSelection);
@@ -1150,14 +1203,14 @@ export default function MapCanvas({ datasetWorkspace = false }: { datasetWorkspa
     x: number;
     y: number;
   } | null>(null);
-  const popupPos = choroplethSelection && (
-    dragPosition?.selection === choroplethSelection
+  const popupPos =
+    choroplethSelection &&
+    (dragPosition?.selection === choroplethSelection
       ? dragPosition
       : {
           x: Math.max(8, choroplethSelection.x - 120),
           y: Math.max(8, choroplethSelection.y - 200),
-        }
-  );
+        });
   const dragState = useRef<{
     startX: number;
     startY: number;
@@ -1579,8 +1632,8 @@ export default function MapCanvas({ datasetWorkspace = false }: { datasetWorkspa
     <div className="relative h-full w-full">
       <MapContainer
         center={PH_CENTER}
-        zoom={datasetWorkspace ? PH_OVERVIEW_ZOOM : 6}
-        minZoom={datasetWorkspace ? PH_OVERVIEW_ZOOM : undefined}
+        zoom={PH_OVERVIEW_ZOOM}
+        zoomSnap={0.25}
         maxBounds={datasetWorkspace ? PH_BOUNDS : undefined}
         maxBoundsViscosity={datasetWorkspace ? 1 : undefined}
         className="h-full w-full"
@@ -1617,7 +1670,10 @@ export default function MapCanvas({ datasetWorkspace = false }: { datasetWorkspa
       </MapContainer>
       <BarangayNotice />
       {tableOnly && (
-        <p role="status" className="absolute left-4 right-4 top-16 z-[800] w-fit rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow">
+        <p
+          role="status"
+          className="absolute left-4 right-4 top-16 z-[800] w-fit rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow"
+        >
           This record category isn't shown on the map.
         </p>
       )}
@@ -1816,9 +1872,7 @@ export default function MapCanvas({ datasetWorkspace = false }: { datasetWorkspa
               />
             </svg>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate">
-                {choroplethSelection.name}
-              </p>
+              <p className="text-xs font-bold text-white truncate">{choroplethSelection.name}</p>
               {layerData && (
                 <p className="text-[9px] text-team truncate">{layerData.dataset.name}</p>
               )}
