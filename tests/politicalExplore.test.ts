@@ -76,6 +76,13 @@ test("record locations require the configured level and allow no location for ta
   assert.equal(selectedLocationCode(region, "city"), null);
   assert.equal(selectedLocationCode(city, "city"), "137404000");
   assert.equal(selectedLocationCode(barangay, null), "137404001");
+  const provinceOnly = { ...emptyArea, region: "070000000", province: "072200000" };
+  const cityInProvince = { ...provinceOnly, city: "072217000" };
+  const ncrCity = { ...emptyArea, region: "130000000", city: "137404000" };
+  assert.equal(selectedLocationCode(provinceOnly, "province"), "072200000");
+  assert.equal(selectedLocationCode(cityInProvince, "province"), "072217000");
+  assert.equal(selectedLocationCode(ncrCity, "province"), "137404000");
+  assert.equal(selectedLocationCode(emptyArea, "province"), null);
   assert.deepEqual(selectArea(barangay, "region", "070000000"), {
     ...emptyArea,
     region: "070000000",
