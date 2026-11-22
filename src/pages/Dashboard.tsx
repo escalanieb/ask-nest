@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useRef } from "react";
 import CommandBar from "../components/dashboard/CommandBar";
 import ExploreSidebar from "../components/explore/ExploreSidebar";
 import DatasetWorkspaceSidebar from "../components/explore/DatasetWorkspaceSidebar";
@@ -6,7 +6,7 @@ import { useAuthStore } from "../stores/useAuthStore";
 import { usesDatasetWorkspace } from "../lib/teamAccess";
 import StatusBar from "../components/dashboard/StatusBar";
 import SummaryBar from "../components/dashboard/SummaryBar";
-import BottomTray from "../components/dashboard/BottomTray";
+import PanelDrawer from "../components/dashboard/PanelDrawer";
 import MapStyleControl from "../components/map/MapStyleControl";
 import { ElectionCountdown } from "../components/dashboard/SourceTools";
 
@@ -16,6 +16,7 @@ const MapCanvas = lazy(() => import("../components/map/MapCanvas"));
 export default function Dashboard() {
   const user = useAuthStore((s) => s.user);
   const datasetWorkspace = usesDatasetWorkspace(user);
+  const rightPanel = useRef<HTMLElement>(null);
   return (
     <div className="flex h-full flex-col bg-slate-50 overflow-hidden">
       {/* Navigation Bar */}
@@ -58,16 +59,17 @@ export default function Dashboard() {
           </main>
         </div>
 
-        {/* Right panel: countdown and tray share the top row, sidebar below */}
-        <aside className="flex min-w-0 flex-1 flex-col overflow-hidden border-l border-slate-200 bg-white shadow-sm">
-          <div className="grid h-52 shrink-0 grid-cols-2 grid-rows-[minmax(0,1fr)] overflow-hidden border-b-2 border-slate-300">
-            <ElectionCountdown />
-            <div className="min-h-0 min-w-0 overflow-hidden border-l border-slate-200">
-              <BottomTray />
+        {/* Right panel: countdown strip, then the sidebar with the panel drawer over it */}
+        <aside
+          ref={rightPanel}
+          className="flex min-w-0 flex-1 flex-col overflow-hidden border-l border-slate-200 bg-white shadow-sm"
+        >
+          <ElectionCountdown />
+          <div className="relative min-h-0 flex-1">
+            <div className="h-full overflow-y-auto">
+              {datasetWorkspace ? <DatasetWorkspaceSidebar /> : <ExploreSidebar />}
             </div>
-          </div>
-          <div className="min-h-0 overflow-y-auto flex-1">
-            {datasetWorkspace ? <DatasetWorkspaceSidebar /> : <ExploreSidebar />}
+            <PanelDrawer scope={rightPanel} />
           </div>
         </aside>
       </div>
