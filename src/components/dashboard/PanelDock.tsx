@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef } from "react";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useTrayStore } from "../../stores/useTrayStore";
 import { useActiveTrayTab, useTrayTabs } from "../../hooks/useActiveTrayTab";
@@ -26,16 +26,15 @@ function Panel({ children, manage }: { children: React.ReactNode; manage?: React
 const INNER_POPUP = '[role="dialog"], [role="listbox"], [role="menu"]';
 
 /**
- * The panel opened from the navbar. It covers the area below the countdown and closes on
- * Esc, on the navbar button, or on a click elsewhere in `scope` (the right-hand panel).
+ * The panel opened from the navbar. It docks below the map and takes 40% of the left
+ * column. It closes on Esc, on the navbar button, or on its own close button.
  */
-export default function PanelDrawer({ scope }: { scope: RefObject<HTMLElement | null> }) {
+export default function PanelDock() {
   const open = useTrayStore((s) => s.open);
   const close = useTrayStore((s) => s.close);
   const active = useActiveTrayTab();
   const tabs = useTrayTabs();
   const user = useAuthStore((s) => s.user);
-  const drawer = useRef<HTMLElement | null>(null);
   const heading = useRef<HTMLHeadingElement | null>(null);
 
   useEffect(() => {
@@ -48,29 +47,21 @@ export default function PanelDrawer({ scope }: { scope: RefObject<HTMLElement | 
       if (event.target instanceof Element && event.target.closest(INNER_POPUP)) return;
       close();
     };
-    const onPointer = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (drawer.current?.contains(target)) return;
-      if (scope.current?.contains(target)) close();
-    };
     document.addEventListener("keydown", onKey);
-    document.addEventListener("pointerdown", onPointer);
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.removeEventListener("pointerdown", onPointer);
       opener?.focus?.();
     };
-  }, [open, close, scope]);
+  }, [open, close]);
 
   if (!open) return null;
   const label = tabs.find((t) => t.id === active)?.label ?? "Panel";
 
   return (
     <section
-      ref={drawer}
       aria-label={`${label} panel`}
-      className="absolute inset-0 z-20 flex min-h-0 flex-col bg-white"
+      className="flex min-h-0 min-w-0 flex-col border-t-2 border-slate-300 bg-white"
+      style={{ flex: "0 0 40%" }}
     >
       <header className="flex h-10 shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50 px-4">
         <h2 ref={heading} tabIndex={-1} className="text-sm font-semibold text-slate-900">

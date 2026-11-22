@@ -85,47 +85,68 @@ function pad(n: number, width = 2) {
 
 export function ElectionCountdown() {
   const { months, weeks, days, hours, minutes, seconds, isPast } = useElectionCountdown();
-  const units = [
-    { v: months, l: "Months" },
-    { v: weeks, l: "Weeks" },
-    { v: days, l: "Days" },
-    { v: hours, l: "Hours" },
-    { v: minutes, l: "Minutes" },
-    { v: seconds, l: "Seconds" },
-  ];
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-200 bg-gradient-to-br from-team-strong via-team to-team px-4 py-2.5">
-      <div className="flex min-w-0 items-center gap-2">
+    <div className="shrink-0 border-b border-slate-200 bg-gradient-to-br from-team-strong via-team to-team px-5 py-5">
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-team-foreground/80">
+          <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-team-foreground/80 mb-0.5">
             Countdown to
           </p>
-          <h2 className="text-sm font-bold leading-tight text-white">PH Elections 2028</h2>
+          <h2 className="text-base font-bold text-white leading-tight">PH Elections 2028</h2>
         </div>
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/80 ring-1 ring-white/20">
+        <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/80 ring-1 ring-white/20">
           LIVE
         </span>
       </div>
 
       {isPast ? (
-        <p className="text-lg font-bold text-white">Election Day!</p>
+        <p className="text-xl font-bold text-white">Election Day!</p>
       ) : (
-        <div className="grid min-w-[16rem] flex-1 grid-cols-6 gap-1.5">
-          {units.map(({ v, l }) => (
-            <div
-              key={l}
-              className="flex flex-col items-center rounded-lg bg-white/10 py-1 ring-1 ring-white/10"
-            >
-              <span className="text-lg font-bold leading-none tabular-nums text-white">
-                {pad(v)}
-              </span>
-              <span className="mt-0.5 text-[8px] font-semibold uppercase tracking-widest text-team-foreground/80">
-                {l}
-              </span>
-            </div>
-          ))}
-        </div>
+        <>
+          {/* Primary row: months / weeks / days */}
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            {[
+              { v: months, l: "Months" },
+              { v: weeks, l: "Weeks" },
+              { v: days, l: "Days" },
+            ].map(({ v, l }) => (
+              <div
+                key={l}
+                className="flex flex-col items-center rounded-xl bg-white/10 py-3 ring-1 ring-white/10"
+              >
+                <span className="text-3xl font-bold tabular-nums text-white leading-none">
+                  {pad(v)}
+                </span>
+                <span className="mt-1 text-[9px] font-semibold uppercase tracking-widest text-team-foreground/80">
+                  {l}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Secondary row: hours / minutes / seconds */}
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { v: hours, l: "Hours" },
+              { v: minutes, l: "Minutes" },
+              { v: seconds, l: "Seconds" },
+            ].map(({ v, l }) => (
+              <div
+                key={l}
+                className="flex flex-col items-center rounded-lg bg-white/5 py-1.5 ring-1 ring-white/5"
+              >
+                <span className="text-lg font-bold tabular-nums text-white/90 leading-none">
+                  {pad(v)}
+                </span>
+                <span className="mt-0.5 text-[8px] font-semibold uppercase tracking-widest text-team-foreground/80">
+                  {l}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

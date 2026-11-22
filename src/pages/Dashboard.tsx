@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef } from "react";
+import { lazy, Suspense } from "react";
 import CommandBar from "../components/dashboard/CommandBar";
 import ExploreSidebar from "../components/explore/ExploreSidebar";
 import DatasetWorkspaceSidebar from "../components/explore/DatasetWorkspaceSidebar";
@@ -6,7 +6,7 @@ import { useAuthStore } from "../stores/useAuthStore";
 import { usesDatasetWorkspace } from "../lib/teamAccess";
 import StatusBar from "../components/dashboard/StatusBar";
 import SummaryBar from "../components/dashboard/SummaryBar";
-import PanelDrawer from "../components/dashboard/PanelDrawer";
+import PanelDock from "../components/dashboard/PanelDock";
 import MapStyleControl from "../components/map/MapStyleControl";
 import { ElectionCountdown } from "../components/dashboard/SourceTools";
 
@@ -16,7 +16,6 @@ const MapCanvas = lazy(() => import("../components/map/MapCanvas"));
 export default function Dashboard() {
   const user = useAuthStore((s) => s.user);
   const datasetWorkspace = usesDatasetWorkspace(user);
-  const rightPanel = useRef<HTMLElement>(null);
   return (
     <div className="flex h-full flex-col bg-slate-50 overflow-hidden">
       {/* Navigation Bar */}
@@ -57,19 +56,14 @@ export default function Dashboard() {
               </Suspense>
             </div>
           </main>
+          <PanelDock />
         </div>
 
-        {/* Right panel: countdown strip, then the sidebar with the panel drawer over it */}
-        <aside
-          ref={rightPanel}
-          className="flex min-w-0 flex-1 flex-col overflow-hidden border-l border-slate-200 bg-white shadow-sm"
-        >
+        {/* Right panel: countdown strip, then the sidebar */}
+        <aside className="flex min-w-0 flex-1 flex-col overflow-hidden border-l border-slate-200 bg-white shadow-sm">
           <ElectionCountdown />
-          <div className="relative min-h-0 flex-1">
-            <div className="h-full overflow-y-auto">
-              {datasetWorkspace ? <DatasetWorkspaceSidebar /> : <ExploreSidebar />}
-            </div>
-            <PanelDrawer scope={rightPanel} />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {datasetWorkspace ? <DatasetWorkspaceSidebar /> : <ExploreSidebar />}
           </div>
         </aside>
       </div>
