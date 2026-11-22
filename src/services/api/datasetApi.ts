@@ -78,6 +78,7 @@ export interface DatasetPayload {
 
 export interface DatasetRecord {
   id: number;
+  record_number?: string;
   dataset_id: number;
   psgc_code: string | null;
   location_source?: Record<string, string> | null;

@@ -19,12 +19,51 @@ interface Props {
 const PAGE_SIZE = 25;
 const cellClass = "min-w-32 border-b border-slate-100 px-3 py-2 text-left";
 
+function RecordNumberCell({
+  number,
+  announce,
+}: {
+  number?: string;
+  announce: (message: string) => void;
+}) {
+  if (!number) return <td className={cellClass}>—</td>;
+
+  async function copy(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      announce(`Copied ${value}.`);
+    } catch {
+      announce(`Could not copy ${value}. You can copy it from the CSV.`);
+    }
+  }
+
+  return (
+    <td className={cellClass}>
+      <div className="flex items-center gap-2 whitespace-nowrap">
+        <span className="font-mono">{number}</span>
+        <button
+          type="button"
+          className="rounded border border-slate-300 px-1.5 py-0.5 text-xs font-medium text-team hover:bg-slate-50"
+          aria-label={`Copy record number ${number}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            void copy(number);
+          }}
+        >
+          Copy
+        </button>
+      </div>
+    </td>
+  );
+}
+
 export default function RecordTable({ dataset, area, prefix, unmatched, onEdit }: Props) {
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(() => setAppliedSearch(search.trim()), 200);
@@ -32,11 +71,12 @@ export default function RecordTable({ dataset, area, prefix, unmatched, onEdit }
   }, [search]);
 
   const params = {
+    workspace: "1",
     ...(prefix ? { psgc_prefix: prefix } : {}),
     ...(appliedSearch ? { search: appliedSearch } : {}),
   };
   const results = useQuery({
-    queryKey: ["political-records", dataset.id, prefix, appliedSearch, page],
+    queryKey: ["dataset-workspace-records", dataset.id, prefix, appliedSearch, page],
     queryFn: () =>
       fetchRecords(dataset.id, { ...params, per_page: String(PAGE_SIZE), page: String(page) }),
   });
@@ -48,7 +88,7 @@ export default function RecordTable({ dataset, area, prefix, unmatched, onEdit }
     setExporting(true);
     setExportError("");
     try {
-      const query = new URLSearchParams({ ...params, workspace: "1" });
+      const query = new URLSearchParams(params);
       await downloadDatasetFile(
         `/datasets/${dataset.id}/records/export?${query}`,
         `${label.replace(/[^\w-]+/g, "-")}.csv`,
@@ -88,6 +128,7 @@ export default function RecordTable({ dataset, area, prefix, unmatched, onEdit }
             onChange={(event) => {
               setSearch(event.target.value);
               setPage(1);
+              setCopyMessage("");
             }}
           />
         </label>
@@ -105,6 +146,9 @@ export default function RecordTable({ dataset, area, prefix, unmatched, onEdit }
           {exportError}
         </p>
       )}
+      <div role="status" className={copyMessage ? "text-sm text-slate-600" : "sr-only"}>
+        {copyMessage}
+      </div>
       {results.isPending && (
         <p role="status" className="text-sm text-slate-500">
           Loading records…
@@ -137,9 +181,14 @@ export default function RecordTable({ dataset, area, prefix, unmatched, onEdit }
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs font-semibold text-slate-700">
               <tr>
+                <th scope="col" className={cellClass}>
+                  Record number
+                </th>
                 {dataset.field_definitions.map((field) => (
                   <th key={field.key} scope="col" className={cellClass}>
-                    {field.label}
+                    {field.label.trim().toLowerCase() === "record number"
+                      ? `${field.label} (custom)`
+                      : field.label}
                   </th>
                 ))}
                 <th scope="col" className={cellClass}>
@@ -180,6 +229,7 @@ export default function RecordTable({ dataset, area, prefix, unmatched, onEdit }
                       : undefined
                   }
                 >
+                  <RecordNumberCell number={record.record_number} announce={setCopyMessage} />
                   {dataset.field_definitions.map((field) => (
                     <td key={field.key} className={cellClass}>
                       {String(record.data[field.key] ?? "—")}

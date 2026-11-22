@@ -6,8 +6,6 @@ import { useDatasetLayerStore } from "../stores/useDatasetLayerStore";
 import { useFilterStore } from "../stores/useFilterStore";
 import { useMapStore } from "../stores/useMapStore";
 import { useEffectiveMapSource } from "../stores/useMapSourceStore";
-import { useAuthStore } from "../stores/useAuthStore";
-import { POLITICAL_SLUG } from "../lib/teamAccess";
 import { barangayCode } from "../lib/barangayCode";
 import { barangayCoverage } from "../lib/datasetLayer";
 import { BarangayShapesUnavailable } from "../services/mapBoundaries";
@@ -52,7 +50,6 @@ export function useExplore({ workspace = false }: { workspace?: boolean } = {}) 
   const allFilters = useDatasetLayerStore((s) => s.filtersByDataset);
   const setDatasetFilters = useDatasetLayerStore((s) => s.setDatasetFilters);
   const { activeRegion, activeProvince, activeCityMuni, activeBarangay } = useFilterStore();
-  const political = useAuthStore((s) => s.user?.team?.slug === POLITICAL_SLUG);
   const prefix = geographicPrefix({ activeRegion, activeProvince, activeCityMuni, activeBarangay });
   const filters: DatasetFilterValues = datasetId && !workspace ? (allFilters[datasetId] ?? {}) : {};
 
@@ -93,19 +90,19 @@ export function useExplore({ workspace = false }: { workspace?: boolean } = {}) 
     staleTime: 1000 * 30,
   });
 
-  // Barangay records with no shape on the map (Political explorer, inside a selected city).
+  // Barangay records with no shape on the map in the selected city.
   // Same query key as the map layer, so the data is fetched once and shared.
   const shapes = useBarangayShapes();
   const { data: layer } = useQuery({
     queryKey: ["layer", datasetId, filters, prefix],
     queryFn: () => fetchDatasetLayer(datasetId!, filters, prefix),
     enabled:
-      political && !!datasetId && !!activeCityMuni && dataset?.layer_config.show_on_map !== false,
+      workspace && !!datasetId && !!activeCityMuni && dataset?.layer_config.show_on_map !== false,
     staleTime: 1000 * 60 * 5,
   });
   const shapesSettled = !!shapes.data || shapes.error instanceof BarangayShapesUnavailable;
   const unmatched =
-    political && layer && shapesSettled
+    workspace && layer && shapesSettled
       ? barangayCoverage(layer.layer_data, new Set((shapes.data?.features ?? []).map(barangayCode)))
           .withoutShape
       : null;
@@ -168,7 +165,7 @@ export function useExplore({ workspace = false }: { workspace?: boolean } = {}) 
       total,
       area,
       chipCount: chips.length,
-      dataTypeLabel: political ? dataset?.data_type?.trim() || dataset?.name || null : null,
+      dataTypeLabel: workspace ? dataset?.data_type?.trim() || dataset?.name || null : null,
     }),
     removeChip,
     clearAll: clearAllNarrowing,
