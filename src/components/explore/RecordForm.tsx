@@ -86,7 +86,7 @@ export default function RecordForm({ dataset, record, initialArea, onBack, onSav
     event.preventDefault();
     if (busy || confirmDelete) return;
     if (requiredLevel && changeLocation && !locationCode) {
-      setError(`Choose a ${levelLabel[requiredLevel]} location for this data type.`);
+      setError(`Choose a ${levelLabel[requiredLevel]} location for this record category.`);
       return;
     }
     const data = Object.fromEntries(

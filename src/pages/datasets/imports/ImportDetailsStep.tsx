@@ -1,6 +1,7 @@
 import type { Dataset } from "../../../services/api/datasetApi";
 import type { GuidedConfiguration } from "../../../services/api/importSessionApi";
 import { inputClass } from "./ImportFileStep";
+import { labelFor, recordKindLabel } from "../../../lib/labels";
 
 export default function ImportDetailsStep({
   config,
@@ -183,7 +184,7 @@ export default function ImportDetailsStep({
               />
             </label>
             <label className="text-sm font-medium text-slate-700">
-              Data type <span className="text-red-600">*</span>
+              Record category <span className="text-red-600">*</span>
               <input
                 className={inputClass}
                 value={config.data_type ?? ""}
@@ -192,11 +193,11 @@ export default function ImportDetailsStep({
                 onChange={(e) => onChange({ ...config, data_type: e.target.value })}
               />
               <span className="mt-1 block text-xs font-normal text-slate-500">
-                Shown in the “What do you want to see?” list.
+                The kind of people or things these records describe.
               </span>
             </label>
             <label className="text-sm font-medium text-slate-700">
-              Record type
+              Each record is a…
               <select
                 className={inputClass}
                 value={config.entity_type ?? "person"}
@@ -205,7 +206,9 @@ export default function ImportDetailsStep({
                 }
               >
                 {["person", "establishment", "location", "event"].map((s) => (
-                  <option key={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {labelFor(recordKindLabel, s)}
+                  </option>
                 ))}
               </select>
             </label>

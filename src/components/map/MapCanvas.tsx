@@ -1618,7 +1618,7 @@ export default function MapCanvas({ datasetWorkspace = false }: { datasetWorkspa
       <BarangayNotice />
       {tableOnly && (
         <p role="status" className="absolute left-4 right-4 top-16 z-[800] w-fit rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow">
-          This data type isn't shown on the map.
+          This record category isn't shown on the map.
         </p>
       )}
 

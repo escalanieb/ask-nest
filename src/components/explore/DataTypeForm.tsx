@@ -7,6 +7,7 @@ import {
   type PsgcLevel,
 } from "../../services/api/datasetApi";
 import { importError } from "../../lib/guidedImport";
+import { columnFormatLabel, labelFor } from "../../lib/labels";
 
 interface Props {
   dataset?: Dataset;
@@ -58,7 +59,7 @@ function FieldEditor({
           />
         </label>
         <label className="block text-xs font-medium text-slate-700">
-          Field type
+          Answer format
           <select
             className={inputClass}
             value={field.type}
@@ -67,7 +68,7 @@ function FieldEditor({
             <option value="text">Text</option>
             <option value="number">Number</option>
             <option value="date">Date</option>
-            <option value="choice">Choice</option>
+            <option value="choice">Pick from options</option>
           </select>
         </label>
       </div>
@@ -181,7 +182,7 @@ export default function DataTypeForm({ dataset, onBack, onSaved, onDeleted }: Pr
         Back to list
       </button>
       <h2 className="text-lg font-semibold text-slate-900">
-        {dataset ? "Edit data type" : "New data type"}
+        {dataset ? "Edit record category" : "New record category"}
       </h2>
       <form onSubmit={(event) => void save(event)}>
         <fieldset disabled={busy || confirmDelete} className="space-y-5">
@@ -205,7 +206,7 @@ export default function DataTypeForm({ dataset, onBack, onSaved, onDeleted }: Pr
                 <p>
                   <strong>{field.label}</strong>{" "}
                   <span className="text-slate-500">
-                    · {field.type === "select" ? "Choice" : field.type}
+                    · {field.type === "select" ? "Pick from options" : labelFor(columnFormatLabel, field.type)}
                     {field.required ? " · Required" : ""}
                   </span>
                 </p>
@@ -293,7 +294,7 @@ export default function DataTypeForm({ dataset, onBack, onSaved, onDeleted }: Pr
               type="submit"
               className="rounded-md bg-team px-4 py-2 text-sm font-semibold text-team-foreground disabled:opacity-60"
             >
-              {busy ? "Saving…" : dataset ? "Save changes" : "Create data type"}
+              {busy ? "Saving…" : dataset ? "Save changes" : "Create record category"}
             </button>
             {dataset && (
               <button
@@ -304,7 +305,7 @@ export default function DataTypeForm({ dataset, onBack, onSaved, onDeleted }: Pr
                   setConfirmDelete(true);
                 }}
               >
-                Delete data type
+                Delete record category
               </button>
             )}
           </div>
@@ -313,7 +314,7 @@ export default function DataTypeForm({ dataset, onBack, onSaved, onDeleted }: Pr
       {confirmDelete && dataset && (
         <form
           onSubmit={(event) => void remove(event)}
-          aria-label="Confirm data type deletion"
+          aria-label="Confirm record category deletion"
           className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm"
         >
           <p>Deleting {dataset.name} permanently removes its records and imports.</p>

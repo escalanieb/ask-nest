@@ -9,6 +9,7 @@ import type {
   EntityType,
   PsgcLevel,
 } from "../../services/api/datasetApi";
+import { labelFor, recordKindLabel } from "../../lib/labels";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -303,7 +304,7 @@ export default function DatasetFormPage() {
                   />
                 </Field>
 
-                <Field label="Data Type">
+                <Field label="Record category">
                   <input
                     className="input"
                     value={dataType}
@@ -323,7 +324,7 @@ export default function DatasetFormPage() {
                 </Field>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="Entity Type" required>
+                  <Field label="Each record is a…" required>
                     <select
                       className="input"
                       value={entityType}
@@ -331,7 +332,7 @@ export default function DatasetFormPage() {
                     >
                       {ENTITY_TYPES.map((t) => (
                         <option key={t} value={t}>
-                          {t.charAt(0).toUpperCase() + t.slice(1)}
+                          {labelFor(recordKindLabel, t)}
                         </option>
                       ))}
                     </select>
@@ -674,7 +675,7 @@ export default function DatasetFormPage() {
                 <ReviewSection label="Basic Information" onEdit={() => handleJump(1)}>
                   <ReviewRow label="Name" value={name} />
                   <ReviewRow label="Description" value={description || "—"} />
-                  <ReviewRow label="Entity Type" value={entityType} />
+                  <ReviewRow label="Each record is a…" value={labelFor(recordKindLabel, entityType)} />
                   <ReviewRow label="PSGC Level" value={psgcLevel} />
                   <ReviewRow label="Allow Duplicates" value={allowDuplicates ? "Yes" : "No"} />
                 </ReviewSection>
