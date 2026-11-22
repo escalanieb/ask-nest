@@ -1,6 +1,7 @@
 import type { Dataset, ImportColumn } from "../../../services/api/datasetApi";
 import type { GuidedConfiguration } from "../../../services/api/importSessionApi";
 import { inputClass } from "./ImportFileStep";
+import { columnFormatLabel, labelFor } from "../../../lib/labels";
 export default function ImportColumnCard({
   column,
   config,
@@ -123,7 +124,7 @@ export default function ImportColumnCard({
                 />
               </label>
               <label className="text-xs text-slate-600">
-                Data type
+                Column format
                 <select
                   className={inputClass}
                   disabled={
@@ -145,7 +146,9 @@ export default function ImportColumnCard({
                     "category",
                     ...(config.type === "general" ? ["select", "email", "url"] : []),
                   ].map((t) => (
-                    <option key={t}>{t}</option>
+                    <option key={t} value={t}>
+                      {labelFor(columnFormatLabel, t)}
+                    </option>
                   ))}
                 </select>
               </label>

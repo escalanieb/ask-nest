@@ -120,7 +120,7 @@ export function configurationForFile(
   };
 }
 
-/** Details step: a general dataset needs a plain "Data type" label (e.g. Vloggers). */
+/** Details step: a general dataset needs a plain "Record category" label (e.g. Vloggers). */
 export function detailsProblem(config: GuidedConfiguration): string {
   if (config.type === "general" && !(config.data_type ?? "").trim())
     return "Say what kind of data this is, for example “Vloggers” or “SK Chairpersons”.";

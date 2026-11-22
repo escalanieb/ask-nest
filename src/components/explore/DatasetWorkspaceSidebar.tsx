@@ -106,7 +106,7 @@ export default function DatasetWorkspaceSidebar() {
             cache.setQueryData(["dataset", saved.id], saved);
             chooseDataset(saved.id, saved.psgc_level);
             refresh(saved.id);
-            setMessage(view.kind === "newType" ? "Data type created." : "Data type updated.");
+            setMessage(view.kind === "newType" ? "Record category created." : "Record category updated.");
             back();
           }}
           onDeleted={(result) => {
@@ -136,7 +136,7 @@ export default function DatasetWorkspaceSidebar() {
           </fieldset>
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="block text-xs font-medium text-slate-700">
-              Data type
+              Record category
               <select
                 className="mt-1 block w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
                 value={current?.key ?? ""}
@@ -144,7 +144,7 @@ export default function DatasetWorkspaceSidebar() {
                 onChange={(event) => chooseType(event.target.value)}
               >
                 <option value="">
-                  {available.isPending ? "Loading data types…" : "Choose a data type"}
+                  {available.isPending ? "Loading record categories…" : "Choose a record category"}
                 </option>
                 {available.data?.map((option) => (
                   <option key={option.key} value={option.key}>
@@ -155,7 +155,7 @@ export default function DatasetWorkspaceSidebar() {
             </label>
             {current && current.datasets.length > 1 && (
               <label className="block text-xs font-medium text-slate-700">
-                List
+                Source list
                 <select
                   className="mt-1 block w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
                   value={datasetId ?? ""}
@@ -181,7 +181,7 @@ export default function DatasetWorkspaceSidebar() {
               className="text-sm text-team underline"
               onClick={() => void available.refetch()}
             >
-              Could not load data types. Try again
+              Could not load record categories. Try again
             </button>
           )}
           {canManage && (
@@ -201,7 +201,7 @@ export default function DatasetWorkspaceSidebar() {
                 className={secondaryButton}
                 onClick={() => setView({ kind: "newType" })}
               >
-                New data type
+                New record category
               </button>
               {selected?.political_entry && (
                 <button
@@ -209,7 +209,7 @@ export default function DatasetWorkspaceSidebar() {
                   className={secondaryButton}
                   onClick={() => setView({ kind: "editType", dataset: selected })}
                 >
-                  Edit data type
+                  Edit record category
                 </button>
               )}
             </div>
@@ -235,8 +235,8 @@ export default function DatasetWorkspaceSidebar() {
           ) : (
             <p className="rounded-md border border-slate-200 p-4 text-sm text-slate-600">
               {available.data?.length === 0
-                ? "No data types available."
-                : "Choose a data type to see its records."}
+                ? "No record categories available."
+                : "Choose a record category to see its records."}
             </p>
           )}
         </>

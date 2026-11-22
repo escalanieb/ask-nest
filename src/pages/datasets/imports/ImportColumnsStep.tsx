@@ -65,7 +65,7 @@ export default function ImportColumnsStep({
     <div className="space-y-6">
       {target?.political_entry ? (
         <p className="text-sm text-slate-600">
-          Match the spreadsheet columns to this data type's fields. Each accepted row adds a record.
+          Match the spreadsheet columns to this record category's fields. Each accepted row adds a record.
         </p>
       ) : (
         <div className="rounded-xl border border-team/30 bg-team/5 p-5">
