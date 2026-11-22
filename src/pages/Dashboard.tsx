@@ -60,9 +60,9 @@ export default function Dashboard() {
 
         {/* Right panel: countdown and tray share the top row, sidebar below */}
         <aside className="flex min-w-0 flex-1 flex-col overflow-hidden border-l border-slate-200 bg-white shadow-sm">
-          <div className="grid h-52 shrink-0 grid-cols-2 border-b-2 border-slate-300">
+          <div className="grid h-52 shrink-0 grid-cols-2 grid-rows-[minmax(0,1fr)] overflow-hidden border-b-2 border-slate-300">
             <ElectionCountdown />
-            <div className="min-w-0 border-l border-slate-200">
+            <div className="min-h-0 min-w-0 overflow-hidden border-l border-slate-200">
               <BottomTray />
             </div>
           </div>
