@@ -13,10 +13,12 @@ import { inputClass, secondaryClass } from "./ImportFileStep";
 function LocationChoice({
   group,
   config,
+  requiresLocation,
   onMatch,
 }: {
   group: LocationGroup;
   config: GuidedConfiguration;
+  requiresLocation: boolean;
   onMatch: (value: string | null) => void;
 }) {
   const [search, setSearch] = useState(() => Object.values(group.raw).join(" "));
@@ -60,7 +62,9 @@ function LocationChoice({
           value={decision ?? ""}
           onChange={(e) => onMatch(e.target.value || null)}
         >
-          <option value="">Keep location unknown</option>
+          <option value="">
+            {requiresLocation ? "Leave unresolved" : "Keep location unknown"}
+          </option>
           {decision && !options.some((p) => p.code === decision) && (
             <option value={decision}>Verified code {decision}</option>
           )}
@@ -119,6 +123,7 @@ export default function ImportLocationsStep({
   locations,
   fresh,
   fixedLevel,
+  requiresLocation = false,
   unknown,
   onUnknown,
   onChange,
@@ -129,6 +134,7 @@ export default function ImportLocationsStep({
   locations: LocationReview | null;
   fresh: boolean;
   fixedLevel: boolean;
+  requiresLocation?: boolean;
   unknown: boolean;
   onUnknown: (value: boolean) => void;
   onChange: (config: GuidedConfiguration) => void;
@@ -144,7 +150,9 @@ export default function ImportLocationsStep({
           {config.type === "event"
             ? "Match attendees’ home locations, not the event venue."
             : "Match the locations represented by your records."}{" "}
-          Unknown locations stay in your records and totals, but will not shade an area on the map.
+          {requiresLocation
+            ? "This data type requires a verified location. Unresolved rows will be excluded during review."
+            : "Unknown locations stay in your records and totals, but will not shade an area on the map."}
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -240,6 +248,7 @@ export default function ImportLocationsStep({
                 key={group.key}
                 group={group}
                 config={config}
+                requiresLocation={requiresLocation}
                 onMatch={(value) =>
                   onChange({ ...config, locations: { ...config.locations, [group.key]: value } })
                 }
@@ -269,7 +278,7 @@ export default function ImportLocationsStep({
               </button>
             </div>
           )}
-          {locations.unknown_rows > 0 && (
+          {locations.unknown_rows > 0 && !requiresLocation && (
             <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
               <input
                 className="mt-1.5"

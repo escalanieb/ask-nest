@@ -17,13 +17,15 @@ export default function Dashboard() {
   return (
     <div className="flex h-full flex-col bg-slate-50 overflow-hidden">
       {/* Navigation Bar */}
-      <CommandBar />
+      <CommandBar showTrayTools={!political} />
 
       {/* Main content — left column (map + tray) + right sidebar */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left column: map on top (2/3), panel tray on bottom (1/3) */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <SummaryBar />
+        <div
+          className={`flex min-w-0 flex-col overflow-hidden ${political ? "w-1/3 shrink-0" : "flex-1"}`}
+        >
+          {!political && <SummaryBar />}
           {/* Map — takes 2/3 of vertical space */}
           <main className="relative overflow-hidden" style={{ flex: 2 }}>
             {/* Isolated stacking context keeps Leaflet z-indices contained */}
@@ -50,25 +52,27 @@ export default function Dashboard() {
                   </div>
                 }
               >
-                <MapCanvas />
+                <MapCanvas key={String(political)} political={political} />
                 <MapStyleControl />
               </Suspense>
             </div>
           </main>
 
-          <BottomTray />
+          {!political && <BottomTray />}
         </div>
 
         {/* Right sidebar — spans full height of content area */}
-        <aside className="flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="overflow-y-auto flex-1">
+        <aside
+          className={`flex min-w-0 flex-col border-l border-slate-200 bg-white shadow-sm overflow-hidden ${political ? "flex-1" : "w-[380px] shrink-0"}`}
+        >
+          <div className="min-h-0 overflow-y-auto flex-1">
             {political ? <PoliticalSidebar /> : <ExploreSidebar />}
           </div>
         </aside>
       </div>
 
       {/* Status bar */}
-      <StatusBar />
+      <StatusBar political={political} />
     </div>
   );
 }

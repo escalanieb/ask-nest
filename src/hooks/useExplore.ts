@@ -44,7 +44,7 @@ export function clearArea() {
  * Single read model for "what am I looking at?". It adapts the existing
  * filter, layer and map stores, so the map keeps working unchanged.
  */
-export function useExplore() {
+export function useExplore({ workspace = false }: { workspace?: boolean } = {}) {
   const source = useEffectiveMapSource();
   const datasetId = useDatasetLayerStore((s) =>
     source === "imported" ? s.activeLayerDatasetId : null,
@@ -54,7 +54,7 @@ export function useExplore() {
   const { activeRegion, activeProvince, activeCityMuni, activeBarangay } = useFilterStore();
   const political = useAuthStore((s) => s.user?.team?.slug === POLITICAL_SLUG);
   const prefix = geographicPrefix({ activeRegion, activeProvince, activeCityMuni, activeBarangay });
-  const filters: DatasetFilterValues = datasetId ? (allFilters[datasetId] ?? {}) : {};
+  const filters: DatasetFilterValues = datasetId && !workspace ? (allFilters[datasetId] ?? {}) : {};
 
   const { data: dataset } = useQuery({
     queryKey: ["dataset", datasetId],
@@ -89,7 +89,7 @@ export function useExplore() {
   const { data: page } = useQuery({
     queryKey: ["map-panel-records", datasetId, prefix, 1, filters],
     queryFn: () => fetchMapPanelRecords(datasetId!, prefix, 1, filters),
-    enabled: !!datasetId,
+    enabled: !!datasetId && !workspace,
     staleTime: 1000 * 30,
   });
 
@@ -99,7 +99,8 @@ export function useExplore() {
   const { data: layer } = useQuery({
     queryKey: ["layer", datasetId, filters, prefix],
     queryFn: () => fetchDatasetLayer(datasetId!, filters, prefix),
-    enabled: political && !!datasetId && !!activeCityMuni,
+    enabled:
+      political && !!datasetId && !!activeCityMuni && dataset?.layer_config.show_on_map !== false,
     staleTime: 1000 * 60 * 5,
   });
   const shapesSettled = !!shapes.data || shapes.error instanceof BarangayShapesUnavailable;

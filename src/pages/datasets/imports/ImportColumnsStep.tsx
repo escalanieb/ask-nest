@@ -60,33 +60,39 @@ export default function ImportColumnsStep({
       .find((c) => c.source === source)
       ?.samples.slice(0, 3)
       .join(", ") || "No sample values";
-  const problem = essentialProblem(config);
+  const problem = essentialProblem(config, target?.political_entry);
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-team/30 bg-team/5 p-5">
-        <label className="block text-sm font-semibold text-slate-800">
-          {config.type === "event"
-            ? "Which column identifies each participant?"
-            : "Which column identifies each record?"}
-          <select
-            className={inputClass}
-            value={identifier?.source ?? ""}
-            onChange={(e) => chooseRole(e.target.value, "participant_id")}
-          >
-            <option value="">Choose an identifier column</option>
-            {config.columns.map((c) => (
-              <option key={c.source}>{c.source}</option>
-            ))}
-          </select>
-        </label>
-        <p className="mt-3 text-xs leading-5 text-slate-600">
-          Use a registration number, reference, or stable ID. Repeat imports use it to find the same
-          record. Names alone are not reliable identifiers. Keep this column as text.
+      {target?.political_entry ? (
+        <p className="text-sm text-slate-600">
+          Match the spreadsheet columns to this data type's fields. Each accepted row adds a record.
         </p>
-        {identifier && (
-          <p className="mt-2 text-xs text-team">Sample values: {samples(identifier.source)}</p>
-        )}
-      </div>
+      ) : (
+        <div className="rounded-xl border border-team/30 bg-team/5 p-5">
+          <label className="block text-sm font-semibold text-slate-800">
+            {config.type === "event"
+              ? "Which column identifies each participant?"
+              : "Which column identifies each record?"}
+            <select
+              className={inputClass}
+              value={identifier?.source ?? ""}
+              onChange={(e) => chooseRole(e.target.value, "participant_id")}
+            >
+              <option value="">Choose an identifier column</option>
+              {config.columns.map((c) => (
+                <option key={c.source}>{c.source}</option>
+              ))}
+            </select>
+          </label>
+          <p className="mt-3 text-xs leading-5 text-slate-600">
+            Use a registration number, reference, or stable ID. Repeat imports use it to find the
+            same record. Names alone are not reliable identifiers. Keep this column as text.
+          </p>
+          {identifier && (
+            <p className="mt-2 text-xs text-team">Sample values: {samples(identifier.source)}</p>
+          )}
+        </div>
+      )}
       {config.type === "event" && (
         <label className="block text-sm font-medium text-slate-700">
           Attendee name <span className="font-normal text-slate-400">(optional)</span>
@@ -133,7 +139,7 @@ export default function ImportColumnsStep({
               }
             />
           ))}
-          {config.type === "general" && (
+          {config.type === "general" && !target?.political_entry && (
             <div className="grid gap-3 rounded-xl bg-slate-50 p-4 sm:grid-cols-2">
               <label className="text-sm text-slate-600">
                 Map measure

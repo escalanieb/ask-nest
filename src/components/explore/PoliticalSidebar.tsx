@@ -1,146 +1,246 @@
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { downloadDatasetFile, fetchDataTypes, filterQuery } from "../../services/api/datasetApi";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchDataTypes, type Dataset, type DatasetRecord } from "../../services/api/datasetApi";
+import { useAuthStore } from "../../stores/useAuthStore";
 import { useDatasetLayerStore } from "../../stores/useDatasetLayerStore";
 import { useFilterStore } from "../../stores/useFilterStore";
-import { useTrayStore } from "../../stores/useTrayStore";
+import { useMapStore } from "../../stores/useMapStore";
+import { useMapSourceStore } from "../../stores/useMapSourceStore";
+import { canManageDatasets } from "../../lib/datasetPermissions";
 import { useExplore } from "../../hooks/useExplore";
-import { geographicPrefix } from "../../lib/geographicPrefix";
-import {
-  defaultDatasetFor,
-  optionForDataset,
-  optionLabel,
-  selectionIsStale,
-} from "../../lib/politicalExplore";
-import { ElectionCountdown } from "../dashboard/SourceTools";
+import { defaultDatasetFor, optionForDataset, optionLabel } from "../../lib/politicalExplore";
+import type { PoliticalArea } from "../../lib/politicalArea";
+import type { AreaLevel } from "../../lib/exploreSummary";
 import AreaPicker from "./AreaPicker";
-import Step from "./Step";
+import RecordTable from "./RecordTable";
+import RecordForm from "./RecordForm";
+import DataTypeForm from "./DataTypeForm";
 
-/**
- * Political team sidebar: choose where (Region > Province > City > Barangay),
- * then choose one of the data types that actually has records there.
- */
+type View =
+  | { kind: "list" | "newType" }
+  | { kind: "editType" | "add"; dataset: Dataset }
+  | { kind: "edit"; dataset: Dataset; record: DatasetRecord };
+
+const secondaryButton = "rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold";
+
 export default function PoliticalSidebar() {
-  const { activeRegion, activeProvince, activeCityMuni, activeBarangay } = useFilterStore();
-  const prefix = geographicPrefix({ activeRegion, activeProvince, activeCityMuni, activeBarangay });
-  const datasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
-  const setActiveLayer = useDatasetLayerStore((s) => s.setActiveLayer);
-  const setTab = useTrayStore((s) => s.setTab);
-  const { filters } = useExplore();
-  const [error, setError] = useState("");
+  const areaFilters = useFilterStore();
+  const selection: PoliticalArea = {
+    region: areaFilters.activeRegion,
+    province: areaFilters.activeProvince,
+    city: areaFilters.activeCityMuni,
+    barangay: areaFilters.activeBarangay,
+  };
+  const { area, dataset, prefix, unmatched } = useExplore({ workspace: true });
+  const datasetId = useDatasetLayerStore((state) => state.activeLayerDatasetId);
+  const canManage = useAuthStore((state) => canManageDatasets(state.user));
+  const [view, setView] = useState<View>({ kind: "list" });
+  const [message, setMessage] = useState("");
+  const cache = useQueryClient();
 
-  const {
-    data: options,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
+  const available = useQuery({
     queryKey: ["data-types", prefix ?? "all"],
     queryFn: () => fetchDataTypes(prefix),
-    staleTime: 1000 * 30,
+    staleTime: 30_000,
   });
+  const current = optionForDataset(available.data ?? [], datasetId);
+  const selected = dataset?.is_active && current ? dataset : undefined;
+  const canManageRecords = canManage && !!selected;
 
-  // The chosen data disappears from the list when the area changes: stop showing it.
-  useEffect(() => {
-    if (options && selectionIsStale(options, datasetId)) {
-      setActiveLayer(null);
-      setTab(null);
-    }
-  }, [options, datasetId, setActiveLayer, setTab]);
+  function chooseArea(next: PoliticalArea, level: AreaLevel) {
+    const setters = {
+      region: areaFilters.setActiveRegion,
+      province: areaFilters.setActiveProvince,
+      city: areaFilters.setActiveCityMuni,
+      barangay: areaFilters.setActiveBarangay,
+    };
+    setters[level](next[level]);
+    useMapStore
+      .getState()
+      .setMapAreaLevel(next.city ? "municity" : next.province ? "province" : "region");
+  }
 
-  const current = options ? optionForDataset(options, datasetId) : undefined;
-
-  function chooseDataset(id: number, level: string) {
-    setActiveLayer(id, level);
-    setTab("results");
+  function chooseDataset(id: number | null, level?: string) {
+    useMapSourceStore.getState().setSource("imported");
+    useDatasetLayerStore.getState().setActiveLayer(id, level);
+    setMessage("");
   }
 
   function chooseType(key: string) {
-    const option = options?.find((o) => o.key === key);
-    if (!option) {
-      setActiveLayer(null);
-      setTab(null);
-      return;
-    }
-    const id = defaultDatasetFor(option);
-    chooseDataset(id, option.datasets.find((d) => d.id === id)?.psgc_level ?? "city");
+    const option = available.data?.find((item) => item.key === key);
+    const list = option?.datasets.find((item) => item.id === defaultDatasetFor(option));
+    chooseDataset(list?.id ?? null, list?.psgc_level);
   }
 
+  function back() {
+    setView({ kind: "list" });
+  }
+
+  function refresh(id?: number) {
+    void cache.invalidateQueries({ queryKey: ["data-types"] });
+    void cache.invalidateQueries({ queryKey: ["datasets"] });
+    if (id) {
+      cache.removeQueries({ queryKey: ["political-records", id], type: "inactive" });
+      void cache.invalidateQueries({ queryKey: ["map-panel-records", id] });
+      void cache.invalidateQueries({ queryKey: ["layer", id] });
+      void cache.invalidateQueries({ queryKey: ["dataset", id] });
+    }
+  }
+
+  const recordArea =
+    selected && selected.layer_config.show_on_map !== false
+      ? {
+          ...selection,
+          city: selected.psgc_level === "province" ? null : selection.city,
+          barangay: selected.psgc_level === "barangay" ? selection.barangay : null,
+        }
+      : selection;
+
   return (
-    <>
-      <ElectionCountdown />
-      <Step n={1} title="Where?" hint="Pick as much or as little of the area as you need.">
-        <AreaPicker withBarangay />
-      </Step>
-      <Step n={2} title="What do you want to see?">
-        {isLoading && <p className="text-xs text-slate-400">Checking what data is available…</p>}
-        {isError && (
-          <button type="button" className="text-xs underline" onClick={() => refetch()}>
-            Could not load the available data. Try again
-          </button>
-        )}
-        {options && options.length === 0 && (
-          <p className="text-xs text-slate-500">No data available for this area.</p>
-        )}
-        {options && options.length > 0 && (
-          <div className="space-y-2">
-            <label className="block text-xs text-slate-700">
-              Data
+    <div className="space-y-5 p-5">
+      {canManage && (view.kind === "newType" || view.kind === "editType") ? (
+        <DataTypeForm
+          dataset={view.kind === "editType" ? view.dataset : undefined}
+          onBack={back}
+          onSaved={(saved) => {
+            cache.setQueryData(["dataset", saved.id], saved);
+            chooseDataset(saved.id, saved.psgc_level);
+            refresh(saved.id);
+            setMessage(view.kind === "newType" ? "Data type created." : "Data type updated.");
+            back();
+          }}
+          onDeleted={(result) => {
+            chooseDataset(null);
+            refresh();
+            setMessage(result);
+            back();
+          }}
+        />
+      ) : canManage && (view.kind === "add" || view.kind === "edit") ? (
+        <RecordForm
+          dataset={view.dataset}
+          record={view.kind === "edit" ? view.record : undefined}
+          initialArea={recordArea}
+          onBack={back}
+          onSaved={(result) => {
+            refresh(view.dataset.id);
+            setMessage(result);
+            back();
+          }}
+        />
+      ) : (
+        <>
+          <fieldset className="space-y-2">
+            <legend className="mb-2 text-sm font-semibold text-slate-900">Area</legend>
+            <AreaPicker mode="filter" area={selection} onChange={chooseArea} />
+          </fieldset>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="block text-xs font-medium text-slate-700">
+              Data type
               <select
-                className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-xs"
+                className="mt-1 block w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
                 value={current?.key ?? ""}
-                onChange={(e) => chooseType(e.target.value)}
+                disabled={available.isPending || available.isError}
+                onChange={(event) => chooseType(event.target.value)}
               >
-                <option value="">Choose what to show…</option>
-                {options.map((o) => (
-                  <option key={o.key} value={o.key}>
-                    {optionLabel(o)}
+                <option value="">
+                  {available.isPending ? "Loading data types…" : "Choose a data type"}
+                </option>
+                {available.data?.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {optionLabel(option)}
                   </option>
                 ))}
               </select>
             </label>
             {current && current.datasets.length > 1 && (
-              <label className="block text-xs text-slate-700">
-                Which list?
+              <label className="block text-xs font-medium text-slate-700">
+                List
                 <select
-                  className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-xs"
+                  className="mt-1 block w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
                   value={datasetId ?? ""}
-                  onChange={(e) => {
-                    const ds = current.datasets.find((d) => d.id === Number(e.target.value));
-                    if (ds) chooseDataset(ds.id, ds.psgc_level);
+                  onChange={(event) => {
+                    const list = current.datasets.find(
+                      (item) => item.id === Number(event.target.value),
+                    );
+                    if (list) chooseDataset(list.id, list.psgc_level);
                   }}
                 >
-                  {current.datasets.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.record_count.toLocaleString()})
+                  {current.datasets.map((list) => (
+                    <option key={list.id} value={list.id}>
+                      {list.name} ({list.record_count.toLocaleString()})
                     </option>
                   ))}
                 </select>
               </label>
             )}
-            {current && datasetId && (
+          </div>
+          {available.isError && (
+            <button
+              type="button"
+              className="text-sm text-team underline"
+              onClick={() => void available.refetch()}
+            >
+              Could not load data types. Try again
+            </button>
+          )}
+          {canManage && (
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                className="text-xs font-semibold text-slate-600 underline"
+                className="rounded-md bg-team px-3 py-2 text-sm font-semibold text-team-foreground disabled:opacity-50"
+                disabled={!canManageRecords}
                 onClick={() => {
-                  setError("");
-                  downloadDatasetFile(
-                    `/datasets/${datasetId}/records/export${filterQuery(filters, prefix)}`,
-                    `${current.label.replace(/[^\w-]+/g, "-")}.csv`,
-                  ).catch(() => setError("Download failed. Please try again."));
+                  if (selected) setView({ kind: "add", dataset: selected });
                 }}
               >
-                Download this list (CSV)
+                Add record
               </button>
-            )}
-            {error && (
-              <p role="alert" className="text-xs text-red-700">
-                {error}
-              </p>
-            )}
-          </div>
-        )}
-      </Step>
-    </>
+              <button
+                type="button"
+                className={secondaryButton}
+                onClick={() => setView({ kind: "newType" })}
+              >
+                New data type
+              </button>
+              {selected?.political_entry && (
+                <button
+                  type="button"
+                  className={secondaryButton}
+                  onClick={() => setView({ kind: "editType", dataset: selected })}
+                >
+                  Edit data type
+                </button>
+              )}
+            </div>
+          )}
+          {message && (
+            <p role="status" className="text-sm font-medium text-emerald-800">
+              {message}
+            </p>
+          )}
+          {selected ? (
+            <RecordTable
+              key={`${selected.id}:${prefix ?? ""}`}
+              dataset={selected}
+              area={area}
+              prefix={prefix}
+              unmatched={unmatched}
+              onEdit={
+                canManageRecords
+                  ? (record) => setView({ kind: "edit", dataset: selected, record })
+                  : undefined
+              }
+            />
+          ) : (
+            <p className="rounded-md border border-slate-200 p-4 text-sm text-slate-600">
+              {available.data?.length === 0
+                ? "No data types available."
+                : "Choose a data type to see its records."}
+            </p>
+          )}
+        </>
+      )}
+    </div>
   );
 }

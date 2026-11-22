@@ -56,9 +56,11 @@ export function configurationForFile(
             (field.type === "number" ? "range" : field.type === "date" ? "date" : "category"),
           popup: tooltipKeys.has(field.key),
         }
-      : column;
+      : dataset.political_entry && column.role !== "residence"
+        ? { ...column, role: "ignore", required: false }
+        : column;
   });
-  if (!columns.some((c) => c.role === "participant_id")) {
+  if (!dataset?.political_entry && !columns.some((c) => c.role === "participant_id")) {
     const id = columns.find((c) => normalize(c.source) === "id");
     if (id) {
       id.role = "participant_id";
@@ -117,17 +119,23 @@ export function detailsProblem(config: GuidedConfiguration): string {
   return "";
 }
 
-export function essentialProblem(config: GuidedConfiguration): string {
+export function essentialProblem(config: GuidedConfiguration, politicalEntry = false): string {
   const identifiers = config.columns.filter((c) => c.role === "participant_id");
   if (config.type === "event" && identifiers.length !== 1)
     return "Choose exactly one participant ID column. Names alone cannot reliably identify the same attendee.";
-  if (config.type === "general" && !identifiers.length && !config.match_key_fields?.length)
+  if (
+    config.type === "general" &&
+    !politicalEntry &&
+    !identifiers.length &&
+    !config.match_key_fields?.length
+  )
     return "Choose a record identifier so repeat imports can find the same record.";
   if (config.type === "event" && identifiers.some((c) => c.type !== "text"))
     return "Keep identifiers as text to preserve leading zeroes.";
   const included = config.columns.filter(
     (c) => !["ignore", "residence", "event_id", "event_name"].includes(c.role),
   );
+  if (politicalEntry && !included.length) return "Match at least one column to an existing field.";
   if (
     new Set(included.map((c) => c.key)).size !== included.length ||
     included.some((c) => !/^[a-z][a-z0-9_]{0,63}$/.test(c.key) || !(c.label ?? "").trim())

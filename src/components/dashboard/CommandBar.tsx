@@ -10,7 +10,7 @@ const TOOLS: { tab: TrayTab; label: string; capability?: string }[] = [
   { tab: "disasters", label: "Disasters" },
 ];
 
-export default function CommandBar() {
+export default function CommandBar({ showTrayTools = true }: { showTrayTools?: boolean }) {
   const setTab = useTrayStore((s) => s.setTab);
   const activeTab = useActiveTrayTab();
   const user = useAuthStore((s) => s.user);
@@ -24,27 +24,33 @@ export default function CommandBar() {
 
       <div className="flex-1" />
 
-      <div className="mx-1 h-6 w-px bg-slate-200" />
+      {showTrayTools && (
+        <>
+          <div className="mx-1 h-6 w-px bg-slate-200" />
 
-      <nav aria-label="Tools" className="flex shrink-0 items-center gap-1">
-        {TOOLS.filter((t) => !t.capability || user?.capabilities?.includes(t.capability)).map(
-          (t) => (
-            <button
-              key={t.tab}
-              type="button"
-              aria-pressed={activeTab === t.tab}
-              onClick={() => setTab(t.tab)}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-                activeTab === t.tab ? "bg-team-soft text-team" : "text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {t.label}
-            </button>
-          ),
-        )}
-      </nav>
+          <nav aria-label="Tools" className="flex shrink-0 items-center gap-1">
+            {TOOLS.filter((t) => !t.capability || user?.capabilities?.includes(t.capability)).map(
+              (t) => (
+                <button
+                  key={t.tab}
+                  type="button"
+                  aria-pressed={activeTab === t.tab}
+                  onClick={() => setTab(t.tab)}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+                    activeTab === t.tab
+                      ? "bg-team-soft text-team"
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ),
+            )}
+          </nav>
 
-      <div className="mx-1 h-6 w-px bg-slate-200" />
+          <div className="mx-1 h-6 w-px bg-slate-200" />
+        </>
+      )}
 
       {canManageDatasets(user) && (
         <Link
