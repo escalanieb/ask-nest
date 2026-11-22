@@ -20,7 +20,11 @@ interface Props {
 
 const inputClass =
   "mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm";
-const levelLabel = { province: "province", city: "city or municipality", barangay: "barangay" };
+const levelLabel = {
+  province: "province or city",
+  city: "city or municipality",
+  barangay: "barangay",
+};
 
 function RecordField({
   field,
@@ -159,7 +163,9 @@ export default function RecordForm({ dataset, record, initialArea, onBack, onSav
             <legend className="px-1 text-sm font-semibold">
               Location{" "}
               {requiredLevel && changeLocation
-                ? `(${levelLabel[requiredLevel]} required)`
+                ? requiredLevel === "province"
+                  ? "(province required, city optional)"
+                  : `(${levelLabel[requiredLevel]} required)`
                 : requiredLevel
                   ? ""
                   : "(optional)"}
@@ -169,7 +175,7 @@ export default function RecordForm({ dataset, record, initialArea, onBack, onSav
                 <AreaPicker
                   mode="record"
                   area={area}
-                  maxLevel={requiredLevel ?? "barangay"}
+                  maxLevel={requiredLevel === "province" ? "city" : (requiredLevel ?? "barangay")}
                   onChange={setArea}
                 />
                 {record && (record.psgc_code || !dataset.political_entry) && (

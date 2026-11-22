@@ -19,6 +19,8 @@ export function selectedLocationCode(
   area: PoliticalArea,
   requiredLevel: PsgcLevel | null,
 ): string | null {
+  // A province-level category also takes a city, which counts under its province.
+  if (requiredLevel === "province") return area.city || area.province;
   return requiredLevel
     ? area[requiredLevel]
     : area.barangay || area.city || area.province || area.region;
