@@ -1,6 +1,6 @@
 import { currentMapSource, useEffectiveMapSource } from "../../stores/useMapSourceStore";
 import { geographicPrefix, datasetLayerKey } from "../../lib/datasetQuery";
-import { usesPoliticalExplorer } from "../../lib/teamAccess";
+import { usesDatasetWorkspace } from "../../lib/teamAccess";
 import {
   buildDatasetLayer,
   summarizeDatasetArea,
@@ -69,6 +69,8 @@ const PH_BOUNDS: L.LatLngBoundsExpression = [
   [4.3, 114],
   [22, 127.5],
 ];
+// The country itself, used to frame the whole-country view at any container size.
+const PH_FIT_BOUNDS = L.latLngBounds([4.5, 116.6], [21.3, 126.8]);
 
 const loadBoundaries = createBoundaryLoader(fetch, `${import.meta.env.BASE_URL}maps/ph-2019/`);
 // TIPAS pins are placed independently of the displayed boundary level / centroidMap.
@@ -618,12 +620,12 @@ function FloodLayer() {
 }
 
 // Registers map click handler for background deselect
-function MapInstanceCapture({ political }: { political: boolean }) {
+function MapInstanceCapture({ datasetWorkspace }: { datasetWorkspace: boolean }) {
   useMapEvents({
     click() {
       useMapStore.getState().setSelectedLocation(null);
       useFilterStore.getState().setActiveRegion(null);
-      if (political) useMapStore.getState().setMapAreaLevel("region");
+      if (datasetWorkspace) useMapStore.getState().setMapAreaLevel("region");
       useDatasetLayerStore.getState().setChoroplethSelection(null);
     },
   });
@@ -770,12 +772,15 @@ function getChoroplethStyleFromCache(psgcCode: string): PathOptions {
     currentMapSource() === "imported" ? useDatasetLayerStore.getState().activeLayerDatasetId : null;
   if (!layerId || !showChoropleth) return defaultStyle;
 
-  const political = usesPoliticalExplorer(useAuthStore.getState().user);
+  const datasetWorkspace = usesDatasetWorkspace(useAuthStore.getState().user);
   const dataset = queryClient.getQueryData<Dataset>(["dataset", layerId]);
-  if (political && (!dataset?.is_active || (dataset.political_entry && dataset.layer_config.show_on_map === false))) {
+  if (
+    datasetWorkspace &&
+    (!dataset?.is_active || (dataset.political_entry && dataset.layer_config.show_on_map === false))
+  ) {
     return defaultStyle;
   }
-  const key = political
+  const key = datasetWorkspace
     ? ["layer", layerId, {}, geographicPrefix(useFilterStore.getState())]
     : datasetLayerKey(layerId);
   const cached = queryClient.getQueryData<LayerResponse>(key);
@@ -1001,7 +1006,7 @@ function TipasEventsLayer() {
                           onClick={() => {
                             useFilterStore.getState().setSelectedTipasEventId(evt.id);
                             useFilterStore.getState().setShowTipasAttendees(true);
-                            useTrayStore.getState().setTab("results");
+                            useTrayStore.getState().show("results");
                           }}
                           style={{
                             width: "100%",
@@ -1036,14 +1041,56 @@ function TipasEventsLayer() {
 // ---------------------------------------------------------------------------
 import { useMap } from "react-leaflet";
 
-function MapPanZoomController({ political }: { political: boolean }) {
+function MapPanZoomController({ datasetWorkspace }: { datasetWorkspace: boolean }) {
   const map = useMap();
   const selectedLocation = useMapStore((s) => s.selectedLocation);
-  const showOverview = useFilterStore((s) => political && !s.activeRegion);
+  const hasLocation = !!(selectedLocation?.lat && selectedLocation?.lng);
+  // The whole country shows until an area is chosen.
+  const showOverview = useFilterStore((s) =>
+    datasetWorkspace ? !s.activeRegion : !s.activeRegion && !hasLocation,
+  );
+  const overviewRef = useRef(showOverview);
+
+  // Leaflet clamps the fit to the current zoom floor, so lift it before measuring.
+  const countryZoom = useCallback(() => {
+    if (datasetWorkspace) map.setMinZoom(0);
+    return map.getBoundsZoom(PH_FIT_BOUNDS);
+  }, [map, datasetWorkspace]);
+
+  const fitCountry = useCallback(() => {
+    if (!map.getContainer().clientWidth || !map.getContainer().clientHeight) return;
+    map.invalidateSize({ animate: false });
+    const zoom = countryZoom();
+    if (datasetWorkspace) map.setMinZoom(zoom);
+    map.setView(PH_FIT_BOUNDS.getCenter(), zoom, { animate: false });
+  }, [map, datasetWorkspace, countryZoom]);
+
+  useEffect(() => {
+    overviewRef.current = showOverview;
+  }, [showOverview]);
+
+  // Re-measure whenever the container changes size, such as when the panel dock opens.
+  useEffect(() => {
+    const el = map.getContainer();
+    const observer = new ResizeObserver(() => {
+      if (!el.clientWidth || !el.clientHeight) return;
+      if (overviewRef.current) {
+        fitCountry();
+      } else {
+        map.invalidateSize({ animate: false });
+        if (datasetWorkspace) {
+          const floor = countryZoom();
+          map.setMinZoom(floor);
+        }
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [map, datasetWorkspace, fitCountry, countryZoom]);
 
   useEffect(() => {
     if (showOverview) {
-      map.setView(PH_CENTER, PH_OVERVIEW_ZOOM, { animate: false });
+      fitCountry();
     } else if (selectedLocation?.lat && selectedLocation?.lng) {
       // Zoom levels: 8 for Region, 9 for Province, 11 for City/Municity
       const zoomLevel =
@@ -1056,12 +1103,12 @@ function MapPanZoomController({ political }: { political: boolean }) {
     return () => {
       if (map.getPane("mapPane")) map.stop();
     };
-  }, [selectedLocation, map, showOverview]);
+  }, [selectedLocation, map, showOverview, fitCountry]);
 
   return null;
 }
 
-export default function MapCanvas({ political = false }: { political?: boolean }) {
+export default function MapCanvas({ datasetWorkspace = false }: { datasetWorkspace?: boolean }) {
   const selectedLocation = useMapStore((s) => s.selectedLocation);
   const setSelectedLocation = useMapStore((s) => s.setSelectedLocation);
   const mapAreaLevel = useMapStore((s) => s.mapAreaLevel);
@@ -1077,7 +1124,7 @@ export default function MapCanvas({ political = false }: { political?: boolean }
   // Sync active dropdown selection to selectedLocation (which sets lat/lng for map flying)
   useEffect(() => {
     const selectedLevel = activeCityMuni ? "municity" : activeProvince ? "province" : "region";
-    const targetLevel = political ? selectedLevel : mapAreaLevel;
+    const targetLevel = datasetWorkspace ? selectedLevel : mapAreaLevel;
     const targetCode =
       targetLevel === "municity"
         ? activeCityMuni
@@ -1106,27 +1153,33 @@ export default function MapCanvas({ political = false }: { political?: boolean }
     activeRegion,
     mapAreaLevel,
     geoVersion,
-    political,
+    datasetWorkspace,
     setSelectedLocation,
   ]);
 
   const canUseDatasets = useAuthStore((s) => !!s.user?.capabilities?.includes("datasets.use"));
   const selectedDatasetId = useDatasetLayerStore((s) => s.activeLayerDatasetId);
   const source = useEffectiveMapSource();
-  const { data: politicalDataset } = useQuery({
+  const { data: workspaceDataset } = useQuery({
     queryKey: ["dataset", selectedDatasetId],
     queryFn: () => fetchDataset(selectedDatasetId!),
-    enabled: political && !!selectedDatasetId,
+    enabled: datasetWorkspace && !!selectedDatasetId,
     staleTime: 1000 * 60 * 5,
   });
   const tableOnly =
-    political && politicalDataset?.political_entry && politicalDataset.layer_config.show_on_map === false;
+    datasetWorkspace &&
+    workspaceDataset?.political_entry &&
+    workspaceDataset.layer_config.show_on_map === false;
   const activeLayerDatasetId =
-    source === "imported" && canUseDatasets && !tableOnly && (!political || politicalDataset?.is_active)
+    source === "imported" &&
+    canUseDatasets &&
+    !tableOnly &&
+    (!datasetWorkspace || workspaceDataset?.is_active)
       ? selectedDatasetId
       : null;
   const allFilters = useDatasetLayerStore((s) => s.filtersByDataset);
-  const datasetFilters = activeLayerDatasetId && !political ? (allFilters[activeLayerDatasetId] ?? {}) : {};
+  const datasetFilters =
+    activeLayerDatasetId && !datasetWorkspace ? (allFilters[activeLayerDatasetId] ?? {}) : {};
   const geoFilters = useFilterStore();
   const datasetPrefix = geographicPrefix(geoFilters);
   const choroplethSelection = useDatasetLayerStore((s) => s.choroplethSelection);
@@ -1150,14 +1203,14 @@ export default function MapCanvas({ political = false }: { political?: boolean }
     x: number;
     y: number;
   } | null>(null);
-  const popupPos = choroplethSelection && (
-    dragPosition?.selection === choroplethSelection
+  const popupPos =
+    choroplethSelection &&
+    (dragPosition?.selection === choroplethSelection
       ? dragPosition
       : {
           x: Math.max(8, choroplethSelection.x - 120),
           y: Math.max(8, choroplethSelection.y - 200),
-        }
-  );
+        });
   const dragState = useRef<{
     startX: number;
     startY: number;
@@ -1537,7 +1590,7 @@ export default function MapCanvas({ political = false }: { political?: boolean }
           x: e.containerPoint.x,
           y: e.containerPoint.y,
         } satisfies ChoroplethSelection);
-      } else if (dsId && !political) {
+      } else if (dsId && !datasetWorkspace) {
         const cached = queryClient.getQueryData<LayerResponse>(datasetLayerKey(dsId));
         // Aggregate all records whose psgc_code starts with the area prefix
         const prefix =
@@ -1579,10 +1632,10 @@ export default function MapCanvas({ political = false }: { political?: boolean }
     <div className="relative h-full w-full">
       <MapContainer
         center={PH_CENTER}
-        zoom={political ? PH_OVERVIEW_ZOOM : 6}
-        minZoom={political ? PH_OVERVIEW_ZOOM : undefined}
-        maxBounds={political ? PH_BOUNDS : undefined}
-        maxBoundsViscosity={political ? 1 : undefined}
+        zoom={PH_OVERVIEW_ZOOM}
+        zoomSnap={0.25}
+        maxBounds={datasetWorkspace ? PH_BOUNDS : undefined}
+        maxBoundsViscosity={datasetWorkspace ? 1 : undefined}
         className="h-full w-full"
         zoomControl={true}
         attributionControl={true}
@@ -1612,13 +1665,16 @@ export default function MapCanvas({ political = false }: { political?: boolean }
         <FloodLayer />
         <TipasEventsLayer />
         <BarangayLayer />
-        <MapPanZoomController political={political} />
-        <MapInstanceCapture political={political} />
+        <MapPanZoomController datasetWorkspace={datasetWorkspace} />
+        <MapInstanceCapture datasetWorkspace={datasetWorkspace} />
       </MapContainer>
       <BarangayNotice />
       {tableOnly && (
-        <p role="status" className="absolute left-4 right-4 top-16 z-[800] w-fit rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow">
-          This data type isn't shown on the map.
+        <p
+          role="status"
+          className="absolute left-4 right-4 top-16 z-[800] w-fit rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow"
+        >
+          This record category isn't shown on the map.
         </p>
       )}
 
@@ -1770,7 +1826,7 @@ export default function MapCanvas({ political = false }: { political?: boolean }
       )}
 
       {/* ── Draggable choropleth detail popup ── */}
-      {!political && choroplethSelection && popupPos && (
+      {!datasetWorkspace && choroplethSelection && popupPos && (
         <div
           className="absolute z-[900] w-72 rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 select-none overflow-hidden"
           style={{ left: popupPos.x, top: popupPos.y }}
@@ -1816,9 +1872,7 @@ export default function MapCanvas({ political = false }: { political?: boolean }
               />
             </svg>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate">
-                {choroplethSelection.name}
-              </p>
+              <p className="text-xs font-bold text-white truncate">{choroplethSelection.name}</p>
               {layerData && (
                 <p className="text-[9px] text-team truncate">{layerData.dataset.name}</p>
               )}

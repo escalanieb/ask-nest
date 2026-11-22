@@ -1,18 +1,15 @@
 import { canManageDatasets } from "../../lib/datasetPermissions";
 import { Link } from "react-router-dom";
-import { useTrayStore, type TrayTab } from "../../stores/useTrayStore";
-import { useActiveTrayTab } from "../../hooks/useActiveTrayTab";
+import { useTrayStore } from "../../stores/useTrayStore";
+import { useActiveTrayTab, useTrayTabs } from "../../hooks/useActiveTrayTab";
 import { useAuthStore } from "../../stores/useAuthStore";
 import NestLogo from "../NestLogo";
-const TOOLS: { tab: TrayTab; label: string; capability?: string }[] = [
-  { tab: "news", label: "News", capability: "rss.use" },
-  { tab: "video", label: "Video" },
-  { tab: "disasters", label: "Disasters" },
-];
 
-export default function CommandBar({ showTrayTools = true }: { showTrayTools?: boolean }) {
-  const setTab = useTrayStore((s) => s.setTab);
+export default function CommandBar() {
+  const toggle = useTrayStore((s) => s.toggle);
+  const open = useTrayStore((s) => s.open);
   const activeTab = useActiveTrayTab();
+  const tabs = useTrayTabs();
   const user = useAuthStore((s) => s.user);
 
   return (
@@ -24,33 +21,30 @@ export default function CommandBar({ showTrayTools = true }: { showTrayTools?: b
 
       <div className="flex-1" />
 
-      {showTrayTools && (
-        <>
-          <div className="mx-1 h-6 w-px bg-slate-200" />
+      <>
+        <div className="mx-1 h-6 w-px bg-slate-200" />
 
-          <nav aria-label="Tools" className="flex shrink-0 items-center gap-1">
-            {TOOLS.filter((t) => !t.capability || user?.capabilities?.includes(t.capability)).map(
-              (t) => (
-                <button
-                  key={t.tab}
-                  type="button"
-                  aria-pressed={activeTab === t.tab}
-                  onClick={() => setTab(t.tab)}
-                  className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-                    activeTab === t.tab
-                      ? "bg-team-soft text-team"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ),
-            )}
-          </nav>
+        <nav aria-label="Tools" className="flex shrink-0 items-center gap-1">
+          {tabs.map((t) => {
+            const pressed = open && activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                aria-pressed={pressed}
+                onClick={() => toggle(t.id)}
+                className={`rounded-lg px-2.5 py-2 text-sm font-semibold ${
+                  pressed ? "bg-team-soft text-team" : "text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </nav>
 
-          <div className="mx-1 h-6 w-px bg-slate-200" />
-        </>
-      )}
+        <div className="mx-1 h-6 w-px bg-slate-200" />
+      </>
 
       {canManageDatasets(user) && (
         <Link

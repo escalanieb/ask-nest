@@ -151,7 +151,7 @@ export default function ImportLocationsStep({
             ? "Match attendees’ home locations, not the event venue."
             : "Match the locations represented by your records."}{" "}
           {requiresLocation
-            ? "This data type requires a verified location. Unresolved rows will be excluded during review."
+            ? "This record category requires a verified location. Unresolved rows will be excluded during review."
             : "Unknown locations stay in your records and totals, but will not shade an area on the map."}
         </p>
       </div>

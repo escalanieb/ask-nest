@@ -69,6 +69,36 @@ test("guided imports into a Political type match its existing fields without req
   assert.match(essentialProblem(config), /record identifier/);
 });
 
+test("guided imports ignore the generated number in a workspace CSV and retain a similarly named custom field", () => {
+  const target = {
+    political_entry: true,
+    name: "Practice sites",
+    psgc_level: "barangay",
+    match_key_fields: [],
+    allow_duplicates: true,
+    field_definitions: [{ key: "record_number", label: "Record number", type: "text" }],
+    layer_config: { filter_fields: [], tooltip_fields: [] },
+  } as unknown as Dataset;
+  for (const generatedHeading of ["Record number", "Record number (ask-nest 2)"]) {
+    const exported = {
+      ...inspection,
+      columns: [
+        generatedHeading,
+        "psgc_code",
+        "record_number",
+        "location_status",
+        "location_source",
+        "location_reason",
+      ].map((source) => ({ ...inspection.columns[0], source })),
+    };
+    const config = configurationForFile(exported, "sites.csv", target);
+    assert.equal(config.columns[0].role, "ignore");
+    assert.equal(config.columns[2].role, "field");
+    assert.equal(config.columns[2].key, "record_number");
+    assert.equal(essentialProblem(config, true), "");
+  }
+});
+
 test("import errors use actionable server validation and expiry explanations", () => {
   assert.equal(
     importError(new Error('API error 422: {"errors":{"columns":["Choose an ID"]}}')),

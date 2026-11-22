@@ -1,33 +1,32 @@
 import { lazy, Suspense } from "react";
 import CommandBar from "../components/dashboard/CommandBar";
 import ExploreSidebar from "../components/explore/ExploreSidebar";
-import PoliticalSidebar from "../components/explore/PoliticalSidebar";
+import DatasetWorkspaceSidebar from "../components/explore/DatasetWorkspaceSidebar";
 import { useAuthStore } from "../stores/useAuthStore";
-import { usesPoliticalExplorer } from "../lib/teamAccess";
+import { usesDatasetWorkspace } from "../lib/teamAccess";
 import StatusBar from "../components/dashboard/StatusBar";
 import SummaryBar from "../components/dashboard/SummaryBar";
-import BottomTray from "../components/dashboard/BottomTray";
+import PanelDock from "../components/dashboard/PanelDock";
 import MapStyleControl from "../components/map/MapStyleControl";
+import { ElectionCountdown } from "../components/dashboard/SourceTools";
 
 // Lazy-load the map to avoid SSR issues with Leaflet
 const MapCanvas = lazy(() => import("../components/map/MapCanvas"));
 
 export default function Dashboard() {
-  const political = useAuthStore((s) => usesPoliticalExplorer(s.user));
+  const user = useAuthStore((s) => s.user);
+  const datasetWorkspace = usesDatasetWorkspace(user);
   return (
     <div className="flex h-full flex-col bg-slate-50 overflow-hidden">
       {/* Navigation Bar */}
-      <CommandBar showTrayTools={!political} />
+      <CommandBar />
 
       {/* Main content — left column (map + tray) + right sidebar */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left column: map on top (2/3), panel tray on bottom (1/3) */}
-        <div
-          className={`flex min-w-0 flex-col overflow-hidden ${political ? "w-1/3 shrink-0" : "flex-1"}`}
-        >
-          {!political && <SummaryBar />}
-          {/* Map — takes 2/3 of vertical space */}
-          <main className="relative overflow-hidden" style={{ flex: 2 }}>
+        {/* Left column: one-third wide for every team; summary bar above the map */}
+        <div className="flex w-1/3 min-w-0 shrink-0 flex-col overflow-hidden">
+          {!datasetWorkspace && <SummaryBar />}
+          <main className="relative min-h-0 flex-1 overflow-hidden">
             {/* Isolated stacking context keeps Leaflet z-indices contained */}
             <div className="absolute inset-0 [isolation:isolate]">
               <Suspense
@@ -52,27 +51,25 @@ export default function Dashboard() {
                   </div>
                 }
               >
-                <MapCanvas key={String(political)} political={political} />
+                <MapCanvas key={String(datasetWorkspace)} datasetWorkspace={datasetWorkspace} />
                 <MapStyleControl />
               </Suspense>
             </div>
           </main>
-
-          {!political && <BottomTray />}
+          <PanelDock />
         </div>
 
-        {/* Right sidebar — spans full height of content area */}
-        <aside
-          className={`flex min-w-0 flex-col border-l border-slate-200 bg-white shadow-sm overflow-hidden ${political ? "flex-1" : "w-[380px] shrink-0"}`}
-        >
-          <div className="min-h-0 overflow-y-auto flex-1">
-            {political ? <PoliticalSidebar /> : <ExploreSidebar />}
+        {/* Right panel: countdown strip, then the sidebar */}
+        <aside className="flex min-w-0 flex-1 flex-col overflow-hidden border-l border-slate-200 bg-white shadow-sm">
+          <ElectionCountdown />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {datasetWorkspace ? <DatasetWorkspaceSidebar /> : <ExploreSidebar />}
           </div>
         </aside>
       </div>
 
       {/* Status bar */}
-      <StatusBar political={political} />
+      <StatusBar workspaceTeam={datasetWorkspace ? user?.team?.name : undefined} />
     </div>
   );
 }

@@ -893,7 +893,7 @@ export function TipasLayerSwitcher() {
         </p>
         <button
           className="underline font-semibold"
-          onClick={() => useTrayStore.getState().setTab("results")}
+          onClick={() => useTrayStore.getState().show("results")}
         >
           Open records
         </button>
