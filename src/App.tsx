@@ -17,6 +17,11 @@ const DatasetUploadPage = lazy(() => import("./pages/datasets/DatasetUploadPage"
 const DatasetRecordsPage = lazy(() => import("./pages/datasets/DatasetRecordsPage"));
 const InsightPage = lazy(() => import("./pages/insight/InsightPage"));
 const AscPage = lazy(() => import("./pages/asc/AscPage"));
+const ChroniclesLayout = lazy(() => import("./pages/chronicles/ChroniclesLayout"));
+const TimelinesPage = lazy(() => import("./pages/chronicles/TimelinesPage"));
+const TimelineFormPage = lazy(() => import("./pages/chronicles/TimelineFormPage"));
+const EntriesPage = lazy(() => import("./pages/chronicles/EntriesPage"));
+const ImportPage = lazy(() => import("./pages/chronicles/ImportPage"));
 const RssPage = lazy(() => import("./pages/rss/RssPage"));
 
 const BOOT_MS = 1800;
@@ -108,6 +113,17 @@ export default function App() {
               {/* INSIGHT newsroom — any authenticated user */}
               <Route element={<RequireFeature capability="insight.use" />}>
                 <Route path="/insight" element={<InsightPage />} />
+              </Route>
+
+              {/* Chronicles — sourced public timelines; uses the ask-nest sign-in */}
+              <Route element={<RequireFeature capability="chronicles.use" />}>
+                <Route path="/chronicles" element={<ChroniclesLayout />}>
+                  <Route index element={<TimelinesPage />} />
+                  <Route path="new" element={<TimelineFormPage />} />
+                  <Route path="timelines/:id/entries" element={<EntriesPage />} />
+                  <Route path="timelines/:id/import" element={<ImportPage />} />
+                  <Route path="timelines/:id/settings" element={<TimelineFormPage />} />
+                </Route>
               </Route>
 
               {/* ASC AI assistant — any authenticated user */}

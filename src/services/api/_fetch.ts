@@ -3,7 +3,7 @@ import { useAuthStore } from "../../stores/useAuthStore";
 
 import { sessionFetch, sessionGeneration, assertSession } from "../../lib/session";
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
+const BASE_URL = import.meta.env?.VITE_API_URL ?? "http://localhost:8000/api";
 
 function getToken(): string | null {
   return useAuthStore.getState().token;
@@ -18,7 +18,7 @@ function buildHeaders(extra?: Record<string, string>): Record<string, string> {
   };
 }
 
-async function tryRefresh(): Promise<string | null> {
+export async function tryRefresh(): Promise<string | null> {
   const expected = sessionGeneration();
   const token = getToken();
   if (!token) return null;

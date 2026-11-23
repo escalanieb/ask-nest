@@ -25,6 +25,19 @@ test("capability-gated tools need their capability", () => {
   assert.deepEqual(ids(user), ["map", "insight", "asc", "tala", "tipas", "nexus", "senate-watch"]);
 });
 
+test("Chronicles tile needs the chronicles capability, for any role", () => {
+  assert.ok(!ids({ role: "admin", capabilities: [] }).includes("chronicles"));
+  assert.ok(
+    !ids({ role: "viewer", capabilities: ["rss.use", "insight.use"] }).includes("chronicles"),
+  );
+  assert.ok(ids({ role: "viewer", capabilities: ["chronicles.use"] }).includes("chronicles"));
+  const tile = visibleBuiltIns({ role: "viewer", capabilities: ["chronicles.use"] }).find(
+    (app) => app.id === "chronicles",
+  );
+  assert.equal(tile?.href, "/chronicles");
+  assert.equal(tile?.internal, true);
+});
+
 test("RSS Feeds tile needs the rss capability", () => {
   assert.ok(!ids({ role: "admin", capabilities: [] }).includes("rss"));
   assert.ok(ids({ role: "viewer", capabilities: ["rss.use"] }).includes("rss"));
