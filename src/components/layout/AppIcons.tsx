@@ -49,6 +49,26 @@ export const InsightIcon = () => (
   </svg>
 );
 
+export const ChroniclesIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-5 w-5"
+  >
+    <path d="M6 3v18" />
+    <circle cx="6" cy="6" r="1.5" />
+    <circle cx="6" cy="12" r="1.5" />
+    <circle cx="6" cy="18" r="1.5" />
+    <path d="M11 6h9" />
+    <path d="M11 12h6" />
+    <path d="M11 18h9" />
+  </svg>
+);
+
 export const AscGptIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -121,6 +141,7 @@ const GLYPHS: Record<AppIconKey, () => React.ReactNode> = {
   map: () => <MapIcon />,
   datasets: () => <DatasetIcon />,
   insight: () => <InsightTileIcon className="h-7 w-7" />,
+  chronicles: () => <ChroniclesIcon />,
   asc: () => <AscGptIcon />,
   rss: () => <RssIcon />,
   tala: () => <TalaIcon className="h-7 w-7" />,

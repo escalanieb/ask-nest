@@ -1,6 +1,6 @@
 import { canManageDatasets } from "./datasetPermissions.ts";
 
-export type AppIconKey = "map" | "datasets" | "insight" | "asc" | "rss" | "tala";
+export type AppIconKey = "map" | "datasets" | "insight" | "chronicles" | "asc" | "rss" | "tala";
 
 export interface BuiltInApp {
   id: string;
@@ -40,6 +40,16 @@ export const BUILT_IN_APPS: readonly BuiltInApp[] = [
     internal: true,
     icon: "insight",
     capability: "insight.use",
+  },
+  {
+    id: "chronicles",
+    description: "Sourced public timelines and their editorial tools",
+    color: "#0e7490",
+    label: "Chronicles",
+    href: "/chronicles",
+    internal: true,
+    icon: "chronicles",
+    capability: "chronicles.use",
   },
   {
     id: "asc",
