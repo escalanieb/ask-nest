@@ -76,14 +76,12 @@ export default function EntriesPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       const next = searchInput.trim();
-      setSearch((current) => {
-        if (current === next) return current;
-        setPage(1);
-        return next;
-      });
+      if (next === search) return;
+      setSearch(next);
+      setPage(1);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, search]);
 
   function clearFilters() {
     setSearchInput("");
@@ -95,7 +93,7 @@ export default function EntriesPage() {
   }
 
   async function remove() {
-    if (!deleting) return;
+    if (!deleting || deleteEntry.isPending) return;
     try {
       await deleteEntry.mutateAsync({ timelineId: id, entryId: deleting.id });
       toast.success("Entry deleted");

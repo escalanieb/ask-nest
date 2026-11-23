@@ -51,6 +51,7 @@ export default function EntryForm({
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError("");
     try {
       await saveEntry.mutateAsync({ timelineId: timeline.id, entryId: entry?.id, data });

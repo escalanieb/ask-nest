@@ -62,6 +62,7 @@ export default function TimelinesPage() {
   const list = timelines.data ?? [];
 
   async function toggleArchive(t: ChroniclesTimeline) {
+    if (setArchived.isPending) return;
     const archive = t.status !== "archived";
     try {
       await setArchived.mutateAsync({ id: t.id, archived: archive });
@@ -75,7 +76,7 @@ export default function TimelinesPage() {
 
   async function submitClone(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!cloning) return;
+    if (!cloning || clone.isPending) return;
     const form = new FormData(event.currentTarget);
     setCloneError("");
     try {

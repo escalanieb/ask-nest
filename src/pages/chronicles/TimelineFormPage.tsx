@@ -76,6 +76,7 @@ function TimelineForm({ id, initial }: { id?: string; initial: ChroniclesTimelin
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError("");
     try {
       const saved = await saveTimeline.mutateAsync({ id, data: timeline });
