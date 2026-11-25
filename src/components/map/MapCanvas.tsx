@@ -13,6 +13,7 @@ import {
   TIPAS_GEO_VERSION,
   TIPAS_PLACEMENT_VERSION,
   createTipasPlacer,
+  tipasEventMapCode,
   type TipasPlacement,
 } from "../../services/tipasPlacement";
 import { useAuthStore } from "../../stores/useAuthStore";
@@ -50,6 +51,7 @@ import {
   fetchTipasEvents,
   fetchTipasAttendeesDistribution,
   type TipasDistributionPoint,
+  type TipasEvent,
 } from "../../services/api/tipasApi";
 import { queryClient } from "../../lib/queryClient";
 import NestLogo from "../NestLogo";
@@ -854,59 +856,71 @@ function ImportedEventVenue({ data }: { data: LayerResponse | undefined }) {
   );
 }
 
-function TipasEventsLayer() {
-  const canUseTipas = useAuthStore((s) => !!s.user?.capabilities?.includes("tipas.use"));
-  const tipasEventsSelected = useFilterStore((s) => s.showTipasEvents);
-  const source = useEffectiveMapSource();
-  const tipasGeo = useFilterStore();
-  const prefix = geographicPrefix(tipasGeo);
-  const showTipasEvents =
-    source === "tipas" && canUseTipas && (tipasEventsSelected || !tipasGeo.showTipasAttendees);
-  const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
+type TipasEventGroup = { pos: TipasPlacement; events: TipasEvent[] };
 
-  const { data: events = [] } = useQuery({
+function useTipasEventLocations(enabled: boolean, selectedEventId: number | null, prefix?: string) {
+  const {
+    data: events = [],
+    refetch: retryEvents,
+    isFetching: isFetchingEvents,
+  } = useQuery({
     queryKey: ["tipas-events"],
     queryFn: fetchTipasEvents,
-    enabled: showTipasEvents,
+    enabled,
     staleTime: 1000 * 60 * 5,
   });
 
-  const filteredEvents = events.filter(
-    (event) =>
-      (!selectedTipasEventId || event.id === selectedTipasEventId) &&
-      (!prefix || event.psgc_code?.startsWith(prefix)),
-  );
+  const candidates = enabled
+    ? events
+        .filter((event) => selectedEventId === null || event.id === selectedEventId)
+        .map((event) => ({ event, code: tipasEventMapCode(event) }))
+        .filter(({ code }) => !code || !prefix || code.startsWith(prefix))
+    : [];
 
-  const codes = [...new Set(filteredEvents.map((e) => e.psgc_code).filter(Boolean))].sort();
-  const { data: placements } = useQuery({
+  const codes = [
+    ...new Set(candidates.map(({ code }) => code).filter((code) => code !== null)),
+  ].sort();
+  const {
+    data: placements,
+    isError: placementError,
+    isFetching: isFetchingPlacements,
+    refetch: retryPlacements,
+  } = useQuery({
     queryKey: ["tipas-placements", TIPAS_GEO_VERSION, TIPAS_PLACEMENT_VERSION, codes],
-    queryFn: async () => {
-      const out: Record<string, TipasPlacement | null> = {};
-      await Promise.all(
-        codes.map(async (c) => {
-          out[c as string] = await placeTipasEvent(c);
-        }),
-      );
-      return out;
-    },
-    enabled: showTipasEvents && codes.length > 0,
-    staleTime: Infinity,
+    queryFn: async () =>
+      Object.fromEntries(
+        await Promise.all(codes.map(async (code) => [code, await placeTipasEvent(code)] as const)),
+      ),
+    enabled: enabled && codes.length > 0,
+    staleTime: 1000 * 60 * 5,
   });
 
-  if (!showTipasEvents) return null;
-
-  // Group events by the resolved area so overlapping fallbacks share one marker.
-  // Events with unmapped codes are omitted from the map (not evidence of no event).
-  const groupedEvents: Record<string, { pos: TipasPlacement; events: typeof events }> = {};
-  for (const evt of filteredEvents) {
-    const pos = evt.psgc_code ? placements?.[evt.psgc_code] : null;
-    if (!pos) continue;
-    (groupedEvents[`${pos.areaCode}:${pos.accuracy}`] ??= { pos, events: [] }).events.push(evt);
+  const groups: Record<string, TipasEventGroup> = {};
+  const unmapped: TipasEvent[] = [];
+  for (const { event, code } of candidates) {
+    const pos = code ? placements?.[code] : null;
+    if (pos) {
+      (groups[`${pos.areaCode}:${pos.accuracy}`] ??= { pos, events: [] }).events.push(event);
+    } else if (!code || pos === null) {
+      unmapped.push(event);
+    }
   }
+  return {
+    groups,
+    unmapped,
+    placementError,
+    isFetching: isFetchingEvents || isFetchingPlacements,
+    retry: () => {
+      void retryEvents();
+      if (codes.length) void retryPlacements();
+    },
+  };
+}
 
+function TipasEventsLayer({ groups }: { groups: Record<string, TipasEventGroup> }) {
   return (
     <>
-      {Object.entries(groupedEvents).map(([psgcCode, { pos, events: cityEvents }]) => {
+      {Object.entries(groups).map(([psgcCode, { pos, events: cityEvents }]) => {
         const count = cityEvents.length;
 
         // Custom icon displaying the number of events if > 1
@@ -941,9 +955,7 @@ function TipasEventsLayer() {
                   }}
                   className="border-b border-slate-100 pb-1.5"
                 >
-                  {count > 1
-                    ? `📍 ${cityEvents[0].location} (${count} Events)`
-                    : cityEvents[0].name}
+                  {count > 1 ? `${count} events` : cityEvents[0].name}
                 </strong>
 
                 <div
@@ -1232,9 +1244,17 @@ export default function MapCanvas({ datasetWorkspace = false }: { datasetWorkspa
   });
 
   const canUseTipas = useAuthStore((s) => !!s.user?.capabilities?.includes("tipas.use"));
+  const tipasEventsSelected = useFilterStore((s) => s.showTipasEvents);
   const tipasAttendeesSelected = useFilterStore((s) => s.showTipasAttendees);
+  const showTipasEvents =
+    source === "tipas" && canUseTipas && (tipasEventsSelected || !tipasAttendeesSelected);
   const showTipasAttendees = source === "tipas" && canUseTipas && tipasAttendeesSelected;
   const selectedTipasEventId = useFilterStore((s) => s.selectedTipasEventId);
+  const tipasEventLocations = useTipasEventLocations(
+    showTipasEvents,
+    selectedTipasEventId,
+    datasetPrefix,
+  );
 
   // Fetch TIPAS distribution data
   const {
@@ -1663,12 +1683,42 @@ export default function MapCanvas({ datasetWorkspace = false }: { datasetWorkspa
         <VolcanoLayer />
         <TyphoonLayer />
         <FloodLayer />
-        <TipasEventsLayer />
+        {showTipasEvents && <TipasEventsLayer groups={tipasEventLocations.groups} />}
         <BarangayLayer />
         <MapPanZoomController datasetWorkspace={datasetWorkspace} />
         <MapInstanceCapture datasetWorkspace={datasetWorkspace} />
       </MapContainer>
       <BarangayNotice />
+      {showTipasEvents &&
+        (tipasEventLocations.unmapped.length > 0 || tipasEventLocations.placementError) && (
+          <div className="absolute bottom-8 left-3 z-[800] max-w-72 rounded-lg bg-white px-3 py-2 text-xs text-slate-700 shadow">
+            {tipasEventLocations.placementError && (
+              <p role="status">Could not load TIPAS event locations.</p>
+            )}
+            {tipasEventLocations.unmapped.length > 0 && (
+              <details>
+                <summary className="cursor-pointer font-medium">
+                  {tipasEventLocations.unmapped.length}{" "}
+                  {tipasEventLocations.unmapped.length === 1 ? "TIPAS event" : "TIPAS events"}{" "}
+                  without a map location
+                </summary>
+                <ul className="mt-1 max-h-32 list-disc overflow-auto pl-4">
+                  {tipasEventLocations.unmapped.map((event) => (
+                    <li key={event.id}>{event.name}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
+            <button
+              type="button"
+              className="mt-1 font-semibold underline disabled:opacity-50"
+              disabled={tipasEventLocations.isFetching}
+              onClick={tipasEventLocations.retry}
+            >
+              Retry event locations
+            </button>
+          </div>
+        )}
       {tableOnly && (
         <p
           role="status"
