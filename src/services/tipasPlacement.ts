@@ -1,7 +1,8 @@
 import type { BoundaryLevel } from "./mapBoundaries";
+import type { TipasEvent } from "./api/tipasApi";
 
 /** Bump when the placement algorithm changes so cached results are not reused. */
-export const TIPAS_PLACEMENT_VERSION = "interior-v1";
+export const TIPAS_PLACEMENT_VERSION = "interior-v2";
 export const TIPAS_GEO_VERSION = "ph-2019-medres";
 
 export type PlacementAccuracy = "city" | "province" | "region";
@@ -96,6 +97,10 @@ export function canonicalPsgc(code: string | null | undefined): string | null {
   return /^\d{9}$/.test(c) ? c : null;
 }
 
+export function tipasEventMapCode(event: Pick<TipasEvent, "map_psgc_code" | "psgc_code">) {
+  return canonicalPsgc(event.map_psgc_code ?? event.psgc_code);
+}
+
 /**
  * Resolve an event PSGC code to a stable point, independent of the displayed
  * boundary level or any rendering cache. Falls back city → province → region
@@ -131,7 +136,7 @@ export function createTipasPlacer(loader: Loader) {
     const region = code.slice(0, 2) + "0000000";
     const province = code.slice(0, 4) + "00000";
     if (code !== region && code !== province) {
-      const city = await find("municity", "ADM3_PCODE", code, region);
+      const city = await find("municity", "ADM3_PCODE", code.slice(0, 6) + "000", region);
       if (city) return city;
     }
     if (code !== region) {

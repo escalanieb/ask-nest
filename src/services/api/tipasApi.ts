@@ -6,6 +6,7 @@ export interface TipasEvent {
   description: string | null;
   location: string | null;
   psgc_code: string | null;
+  map_psgc_code?: string | null;
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
   start_time: string;
   end_time: string | null;

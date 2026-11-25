@@ -6,6 +6,7 @@ import {
   canonicalPsgc,
   createTipasPlacer,
   representativePoint,
+  tipasEventMapCode,
 } from "../src/services/tipasPlacement.ts";
 
 async function localFetch(input: string | URL | Request) {
@@ -63,6 +64,19 @@ test("canonicalPsgc rejects non nine-digit codes without truncating", () => {
   assert.equal(canonicalPsgc("0722260000"), null);
   assert.equal(canonicalPsgc("72226000"), null);
   assert.equal(canonicalPsgc(null), null);
+});
+
+test("TIPAS events use the corresponding code for geography and share their city pin", async () => {
+  const legacyTaguig = { psgc_code: "137607000" };
+  const modernTaguig = { psgc_code: "1381500000", map_psgc_code: "137607000" };
+  const modernBarangay = { psgc_code: "1381500006", map_psgc_code: "137607006" };
+  assert.equal(tipasEventMapCode(modernTaguig)?.startsWith("137607"), true);
+  assert.equal(tipasEventMapCode({ psgc_code: "1381500000", map_psgc_code: null }), null);
+  const place = createTipasPlacer(createBoundaryLoader(localFetch as typeof fetch));
+  const legacyPin = await place(tipasEventMapCode(legacyTaguig));
+  assert.equal(legacyPin?.areaCode, "137607000");
+  assert.deepEqual(await place(tipasEventMapCode(modernTaguig)), legacyPin);
+  assert.deepEqual(await place(tipasEventMapCode(modernBarangay)), legacyPin);
 });
 
 test("Lapu-Lapu and Taguig resolve inside their city polygons, independent of call history", async () => {
