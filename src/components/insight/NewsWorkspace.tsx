@@ -329,6 +329,10 @@ function formatCountdown(milliseconds: number) {
     .join(" ");
 }
 
+function formatRoundCount(count: number) {
+  return `${count} ${count === 1 ? "round" : "rounds"}`;
+}
+
 function NextRoundSchedule({
   news,
   latestSnapshot,
@@ -375,7 +379,7 @@ function NextRoundSchedule({
           {remaining > 0 ? formatCountdown(remaining) : "Due now"}
         </div>
         <p className="whitespace-nowrap text-[11px] text-muted-foreground">
-          R{latestSnapshot.round_number} · {formatShortDate(nextRoundAt)}
+          Round {latestSnapshot.round_number} · {formatShortDate(nextRoundAt)}
         </p>
       </div>
     );
@@ -752,7 +756,7 @@ export default function NewsWorkspace() {
               compact
             />
           ) : (
-            <span className="text-xs text-muted-foreground/60">Not scheduled</span>
+            <span className="text-xs text-muted-foreground/60">Not applicable</span>
           ),
       }),
       columnHelper.accessor("source", {
@@ -1710,7 +1714,9 @@ export default function NewsWorkspace() {
                         </p>
                       </div>
                       {snapshotsQuery.data?.data.length ? (
-                        <Badge variant="secondary">{snapshotsQuery.data.data.length} rounds</Badge>
+                        <Badge variant="secondary">
+                          {formatRoundCount(snapshotsQuery.data.data.length)}
+                        </Badge>
                       ) : null}
                     </div>
                     {!snapshotsQuery.isLoading && !snapshotsQuery.isError ? (
