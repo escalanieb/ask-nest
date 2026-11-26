@@ -16,6 +16,27 @@ export interface Sentiment {
   reaction_data_consistent?: boolean;
 }
 
+export type AnalysisType = "quick" | "comprehensive";
+
+export interface NewsSnapshot {
+  id: number;
+  news_id: number;
+  round_number: number;
+  report_id?: string | null;
+  captured_at: string;
+  overall_sentiment?: string | null;
+  positive_percentage?: number | null;
+  negative_percentage?: number | null;
+  neutral_percentage?: number | null;
+  risk_level?: number | null;
+  actual_facebook_comment_count?: number | null;
+  scrape_comment_count?: number | null;
+  reaction_count?: number | null;
+  view_count?: number | null;
+  share_count?: number | null;
+  payload: Record<string, unknown>;
+}
+
 export interface NewsItem {
   id: number;
   title: string;
@@ -48,6 +69,8 @@ export interface NewsItem {
   created_at: string;
   updated_at: string;
   status: string;
+  analysis_type: AnalysisType;
+  track_days?: number | null;
 }
 
 export interface NewsPageMeta {

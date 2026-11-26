@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-table";
 import {
   AlertTriangle,
+  Activity,
   ArrowUpRight,
   BarChart2,
   CheckCircle2,
@@ -31,7 +32,13 @@ import {
 import { toast } from "sonner";
 
 import { insightFetch, type InsightApiError } from "@/services/insightApi";
-import type { NewsItem, PaginatedNewsResponse, Sentiment } from "@/types/insight";
+import type {
+  AnalysisType,
+  NewsItem,
+  NewsSnapshot,
+  PaginatedNewsResponse,
+  Sentiment,
+} from "@/types/insight";
 import { ExportDialog } from "@/components/insight/ExportDialog";
 
 import {
@@ -99,6 +106,8 @@ interface NewsFormState {
   mixed: string;
   risk_level: string;
   total_comments: string;
+  analysis_type: AnalysisType;
+  track_days: string;
 }
 
 const emptyFormState: NewsFormState = {
@@ -116,6 +125,8 @@ const emptyFormState: NewsFormState = {
   mixed: "33%",
   risk_level: "2/5",
   total_comments: "0",
+  analysis_type: "quick",
+  track_days: "3",
 };
 
 const sentimentToneLabels: Record<SentimentTone, string> = {
@@ -161,11 +172,15 @@ function StatusBadge({ status }: { status: ScrapingStatus }) {
 
 const columnHelper = createColumnHelper<NewsItem>();
 
-type CreateSingleLinkPayload = {
+type AnalysisOptions = {
+  analysis_type: AnalysisType;
+  track_days?: number;
+};
+type CreateSingleLinkPayload = AnalysisOptions & {
   link: string;
   comment_count?: number | null;
 };
-type CreateBulkLinksPayload = {
+type CreateBulkLinksPayload = AnalysisOptions & {
   links: Array<{ link: string; comment_count?: number | null }>;
 };
 type FullNewsPayload = {
@@ -197,7 +212,105 @@ function toFormState(item?: NewsItem | null): NewsFormState {
     mixed: item.sentiment?.mixed ?? "",
     risk_level: item.sentiment?.risk_level ?? "",
     total_comments: String(item.sentiment?.total_comments ?? 0),
+    analysis_type: item.analysis_type ?? "quick",
+    track_days: String(item.track_days ?? 3),
   };
+}
+
+function SnapshotTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
+  const width = 760;
+  const height = 260;
+  const padding = 38;
+  const plotWidth = width - padding * 2;
+  const plotHeight = height - padding * 2;
+  const x = (index: number) =>
+    snapshots.length <= 1 ? width / 2 : padding + (index / (snapshots.length - 1)) * plotWidth;
+  const y = (value: number | null | undefined) =>
+    padding + ((100 - Math.max(0, Math.min(100, value ?? 0))) / 100) * plotHeight;
+  const series = [
+    { key: "positive_percentage" as const, label: "Positive", color: "#059669" },
+    { key: "negative_percentage" as const, label: "Negative", color: "#e11d48" },
+    { key: "neutral_percentage" as const, label: "Neutral", color: "#64748b" },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+        {series.map((item) => (
+          <span key={item.key} className="inline-flex items-center gap-1.5">
+            <span className="size-2 rounded-full" style={{ backgroundColor: item.color }} />
+            {item.label}
+          </span>
+        ))}
+      </div>
+      <div className="overflow-x-auto rounded-2xl border border-border/60 bg-background p-2">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="min-w-[620px]"
+          role="img"
+          aria-label="Sentiment percentages over comprehensive analysis rounds"
+        >
+          {[0, 25, 50, 75, 100].map((tick) => (
+            <g key={tick}>
+              <line
+                x1={padding}
+                x2={width - padding}
+                y1={y(tick)}
+                y2={y(tick)}
+                stroke="currentColor"
+                className="text-border"
+                strokeDasharray="4 5"
+              />
+              <text x={4} y={y(tick) + 4} className="fill-muted-foreground text-[10px]">
+                {tick}%
+              </text>
+            </g>
+          ))}
+          {series.map((item) => {
+            const points = snapshots
+              .map((snapshot, index) => `${x(index)},${y(snapshot[item.key])}`)
+              .join(" ");
+            return (
+              <g key={item.key}>
+                {snapshots.length > 1 && (
+                  <polyline
+                    points={points}
+                    fill="none"
+                    stroke={item.color}
+                    strokeWidth="3"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                )}
+                {snapshots.map((snapshot, index) => (
+                  <circle
+                    key={snapshot.id}
+                    cx={x(index)}
+                    cy={y(snapshot[item.key])}
+                    r="4"
+                    fill={item.color}
+                  >
+                    <title>{`${item.label}: ${snapshot[item.key] ?? 0}% — round ${snapshot.round_number}`}</title>
+                  </circle>
+                ))}
+              </g>
+            );
+          })}
+          {snapshots.map((snapshot, index) => (
+            <text
+              key={snapshot.id}
+              x={x(index)}
+              y={height - 8}
+              textAnchor="middle"
+              className="fill-muted-foreground text-[10px]"
+            >
+              R{snapshot.round_number}
+            </text>
+          ))}
+        </svg>
+      </div>
+    </div>
+  );
 }
 
 function formatDate(value: string) {
@@ -337,6 +450,13 @@ export default function NewsWorkspace() {
       return insightFetch<PaginatedNewsResponse>(endpoint);
     },
     placeholderData: keepPreviousData,
+    retry: false,
+  });
+
+  const snapshotsQuery = useQuery({
+    queryKey: ["insight-news-snapshots", sentimentTarget?.id],
+    queryFn: () => insightFetch<{ data: NewsSnapshot[] }>(`/news/${sentimentTarget?.id}/snapshots`),
+    enabled: Boolean(sentimentTarget?.id && sentimentTarget.analysis_type === "comprehensive"),
     retry: false,
   });
 
@@ -635,12 +755,20 @@ export default function NewsWorkspace() {
           ? {
               link: validEntries[0].url,
               comment_count: validEntries[0].commentCount,
+              analysis_type: form.analysis_type,
+              ...(form.analysis_type === "comprehensive"
+                ? { track_days: Number(form.track_days) }
+                : {}),
             }
           : {
               links: validEntries.map((e) => ({
                 link: e.url,
                 comment_count: e.commentCount,
               })),
+              analysis_type: form.analysis_type,
+              ...(form.analysis_type === "comprehensive"
+                ? { track_days: Number(form.track_days) }
+                : {}),
             };
 
       await createMutation.mutateAsync(payload);
@@ -967,6 +1095,62 @@ export default function NewsWorkspace() {
           <form onSubmit={submitForm} className="space-y-6">
             {editorMode === "create" ? (
               <div className="space-y-4">
+                <div className="space-y-3">
+                  <Label>Analysis mode</Label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {(
+                      [
+                        {
+                          value: "quick",
+                          title: "Quick analysis",
+                          description: "Run once and return the latest sentiment report.",
+                        },
+                        {
+                          value: "comprehensive",
+                          title: "Comprehensive analysis",
+                          description: "Track changes across repeated analysis rounds.",
+                        },
+                      ] as const
+                    ).map((mode) => (
+                      <button
+                        key={mode.value}
+                        type="button"
+                        onClick={() =>
+                          setForm((current) => ({ ...current, analysis_type: mode.value }))
+                        }
+                        className={`rounded-2xl border p-4 text-left transition ${
+                          form.analysis_type === mode.value
+                            ? "border-primary bg-primary/5 ring-2 ring-primary/15"
+                            : "border-border/70 hover:border-primary/40"
+                        }`}
+                      >
+                        <span className="font-semibold">{mode.title}</span>
+                        <span className="mt-1 block text-sm text-muted-foreground">
+                          {mode.description}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {form.analysis_type === "comprehensive" && (
+                    <div className="max-w-xs space-y-2">
+                      <Label htmlFor="track-days">Tracking duration (days)</Label>
+                      <Input
+                        id="track-days"
+                        type="number"
+                        min="1"
+                        max="14"
+                        value={form.track_days}
+                        onChange={(event) =>
+                          setForm((current) => ({ ...current, track_days: event.target.value }))
+                        }
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        n8n will analyze the story every three hours for up to 14 days.
+                      </p>
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-3">
                   <Label>Add links (Optional comment limit)</Label>
                   <p className="text-sm text-muted-foreground">
@@ -1321,6 +1505,9 @@ export default function NewsWorkspace() {
                   <Badge variant="secondary" className="rounded-full">
                     {String(sentimentTarget.sentiment?.total_comments ?? 0)} comments
                   </Badge>
+                  <Badge variant="outline" className="rounded-full capitalize">
+                    {sentimentTarget.analysis_type ?? "quick"} analysis
+                  </Badge>
                   <a
                     href={sentimentTarget.link}
                     target="_blank"
@@ -1365,6 +1552,39 @@ export default function NewsWorkspace() {
                     </div>
                   ))}
                 </div>
+
+                {sentimentTarget.analysis_type === "comprehensive" && (
+                  <section className="space-y-3 rounded-3xl border border-border/70 bg-muted/20 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="flex items-center gap-2 font-semibold">
+                          <Activity className="size-4 text-primary" /> Sentiment trend
+                        </h3>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Changes across {sentimentTarget.track_days ?? 3} days of analysis.
+                        </p>
+                      </div>
+                      {snapshotsQuery.data?.data.length ? (
+                        <Badge variant="secondary">{snapshotsQuery.data.data.length} rounds</Badge>
+                      ) : null}
+                    </div>
+                    {snapshotsQuery.isLoading ? (
+                      <div className="flex h-40 items-center justify-center text-muted-foreground">
+                        <Loader2 className="mr-2 size-4 animate-spin" /> Loading snapshots
+                      </div>
+                    ) : snapshotsQuery.isError ? (
+                      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                        Snapshot history could not be loaded.
+                      </div>
+                    ) : snapshotsQuery.data?.data.length ? (
+                      <SnapshotTrendChart snapshots={snapshotsQuery.data.data} />
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                        Waiting for the first comprehensive-analysis snapshot.
+                      </div>
+                    )}
+                  </section>
+                )}
 
                 <div className="grid gap-4 lg:grid-cols-[1.35fr_0.85fr]">
                   <div className="space-y-4">
