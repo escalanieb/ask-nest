@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createColumnHelper,
@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clipboard,
+  Clock3,
   ExternalLink,
   Loader2,
   PenLine,
@@ -313,6 +314,67 @@ function SnapshotTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
   );
 }
 
+function formatCountdown(milliseconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return [
+    hours > 0 ? `${hours}h` : null,
+    minutes > 0 || hours > 0 ? `${minutes}m` : null,
+    `${seconds}s`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function EstimatedNextRound({ news, snapshots }: { news: NewsItem; snapshots: NewsSnapshot[] }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const latestSnapshot = snapshots.at(-1);
+  if (!latestSnapshot) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Clock3 className="size-3.5" /> First round pending
+      </div>
+    );
+  }
+
+  const nextRoundAt = new Date(latestSnapshot.captured_at).getTime() + 3 * 60 * 60 * 1000;
+  const trackingEndsAt =
+    new Date(news.created_at).getTime() + (news.track_days ?? 3) * 24 * 60 * 60 * 1000;
+
+  if (nextRoundAt > trackingEndsAt) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <CheckCircle2 className="size-3.5" /> Tracking window complete
+      </div>
+    );
+  }
+
+  const remaining = nextRoundAt - now;
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+      <Clock3 className="size-3.5" />
+      <span>
+        Estimated next round:{" "}
+        <strong className="font-medium text-foreground">
+          {formatDate(new Date(nextRoundAt).toISOString())}
+        </strong>
+      </span>
+      <span className="font-mono tabular-nums text-primary">
+        {remaining > 0 ? `in ${formatCountdown(remaining)}` : "due now — awaiting workflow"}
+      </span>
+    </div>
+  );
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", {
     month: "short",
@@ -419,6 +481,7 @@ export default function NewsWorkspace() {
   const [search, setSearch] = useState("");
   const [toneFilter, setToneFilter] = useState<"all" | SentimentTone>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [analysisFilter, setAnalysisFilter] = useState<"all" | AnalysisType>("all");
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [editorMode, setEditorMode] = useState<EditorMode>("create");
   const [editorOpen, setEditorOpen] = useState(false);
@@ -438,12 +501,19 @@ export default function NewsWorkspace() {
   }, []);
 
   const newsQuery = useQuery({
-    queryKey: ["insight-news", deferredSearch, pagination.pageIndex, pagination.pageSize],
+    queryKey: [
+      "insight-news",
+      deferredSearch,
+      analysisFilter,
+      pagination.pageIndex,
+      pagination.pageSize,
+    ],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(pagination.pageIndex + 1),
         per_page: String(pagination.pageSize),
       });
+      if (analysisFilter !== "all") params.set("analysis_type", analysisFilter);
       const endpoint = deferredSearch
         ? `/news/search?q=${encodeURIComponent(deferredSearch)}&${params.toString()}`
         : `/news?${params.toString()}`;
@@ -457,6 +527,7 @@ export default function NewsWorkspace() {
     queryKey: ["insight-news-snapshots", sentimentTarget?.id],
     queryFn: () => insightFetch<{ data: NewsSnapshot[] }>(`/news/${sentimentTarget?.id}/snapshots`),
     enabled: Boolean(sentimentTarget?.id && sentimentTarget.analysis_type === "comprehensive"),
+    refetchInterval: sentimentTarget?.analysis_type === "comprehensive" ? 60 * 1000 : false,
     retry: false,
   });
 
@@ -614,11 +685,16 @@ export default function NewsWorkspace() {
               <p className="overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] font-medium leading-6 text-foreground">
                 {info.getValue()}
               </p>
-              {info.row.original.sentiment && (
-                <Badge className={`w-fit rounded-full text-xs ${sentimentToneStyles[tone]}`}>
-                  {sentimentToneLabels[tone]}
+              <div className="flex flex-wrap gap-2">
+                {info.row.original.sentiment && (
+                  <Badge className={`w-fit rounded-full text-xs ${sentimentToneStyles[tone]}`}>
+                    {sentimentToneLabels[tone]}
+                  </Badge>
+                )}
+                <Badge variant="outline" className="w-fit rounded-full text-xs capitalize">
+                  {info.row.original.analysis_type ?? "quick"}
                 </Badge>
-              )}
+              </div>
             </div>
           );
         },
@@ -871,6 +947,26 @@ export default function NewsWorkspace() {
             </Button>
           ))}
         </div>
+      </section>
+
+      {/* ── Analysis type filter ── */}
+      <section className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-muted-foreground shrink-0">Analysis</span>
+        {(["all", "quick", "comprehensive"] as const).map((analysisType) => (
+          <Button
+            key={analysisType}
+            variant={analysisFilter === analysisType ? "default" : "outline"}
+            onClick={() => {
+              setAnalysisFilter(analysisType);
+              setPagination((current) =>
+                current.pageIndex === 0 ? current : { ...current, pageIndex: 0 },
+              );
+            }}
+            className="rounded-full px-4 capitalize"
+          >
+            {analysisType === "all" ? "All analyses" : analysisType}
+          </Button>
+        ))}
       </section>
 
       {/* ── Source filters ── */}
@@ -1568,6 +1664,12 @@ export default function NewsWorkspace() {
                         <Badge variant="secondary">{snapshotsQuery.data.data.length} rounds</Badge>
                       ) : null}
                     </div>
+                    {!snapshotsQuery.isLoading && !snapshotsQuery.isError ? (
+                      <EstimatedNextRound
+                        news={sentimentTarget}
+                        snapshots={snapshotsQuery.data?.data ?? []}
+                      />
+                    ) : null}
                     {snapshotsQuery.isLoading ? (
                       <div className="flex h-40 items-center justify-center text-muted-foreground">
                         <Loader2 className="mr-2 size-4 animate-spin" /> Loading snapshots
