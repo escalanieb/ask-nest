@@ -329,7 +329,15 @@ function formatCountdown(milliseconds: number) {
     .join(" ");
 }
 
-function EstimatedNextRound({ news, snapshots }: { news: NewsItem; snapshots: NewsSnapshot[] }) {
+function NextRoundSchedule({
+  news,
+  latestSnapshot,
+  compact = false,
+}: {
+  news: NewsItem;
+  latestSnapshot?: NewsSnapshot | null;
+  compact?: boolean;
+}) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -337,7 +345,6 @@ function EstimatedNextRound({ news, snapshots }: { news: NewsItem; snapshots: Ne
     return () => window.clearInterval(timer);
   }, []);
 
-  const latestSnapshot = snapshots.at(-1);
   if (!latestSnapshot) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -359,6 +366,21 @@ function EstimatedNextRound({ news, snapshots }: { news: NewsItem; snapshots: Ne
   }
 
   const remaining = nextRoundAt - now;
+
+  if (compact) {
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center gap-1.5 font-mono text-xs font-medium tabular-nums text-primary">
+          <Clock3 className="size-3.5 shrink-0" />
+          {remaining > 0 ? formatCountdown(remaining) : "Due now"}
+        </div>
+        <p className="whitespace-nowrap text-[11px] text-muted-foreground">
+          R{latestSnapshot.round_number} · {formatShortDate(nextRoundAt)}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
       <Clock3 className="size-3.5" />
@@ -380,6 +402,15 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatShortDate(value: string | number) {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(value));
@@ -520,6 +551,7 @@ export default function NewsWorkspace() {
       return insightFetch<PaginatedNewsResponse>(endpoint);
     },
     placeholderData: keepPreviousData,
+    refetchInterval: 60 * 1000,
     retry: false,
   });
 
@@ -705,6 +737,23 @@ export default function NewsWorkspace() {
         minSize: 100,
         maxSize: 140,
         cell: (info) => <StatusBadge status={getScrapingStatus(info.getValue())} />,
+      }),
+      columnHelper.display({
+        id: "next_round",
+        header: "Next round",
+        size: 170,
+        minSize: 155,
+        maxSize: 190,
+        cell: ({ row }) =>
+          row.original.analysis_type === "comprehensive" ? (
+            <NextRoundSchedule
+              news={row.original}
+              latestSnapshot={row.original.latest_snapshot}
+              compact
+            />
+          ) : (
+            <span className="text-xs text-muted-foreground/60">Not scheduled</span>
+          ),
       }),
       columnHelper.accessor("source", {
         header: "Source",
@@ -1665,9 +1714,9 @@ export default function NewsWorkspace() {
                       ) : null}
                     </div>
                     {!snapshotsQuery.isLoading && !snapshotsQuery.isError ? (
-                      <EstimatedNextRound
+                      <NextRoundSchedule
                         news={sentimentTarget}
-                        snapshots={snapshotsQuery.data?.data ?? []}
+                        latestSnapshot={snapshotsQuery.data?.data.at(-1)}
                       />
                     ) : null}
                     {snapshotsQuery.isLoading ? (
