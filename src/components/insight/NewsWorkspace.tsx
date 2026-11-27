@@ -1174,15 +1174,15 @@ export default function NewsWorkspace() {
         );
         const objectUrl = URL.createObjectURL(blob);
         const anchor = document.createElement("a");
-        const titleSlug =
-          item.title
-            .toLowerCase()
-            .trim()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-|-$/g, "") || `comprehensive-analysis-${item.id}`;
+        const exportDate = new Intl.DateTimeFormat("en-CA", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          timeZone: "Asia/Manila",
+        }).format(new Date());
 
         anchor.href = objectUrl;
-        anchor.download = `${titleSlug}-round-history.${format}`;
+        anchor.download = `insight-${item.id}-rounds-${exportDate}.${format}`;
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
