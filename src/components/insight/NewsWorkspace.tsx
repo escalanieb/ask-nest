@@ -326,6 +326,195 @@ function SnapshotTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
   );
 }
 
+const reactionSeries = [
+  { key: "like", label: "Like", color: "#2563eb" },
+  { key: "love", label: "Love", color: "#e11d48" },
+  { key: "care", label: "Care", color: "#f59e0b" },
+  { key: "haha", label: "Haha", color: "#eab308" },
+  { key: "wow", label: "Wow", color: "#8b5cf6" },
+  { key: "sad", label: "Sad", color: "#64748b" },
+  { key: "angry", label: "Angry", color: "#dc2626" },
+] as const;
+
+function formatMetric(value: number) {
+  return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(
+    value,
+  );
+}
+
+function snapshotReactionTotal(snapshot: NewsSnapshot) {
+  if (snapshot.reaction_count !== null && snapshot.reaction_count !== undefined) {
+    return snapshot.reaction_count;
+  }
+
+  if (!snapshot.reactions) return null;
+
+  return reactionSeries.reduce((total, reaction) => {
+    return total + (snapshot.reactions?.[reaction.key] ?? 0);
+  }, 0);
+}
+
+function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
+  const points = snapshots
+    .map((snapshot) => ({ snapshot, total: snapshotReactionTotal(snapshot) }))
+    .filter((point): point is { snapshot: NewsSnapshot; total: number } => point.total !== null);
+
+  if (!points.length) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
+        Reaction history will appear after a round returns reaction data.
+      </div>
+    );
+  }
+
+  const width = 760;
+  const height = 240;
+  const padding = 42;
+  const plotWidth = width - padding * 2;
+  const plotHeight = height - padding * 2;
+  const maximum = Math.max(...points.map((point) => point.total), 1);
+  const x = (index: number) =>
+    points.length <= 1 ? width / 2 : padding + (index / (points.length - 1)) * plotWidth;
+  const y = (value: number) => padding + (1 - value / maximum) * plotHeight;
+  const latest = points.at(-1)!;
+  const previous = points.at(-2);
+  const delta = previous ? latest.total - previous.total : null;
+  const breakdowns = points.filter((point) => point.snapshot.reactions);
+  const displayedBreakdowns = breakdowns.slice(-12);
+  const labelEvery = Math.max(1, Math.ceil(points.length / 10));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="rounded-2xl border border-border/60 bg-background px-4 py-3">
+          <p className="text-xs text-muted-foreground">Latest reactions</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">
+            {latest.total.toLocaleString()}
+          </p>
+        </div>
+        {delta !== null ? (
+          <Badge variant="secondary" className="gap-1 tabular-nums">
+            {delta >= 0 ? (
+              <TrendingUp className="size-3.5" />
+            ) : (
+              <TrendingDown className="size-3.5" />
+            )}
+            {delta >= 0 ? "+" : ""}
+            {delta.toLocaleString()} since previous round
+          </Badge>
+        ) : null}
+        {latest.snapshot.like_count_only ? <Badge variant="outline">Likes only</Badge> : null}
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-border/60 bg-background p-2">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="min-w-[620px]"
+          role="img"
+          aria-label="Total reactions over comprehensive analysis rounds"
+        >
+          {[0, 0.5, 1].map((ratio) => {
+            const tick = maximum * ratio;
+            return (
+              <g key={ratio}>
+                <line
+                  x1={padding}
+                  x2={width - padding}
+                  y1={y(tick)}
+                  y2={y(tick)}
+                  stroke="currentColor"
+                  className="text-border"
+                  strokeDasharray="4 5"
+                />
+                <text x={4} y={y(tick) + 4} className="fill-muted-foreground text-[10px]">
+                  {formatMetric(tick)}
+                </text>
+              </g>
+            );
+          })}
+          {points.length > 1 ? (
+            <polyline
+              points={points.map((point, index) => `${x(index)},${y(point.total)}`).join(" ")}
+              fill="none"
+              stroke="#7c3aed"
+              strokeWidth="3"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          ) : null}
+          {points.map((point, index) => (
+            <g key={point.snapshot.id}>
+              <circle cx={x(index)} cy={y(point.total)} r="4" fill="#7c3aed">
+                <title>{`${point.total.toLocaleString()} reactions — round ${point.snapshot.round_number} — ${formatDate(point.snapshot.captured_at)}${index > 0 ? ` — ${point.total - points[index - 1].total >= 0 ? "+" : ""}${(point.total - points[index - 1].total).toLocaleString()} from previous` : ""}`}</title>
+              </circle>
+              {index === 0 || index === points.length - 1 || index % labelEvery === 0 ? (
+                <text
+                  x={x(index)}
+                  y={height - 8}
+                  textAnchor="middle"
+                  className="fill-muted-foreground text-[10px]"
+                >
+                  R{point.snapshot.round_number}
+                </text>
+              ) : null}
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      {breakdowns.length ? (
+        <div className="space-y-3 rounded-2xl border border-border/60 bg-background p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+              {reactionSeries.map((reaction) => (
+                <span key={reaction.key} className="inline-flex items-center gap-1.5">
+                  <span
+                    className="size-2 rounded-full"
+                    style={{ backgroundColor: reaction.color }}
+                  />
+                  {reaction.label}
+                </span>
+              ))}
+            </div>
+            {breakdowns.length > displayedBreakdowns.length ? (
+              <span className="text-xs text-muted-foreground">Latest 12 rounds</span>
+            ) : null}
+          </div>
+          <div className="space-y-2.5">
+            {displayedBreakdowns.map(({ snapshot }) => {
+              const breakdownTotal = reactionSeries.reduce(
+                (total, reaction) => total + (snapshot.reactions?.[reaction.key] ?? 0),
+                0,
+              );
+
+              return (
+                <div key={snapshot.id} className="grid grid-cols-[2rem_1fr] items-center gap-2">
+                  <span className="text-xs text-muted-foreground">R{snapshot.round_number}</span>
+                  <div className="flex h-3 overflow-hidden rounded-full bg-muted">
+                    {reactionSeries.map((reaction) => {
+                      const count = snapshot.reactions?.[reaction.key] ?? 0;
+                      return count > 0 ? (
+                        <span
+                          key={reaction.key}
+                          style={{
+                            width: `${(count / Math.max(breakdownTotal, 1)) * 100}%`,
+                            backgroundColor: reaction.color,
+                          }}
+                          title={`${reaction.label}: ${count.toLocaleString()}`}
+                        />
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function formatCountdown(milliseconds: number) {
   const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
   const hours = Math.floor(totalSeconds / 3600);
@@ -346,8 +535,10 @@ function formatRoundCount(count: number) {
 }
 
 function formatIntervalLabel(minutes: number) {
-  return comprehensiveIntervalOptions.find((option) => option.value === minutes)?.label ??
-    `${minutes} minutes`;
+  return (
+    comprehensiveIntervalOptions.find((option) => option.value === minutes)?.label ??
+    `${minutes} minutes`
+  );
 }
 
 function NextRoundSchedule({
@@ -375,8 +566,7 @@ function NextRoundSchedule({
   }
 
   const intervalMinutes = news.interval_minutes ?? 180;
-  const nextRoundAt =
-    new Date(latestSnapshot.captured_at).getTime() + intervalMinutes * 60 * 1000;
+  const nextRoundAt = new Date(latestSnapshot.captured_at).getTime() + intervalMinutes * 60 * 1000;
   const trackingEndsAt =
     new Date(news.created_at).getTime() + (news.track_days ?? 3) * 24 * 60 * 60 * 1000;
 
@@ -1349,7 +1539,8 @@ export default function NewsWorkspace() {
                           ))}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          A new round starts every {formatIntervalLabel(Number(form.interval_minutes))}.
+                          A new round starts every{" "}
+                          {formatIntervalLabel(Number(form.interval_minutes))}.
                         </p>
                       </div>
                     </div>
@@ -1789,7 +1980,20 @@ export default function NewsWorkspace() {
                         Snapshot history could not be loaded.
                       </div>
                     ) : snapshotsQuery.data?.data.length ? (
-                      <SnapshotTrendChart snapshots={snapshotsQuery.data.data} />
+                      <div className="space-y-6">
+                        <SnapshotTrendChart snapshots={snapshotsQuery.data.data} />
+                        <div className="border-t border-border/70 pt-5">
+                          <div className="mb-3">
+                            <h3 className="flex items-center gap-2 font-semibold">
+                              <BarChart2 className="size-4 text-violet-600" /> Reaction trend
+                            </h3>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Total growth and reaction mix captured at each round.
+                            </p>
+                          </div>
+                          <ReactionTrendChart snapshots={snapshotsQuery.data.data} />
+                        </div>
+                      </div>
                     ) : (
                       <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
                         Waiting for the first comprehensive-analysis snapshot.

@@ -32,9 +32,22 @@ export interface NewsSnapshot {
   actual_facebook_comment_count?: number | null;
   scrape_comment_count?: number | null;
   reaction_count?: number | null;
+  reactions?: ReactionCounts | null;
+  reaction_breakdown_available?: boolean | null;
+  like_count_only?: boolean | null;
   view_count?: number | null;
   share_count?: number | null;
   payload: Record<string, unknown>;
+}
+
+export interface ReactionCounts {
+  like?: number;
+  love?: number;
+  care?: number;
+  haha?: number;
+  wow?: number;
+  sad?: number;
+  angry?: number;
 }
 
 export interface NewsItem {
@@ -56,15 +69,7 @@ export interface NewsItem {
   like_count?: number | null;
   like_count_only?: boolean | null;
   share_count?: number | null;
-  reactions?: {
-    like?: number;
-    love?: number;
-    haha?: number;
-    wow?: number;
-    sad?: number;
-    angry?: number;
-    care?: number;
-  } | null;
+  reactions?: ReactionCounts | null;
   user_id: number;
   created_at: string;
   updated_at: string;
