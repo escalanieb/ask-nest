@@ -328,14 +328,17 @@ function SnapshotTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
 }
 
 const reactionSeries = [
-  { key: "like", label: "Like", color: "#2563eb" },
-  { key: "love", label: "Love", color: "#e11d48" },
-  { key: "care", label: "Care", color: "#f59e0b" },
-  { key: "haha", label: "Haha", color: "#eab308" },
-  { key: "wow", label: "Wow", color: "#8b5cf6" },
-  { key: "sad", label: "Sad", color: "#64748b" },
-  { key: "angry", label: "Angry", color: "#dc2626" },
+  { key: "like", label: "Like", emoji: "👍", color: "#2563eb" },
+  { key: "love", label: "Love", emoji: "❤️", color: "#e11d48" },
+  { key: "care", label: "Care", emoji: "🤗", color: "#f59e0b" },
+  { key: "haha", label: "Haha", emoji: "😂", color: "#eab308" },
+  { key: "wow", label: "Wow", emoji: "😮", color: "#8b5cf6" },
+  { key: "sad", label: "Sad", emoji: "😢", color: "#64748b" },
+  { key: "angry", label: "Angry", emoji: "😡", color: "#dc2626" },
 ] as const;
+
+type ReactionKey = (typeof reactionSeries)[number]["key"];
+type ReactionSelection = "total" | ReactionKey;
 
 function formatMetric(value: number) {
   return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(
@@ -356,6 +359,7 @@ function snapshotReactionTotal(snapshot: NewsSnapshot) {
 }
 
 function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
+  const [selectedSeries, setSelectedSeries] = useState<ReactionSelection[]>(["total"]);
   const points = snapshots
     .map((snapshot) => ({ snapshot, total: snapshotReactionTotal(snapshot) }))
     .filter((point): point is { snapshot: NewsSnapshot; total: number } => point.total !== null);
@@ -373,7 +377,19 @@ function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
   const padding = 42;
   const plotWidth = width - padding * 2;
   const plotHeight = height - padding * 2;
-  const maximum = Math.max(...points.map((point) => point.total), 1);
+  const selectedDefinitions = selectedSeries.map((key) =>
+    key === "total"
+      ? { key, label: "Total", emoji: "Σ", color: "#7c3aed" }
+      : reactionSeries.find((reaction) => reaction.key === key)!,
+  );
+  const seriesValue = (point: (typeof points)[number], key: ReactionSelection) =>
+    key === "total" ? point.total : (point.snapshot.reactions?.[key] ?? null);
+  const maximum = Math.max(
+    ...selectedDefinitions.flatMap((series) =>
+      points.map((point) => seriesValue(point, series.key) ?? 0),
+    ),
+    1,
+  );
   const x = (index: number) =>
     points.length <= 1 ? width / 2 : padding + (index / (points.length - 1)) * plotWidth;
   const y = (value: number) => padding + (1 - value / maximum) * plotHeight;
@@ -383,6 +399,52 @@ function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
   const breakdowns = points.filter((point) => point.snapshot.reactions);
   const displayedBreakdowns = breakdowns.slice(-12);
   const labelEvery = Math.max(1, Math.ceil(points.length / 10));
+  const deltas = points.slice(1).map((point, index) => ({
+    point,
+    value: point.total - points[index].total,
+  }));
+  const deltaWidth = 760;
+  const deltaHeight = 150;
+  const deltaPadding = 42;
+  const deltaMaximum = Math.max(...deltas.map((item) => item.value), 0);
+  const deltaMinimum = Math.min(...deltas.map((item) => item.value), 0);
+  const deltaRange = Math.max(deltaMaximum - deltaMinimum, 1);
+  const deltaY = (value: number) => 16 + ((deltaMaximum - value) / deltaRange) * (deltaHeight - 48);
+  const zeroY = deltaY(0);
+  const deltaX = (index: number) =>
+    deltas.length <= 1
+      ? deltaWidth / 2
+      : deltaPadding + (index / (deltas.length - 1)) * (deltaWidth - deltaPadding * 2);
+  const barWidth = Math.max(5, Math.min(30, (deltaWidth - deltaPadding * 2) / deltas.length / 1.8));
+
+  const toggleSeries = (key: ReactionSelection) => {
+    if (key === "total") {
+      setSelectedSeries(["total"]);
+      return;
+    }
+
+    setSelectedSeries((current) => {
+      const reactionsOnly = current.filter((item) => item !== "total");
+      const next = reactionsOnly.includes(key)
+        ? reactionsOnly.filter((item) => item !== key)
+        : [...reactionsOnly, key].slice(-3);
+
+      return next.length ? next : ["total"];
+    });
+  };
+
+  const pointTooltip = (point: (typeof points)[number], index: number) => {
+    const pointDelta = index > 0 ? point.total - points[index - 1].total : null;
+    const reactions = reactionSeries
+      .map((reaction) => {
+        const count = point.snapshot.reactions?.[reaction.key];
+        return count === undefined ? null : `${reaction.emoji} ${count.toLocaleString()}`;
+      })
+      .filter(Boolean)
+      .join(" · ");
+
+    return `Round ${point.snapshot.round_number} · ${formatDate(point.snapshot.captured_at)}\nTotal: ${point.total.toLocaleString()}${pointDelta === null ? "" : ` · ${pointDelta >= 0 ? "+" : ""}${pointDelta.toLocaleString()} this round`}${reactions ? `\n${reactions}` : ""}`;
+  };
 
   return (
     <div className="space-y-4">
@@ -407,12 +469,53 @@ function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
         {latest.snapshot.like_count_only ? <Badge variant="outline">Likes only</Badge> : null}
       </div>
 
+      {breakdowns.length ? (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              aria-pressed={selectedSeries.includes("total")}
+              onClick={() => toggleSeries("total")}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                selectedSeries.includes("total")
+                  ? "border-violet-500 bg-violet-50 text-violet-700"
+                  : "border-border bg-background text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Σ Total
+            </button>
+            {reactionSeries.map((reaction) => {
+              const active = selectedSeries.includes(reaction.key);
+              return (
+                <button
+                  key={reaction.key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => toggleSeries(reaction.key)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                    active
+                      ? "border-current bg-muted text-foreground"
+                      : "border-border bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                  style={active ? { color: reaction.color } : undefined}
+                >
+                  {reaction.emoji} {reaction.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Select up to three reaction types to compare. Choose Total to reset the chart.
+          </p>
+        </div>
+      ) : null}
+
       <div className="overflow-x-auto rounded-2xl border border-border/60 bg-background p-2">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="min-w-[620px]"
           role="img"
-          aria-label="Total reactions over comprehensive analysis rounds"
+          aria-label="Selected reaction counts over comprehensive analysis rounds"
         >
           {[0, 0.5, 1].map((ratio) => {
             const tick = maximum * ratio;
@@ -433,21 +536,50 @@ function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
               </g>
             );
           })}
-          {points.length > 1 ? (
-            <polyline
-              points={points.map((point, index) => `${x(index)},${y(point.total)}`).join(" ")}
-              fill="none"
-              stroke="#7c3aed"
-              strokeWidth="3"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-          ) : null}
+          {selectedDefinitions.map((series) => {
+            const seriesPoints = points
+              .map((point, index) => ({ point, index, value: seriesValue(point, series.key) }))
+              .filter(
+                (item): item is { point: (typeof points)[number]; index: number; value: number } =>
+                  item.value !== null,
+              );
+
+            return (
+              <g key={series.key}>
+                {seriesPoints.length > 1 ? (
+                  <polyline
+                    points={seriesPoints
+                      .map((item) => `${x(item.index)},${y(item.value)}`)
+                      .join(" ")}
+                    fill="none"
+                    stroke={series.color}
+                    strokeWidth="3"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                ) : null}
+                {seriesPoints.map((item) => (
+                  <circle
+                    key={`${series.key}-${item.point.snapshot.id}`}
+                    cx={x(item.index)}
+                    cy={y(item.value)}
+                    r="4"
+                    fill={series.color}
+                  >
+                    <title>{`${series.emoji} ${series.label}: ${item.value.toLocaleString()}${
+                      item.index > 0 && seriesValue(points[item.index - 1], series.key) !== null
+                        ? ` · ${item.value - (seriesValue(points[item.index - 1], series.key) ?? 0) >= 0 ? "+" : ""}${(
+                            item.value - (seriesValue(points[item.index - 1], series.key) ?? 0)
+                          ).toLocaleString()} from previous`
+                        : ""
+                    }\n${pointTooltip(item.point, item.index)}`}</title>
+                  </circle>
+                ))}
+              </g>
+            );
+          })}
           {points.map((point, index) => (
             <g key={point.snapshot.id}>
-              <circle cx={x(index)} cy={y(point.total)} r="4" fill="#7c3aed">
-                <title>{`${point.total.toLocaleString()} reactions — round ${point.snapshot.round_number} — ${formatDate(point.snapshot.captured_at)}${index > 0 ? ` — ${point.total - points[index - 1].total >= 0 ? "+" : ""}${(point.total - points[index - 1].total).toLocaleString()} from previous` : ""}`}</title>
-              </circle>
               {index === 0 || index === points.length - 1 || index % labelEvery === 0 ? (
                 <text
                   x={x(index)}
@@ -463,8 +595,69 @@ function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
         </svg>
       </div>
 
+      {deltas.length ? (
+        <div className="space-y-2 rounded-2xl border border-border/60 bg-background p-2">
+          <div className="flex items-center justify-between px-2 pt-1">
+            <div>
+              <p className="text-sm font-medium">New reactions per round</p>
+              <p className="text-xs text-muted-foreground">
+                Change in total reactions since the preceding capture.
+              </p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <svg
+              viewBox={`0 0 ${deltaWidth} ${deltaHeight}`}
+              className="min-w-[620px]"
+              role="img"
+              aria-label="New reactions captured during each analysis interval"
+            >
+              <line
+                x1={deltaPadding}
+                x2={deltaWidth - deltaPadding}
+                y1={zeroY}
+                y2={zeroY}
+                stroke="currentColor"
+                className="text-border"
+              />
+              {deltas.map((item, index) => {
+                const valueY = deltaY(item.value);
+                return (
+                  <g key={item.point.snapshot.id}>
+                    <rect
+                      x={deltaX(index) - barWidth / 2}
+                      y={Math.min(valueY, zeroY)}
+                      width={barWidth}
+                      height={Math.max(2, Math.abs(zeroY - valueY))}
+                      rx="3"
+                      fill={item.value >= 0 ? "#7c3aed" : "#e11d48"}
+                    >
+                      <title>{`Round ${item.point.snapshot.round_number}: ${item.value >= 0 ? "+" : ""}${item.value.toLocaleString()} reactions\n${formatDate(item.point.snapshot.captured_at)}`}</title>
+                    </rect>
+                    <text
+                      x={deltaX(index)}
+                      y={deltaHeight - 7}
+                      textAnchor="middle"
+                      className="fill-muted-foreground text-[10px]"
+                    >
+                      R{item.point.snapshot.round_number}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        </div>
+      ) : null}
+
       {breakdowns.length ? (
         <div className="space-y-3 rounded-2xl border border-border/60 bg-background p-4">
+          <div>
+            <p className="text-sm font-medium">Reaction mix by round</p>
+            <p className="text-xs text-muted-foreground">
+              Each bar represents 100% of the available reaction breakdown.
+            </p>
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
               {reactionSeries.map((reaction) => (
@@ -501,7 +694,7 @@ function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
                             width: `${(count / Math.max(breakdownTotal, 1)) * 100}%`,
                             backgroundColor: reaction.color,
                           }}
-                          title={`${reaction.label}: ${count.toLocaleString()}`}
+                          title={`${reaction.emoji} ${reaction.label}: ${count.toLocaleString()} (${((count / Math.max(breakdownTotal, 1)) * 100).toFixed(1)}%) · Round ${snapshot.round_number} · ${formatDate(snapshot.captured_at)}`}
                         />
                       ) : null;
                     })}
