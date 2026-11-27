@@ -24,6 +24,7 @@ import {
   Plus,
   Search,
   Sparkles,
+  Square,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -557,6 +558,15 @@ function NextRoundSchedule({
     return () => window.clearInterval(timer);
   }, []);
 
+  if (news.monitoring_status === "stopped") {
+    return (
+      <div className="flex items-center gap-2 text-xs text-amber-700">
+        <Square className="size-3.5 fill-current" /> Monitoring stopped
+        {news.monitoring_stopped_at ? ` · ${formatShortDate(news.monitoring_stopped_at)}` : ""}
+      </div>
+    );
+  }
+
   if (!latestSnapshot) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -731,6 +741,7 @@ export default function NewsWorkspace() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<NewsItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<NewsItem | null>(null);
+  const [stopTarget, setStopTarget] = useState<NewsItem | null>(null);
   const [sentimentTarget, setSentimentTarget] = useState<NewsItem | null>(null);
   const [exportTarget, setExportTarget] = useState<NewsItem | null>(null);
   const [form, setForm] = useState<NewsFormState>(emptyFormState);
@@ -837,6 +848,21 @@ export default function NewsWorkspace() {
         }
       }
       toast.error(error.message || "Failed to delete news item");
+    },
+  });
+
+  const stopMonitoringMutation = useMutation({
+    mutationFn: async (id: number) =>
+      insightFetch<{ data: NewsItem; message: string }>(`/news/${id}/stop-monitoring`, "POST"),
+    onSuccess: async ({ data, message }) => {
+      toast.success(message || "Monitoring stopped successfully");
+      setStopTarget(null);
+      setSentimentTarget(data);
+      await queryClient.invalidateQueries({ queryKey: ["insight-news"] });
+      await queryClient.invalidateQueries({ queryKey: ["insight-news-snapshots", data.id] });
+    },
+    onError: (error: InsightApiError) => {
+      toast.error(error.message || "Failed to stop monitoring");
     },
   });
 
@@ -1903,6 +1929,12 @@ export default function NewsWorkspace() {
                   <Badge variant="outline" className="rounded-full capitalize">
                     {sentimentTarget.analysis_type ?? "quick"} analysis
                   </Badge>
+                  {sentimentTarget.analysis_type === "comprehensive" &&
+                  sentimentTarget.monitoring_status === "stopped" ? (
+                    <Badge variant="secondary" className="rounded-full">
+                      Monitoring stopped
+                    </Badge>
+                  ) : null}
                   <a
                     href={sentimentTarget.link}
                     target="_blank"
@@ -2221,6 +2253,18 @@ export default function NewsWorkspace() {
                 >
                   Edit story
                 </Button>
+                {sentimentTarget.analysis_type === "comprehensive" &&
+                sentimentTarget.monitoring_status !== "stopped" ? (
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className="border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                    onClick={() => setStopTarget(sentimentTarget)}
+                  >
+                    <Square className="size-3.5 fill-current" />
+                    Stop monitoring
+                  </Button>
+                ) : null}
                 <Button
                   variant="destructive"
                   type="button"
@@ -2269,6 +2313,44 @@ export default function NewsWorkspace() {
               </AlertDialogFooter>
             </>
           )}
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={Boolean(stopTarget)} onOpenChange={(open) => !open && setStopTarget(null)}>
+        <AlertDialogContent>
+          {stopTarget ? (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Stop comprehensive monitoring?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  No new rounds will be scheduled for{" "}
+                  <span className="font-medium text-foreground">{stopTarget.title}</span>. Existing
+                  sentiment and reaction history will remain available. This action cannot be
+                  resumed yet.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={stopMonitoringMutation.isPending}>
+                  Keep monitoring
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  disabled={stopMonitoringMutation.isPending}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    stopMonitoringMutation.mutate(stopTarget.id);
+                  }}
+                >
+                  {stopMonitoringMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Square className="size-3.5 fill-current" />
+                  )}
+                  Stop monitoring
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          ) : null}
         </AlertDialogContent>
       </AlertDialog>
 

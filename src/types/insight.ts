@@ -77,6 +77,8 @@ export interface NewsItem {
   analysis_type: AnalysisType;
   track_days?: number | null;
   interval_minutes?: number | null;
+  monitoring_status?: "active" | "stopped" | null;
+  monitoring_stopped_at?: string | null;
   latest_snapshot?: NewsSnapshot | null;
   snapshot_count?: number;
 }
