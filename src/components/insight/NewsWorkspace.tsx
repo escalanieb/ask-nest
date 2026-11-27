@@ -535,6 +535,17 @@ function formatRoundCount(count: number) {
   return `${count} ${count === 1 ? "round" : "rounds"}`;
 }
 
+function isMonitoringOngoing(news: NewsItem) {
+  if (news.analysis_type !== "comprehensive" || news.monitoring_status === "stopped") {
+    return false;
+  }
+
+  const trackingEndsAt =
+    new Date(news.created_at).getTime() + (news.track_days ?? 3) * 24 * 60 * 60 * 1000;
+
+  return trackingEndsAt > Date.now();
+}
+
 function formatIntervalLabel(minutes: number) {
   return (
     comprehensiveIntervalOptions.find((option) => option.value === minutes)?.label ??
@@ -2253,8 +2264,7 @@ export default function NewsWorkspace() {
                 >
                   Edit story
                 </Button>
-                {sentimentTarget.analysis_type === "comprehensive" &&
-                sentimentTarget.monitoring_status !== "stopped" ? (
+                {isMonitoringOngoing(sentimentTarget) ? (
                   <Button
                     variant="outline"
                     type="button"
