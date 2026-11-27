@@ -346,23 +346,61 @@ function formatMetric(value: number) {
   );
 }
 
+function snapshotReactionBreakdown(snapshot: NewsSnapshot) {
+  const payloadReactionCounts = snapshot.payload?.reaction_counts;
+  const payloadReactions = snapshot.payload?.reactions;
+  const source =
+    snapshot.reactions ??
+    (payloadReactionCounts && typeof payloadReactionCounts === "object"
+      ? payloadReactionCounts
+      : payloadReactions && typeof payloadReactions === "object"
+        ? payloadReactions
+        : null);
+
+  if (!source) return null;
+
+  const record = source as Record<string, unknown>;
+  const normalized: Partial<Record<ReactionKey, number>> = {};
+
+  for (const reaction of reactionSeries) {
+    const raw = reaction.key === "angry" ? (record.angry ?? record.anger) : record[reaction.key];
+    const value = Number(raw);
+    if (Number.isFinite(value) && value >= 0) normalized[reaction.key] = value;
+  }
+
+  return Object.keys(normalized).length ? normalized : null;
+}
+
 function snapshotReactionTotal(snapshot: NewsSnapshot) {
   if (snapshot.reaction_count !== null && snapshot.reaction_count !== undefined) {
     return snapshot.reaction_count;
   }
 
-  if (!snapshot.reactions) return null;
+  const reactions = snapshotReactionBreakdown(snapshot);
+  if (!reactions) return null;
 
   return reactionSeries.reduce((total, reaction) => {
-    return total + (snapshot.reactions?.[reaction.key] ?? 0);
+    return total + (reactions[reaction.key] ?? 0);
   }, 0);
 }
 
 function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
   const [selectedSeries, setSelectedSeries] = useState<ReactionSelection[]>(["total"]);
   const points = snapshots
-    .map((snapshot) => ({ snapshot, total: snapshotReactionTotal(snapshot) }))
-    .filter((point): point is { snapshot: NewsSnapshot; total: number } => point.total !== null);
+    .map((snapshot) => ({
+      snapshot,
+      total: snapshotReactionTotal(snapshot),
+      reactions: snapshotReactionBreakdown(snapshot),
+    }))
+    .filter(
+      (
+        point,
+      ): point is {
+        snapshot: NewsSnapshot;
+        total: number;
+        reactions: Partial<Record<ReactionKey, number>> | null;
+      } => point.total !== null,
+    );
 
   if (!points.length) {
     return (
@@ -383,7 +421,7 @@ function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
       : reactionSeries.find((reaction) => reaction.key === key)!,
   );
   const seriesValue = (point: (typeof points)[number], key: ReactionSelection) =>
-    key === "total" ? point.total : (point.snapshot.reactions?.[key] ?? null);
+    key === "total" ? point.total : (point.reactions?.[key] ?? null);
   const maximum = Math.max(
     ...selectedDefinitions.flatMap((series) =>
       points.map((point) => seriesValue(point, series.key) ?? 0),
@@ -396,7 +434,7 @@ function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
   const latest = points.at(-1)!;
   const previous = points.at(-2);
   const delta = previous ? latest.total - previous.total : null;
-  const breakdowns = points.filter((point) => point.snapshot.reactions);
+  const breakdowns = points.filter((point) => point.reactions);
   const displayedBreakdowns = breakdowns.slice(-12);
   const labelEvery = Math.max(1, Math.ceil(points.length / 10));
   const deltas = points.slice(1).map((point, index) => ({
@@ -437,7 +475,7 @@ function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
     const pointDelta = index > 0 ? point.total - points[index - 1].total : null;
     const reactions = reactionSeries
       .map((reaction) => {
-        const count = point.snapshot.reactions?.[reaction.key];
+        const count = point.reactions?.[reaction.key];
         return count === undefined ? null : `${reaction.emoji} ${count.toLocaleString()}`;
       })
       .filter(Boolean)
@@ -675,9 +713,9 @@ function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
             ) : null}
           </div>
           <div className="space-y-2.5">
-            {displayedBreakdowns.map(({ snapshot }) => {
+            {displayedBreakdowns.map(({ snapshot, reactions }) => {
               const breakdownTotal = reactionSeries.reduce(
-                (total, reaction) => total + (snapshot.reactions?.[reaction.key] ?? 0),
+                (total, reaction) => total + (reactions?.[reaction.key] ?? 0),
                 0,
               );
 
@@ -686,7 +724,7 @@ function ReactionTrendChart({ snapshots }: { snapshots: NewsSnapshot[] }) {
                   <span className="text-xs text-muted-foreground">R{snapshot.round_number}</span>
                   <div className="flex h-3 overflow-hidden rounded-full bg-muted">
                     {reactionSeries.map((reaction) => {
-                      const count = snapshot.reactions?.[reaction.key] ?? 0;
+                      const count = reactions?.[reaction.key] ?? 0;
                       return count > 0 ? (
                         <span
                           key={reaction.key}
