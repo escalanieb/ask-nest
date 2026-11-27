@@ -14,11 +14,15 @@ import {
   ArrowUpRight,
   BarChart2,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clipboard,
   Clock3,
+  Download,
   ExternalLink,
+  FileSpreadsheet,
+  FileText,
   Loader2,
   PenLine,
   Plus,
@@ -55,6 +59,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -986,6 +996,7 @@ export default function NewsWorkspace() {
   const [stopTarget, setStopTarget] = useState<NewsItem | null>(null);
   const [sentimentTarget, setSentimentTarget] = useState<NewsItem | null>(null);
   const [exportTarget, setExportTarget] = useState<NewsItem | null>(null);
+  const [exportingFormat, setExportingFormat] = useState<"xlsx" | "csv" | null>(null);
   const [form, setForm] = useState<NewsFormState>(emptyFormState);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [showAdvancedReport, setShowAdvancedReport] = useState(false);
@@ -1149,6 +1160,43 @@ export default function NewsWorkspace() {
   const openExportDialog = useCallback((item: NewsItem) => {
     setExportTarget(item);
   }, []);
+
+  const downloadComprehensiveExport = useCallback(
+    async (item: NewsItem, format: "xlsx" | "csv") => {
+      setExportingFormat(format);
+
+      try {
+        const blob = await insightFetch<Blob>(
+          `/news/${item.id}/export?format=${format}`,
+          "GET",
+          undefined,
+          { responseType: "blob" },
+        );
+        const objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        const titleSlug =
+          item.title
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "") || `comprehensive-analysis-${item.id}`;
+
+        anchor.href = objectUrl;
+        anchor.download = `${titleSlug}-round-history.${format}`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(objectUrl);
+        toast.success(`${format.toUpperCase()} export downloaded`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to export analysis";
+        toast.error(message);
+      } finally {
+        setExportingFormat(null);
+      }
+    },
+    [],
+  );
 
   const openEditorFromDetails = useCallback(
     (item: NewsItem) => {
@@ -2488,6 +2536,38 @@ export default function NewsWorkspace() {
                 <Button variant="outline" type="button" onClick={() => setSentimentTarget(null)}>
                   Close
                 </Button>
+                {sentimentTarget.analysis_type === "comprehensive" ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      disabled={exportingFormat !== null}
+                      render={<Button variant="outline" type="button" />}
+                    >
+                      {exportingFormat ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Download className="size-4" />
+                      )}
+                      Export
+                      <ChevronDown className="size-3.5" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-52">
+                      <DropdownMenuItem
+                        className="min-h-9"
+                        onClick={() => void downloadComprehensiveExport(sentimentTarget, "xlsx")}
+                      >
+                        <FileSpreadsheet className="text-emerald-600" />
+                        Export Excel (.xlsx)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="min-h-9"
+                        onClick={() => void downloadComprehensiveExport(sentimentTarget, "csv")}
+                      >
+                        <FileText className="text-sky-600" />
+                        Export CSV (.csv)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
                 <Button
                   variant="ghost"
                   type="button"
