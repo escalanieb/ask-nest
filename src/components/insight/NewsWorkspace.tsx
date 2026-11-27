@@ -109,6 +109,7 @@ interface NewsFormState {
   total_comments: string;
   analysis_type: AnalysisType;
   track_days: string;
+  interval_minutes: string;
 }
 
 const emptyFormState: NewsFormState = {
@@ -128,7 +129,16 @@ const emptyFormState: NewsFormState = {
   total_comments: "0",
   analysis_type: "quick",
   track_days: "3",
+  interval_minutes: "180",
 };
+
+const comprehensiveIntervalOptions = [
+  { value: 30, label: "30 minutes" },
+  { value: 60, label: "1 hour" },
+  { value: 180, label: "3 hours" },
+  { value: 360, label: "6 hours" },
+  { value: 720, label: "12 hours" },
+] as const;
 
 const sentimentToneLabels: Record<SentimentTone, string> = {
   positive: "Positive",
@@ -176,6 +186,7 @@ const columnHelper = createColumnHelper<NewsItem>();
 type AnalysisOptions = {
   analysis_type: AnalysisType;
   track_days?: number;
+  interval_minutes?: number;
 };
 type CreateSingleLinkPayload = AnalysisOptions & {
   link: string;
@@ -215,6 +226,7 @@ function toFormState(item?: NewsItem | null): NewsFormState {
     total_comments: String(item.sentiment?.total_comments ?? 0),
     analysis_type: item.analysis_type ?? "quick",
     track_days: String(item.track_days ?? 3),
+    interval_minutes: String(item.interval_minutes ?? 180),
   };
 }
 
@@ -333,6 +345,11 @@ function formatRoundCount(count: number) {
   return `${count} ${count === 1 ? "round" : "rounds"}`;
 }
 
+function formatIntervalLabel(minutes: number) {
+  return comprehensiveIntervalOptions.find((option) => option.value === minutes)?.label ??
+    `${minutes} minutes`;
+}
+
 function NextRoundSchedule({
   news,
   latestSnapshot,
@@ -357,7 +374,9 @@ function NextRoundSchedule({
     );
   }
 
-  const nextRoundAt = new Date(latestSnapshot.captured_at).getTime() + 3 * 60 * 60 * 1000;
+  const intervalMinutes = news.interval_minutes ?? 180;
+  const nextRoundAt =
+    new Date(latestSnapshot.captured_at).getTime() + intervalMinutes * 60 * 1000;
   const trackingEndsAt =
     new Date(news.created_at).getTime() + (news.track_days ?? 3) * 24 * 60 * 60 * 1000;
 
@@ -886,7 +905,10 @@ export default function NewsWorkspace() {
               comment_count: validEntries[0].commentCount,
               analysis_type: form.analysis_type,
               ...(form.analysis_type === "comprehensive"
-                ? { track_days: Number(form.track_days) }
+                ? {
+                    track_days: Number(form.track_days),
+                    interval_minutes: Number(form.interval_minutes),
+                  }
                 : {}),
             }
           : {
@@ -896,7 +918,10 @@ export default function NewsWorkspace() {
               })),
               analysis_type: form.analysis_type,
               ...(form.analysis_type === "comprehensive"
-                ? { track_days: Number(form.track_days) }
+                ? {
+                    track_days: Number(form.track_days),
+                    interval_minutes: Number(form.interval_minutes),
+                  }
                 : {}),
             };
 
@@ -1281,22 +1306,52 @@ export default function NewsWorkspace() {
                     ))}
                   </div>
                   {form.analysis_type === "comprehensive" && (
-                    <div className="max-w-xs space-y-2">
-                      <Label htmlFor="track-days">Tracking duration (days)</Label>
-                      <Input
-                        id="track-days"
-                        type="number"
-                        min="1"
-                        max="14"
-                        value={form.track_days}
-                        onChange={(event) =>
-                          setForm((current) => ({ ...current, track_days: event.target.value }))
-                        }
-                        required
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        n8n will analyze the story every three hours for up to 14 days.
-                      </p>
+                    <div className="grid gap-5 md:grid-cols-[16rem_1fr]">
+                      <div className="space-y-2">
+                        <Label htmlFor="track-days">Tracking duration (days)</Label>
+                        <Input
+                          id="track-days"
+                          type="number"
+                          min="1"
+                          max="14"
+                          value={form.track_days}
+                          onChange={(event) =>
+                            setForm((current) => ({ ...current, track_days: event.target.value }))
+                          }
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">Maximum of 14 days.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Round interval</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {comprehensiveIntervalOptions.map((option) => (
+                            <Button
+                              key={option.value}
+                              type="button"
+                              size="sm"
+                              variant={
+                                Number(form.interval_minutes) === option.value
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="rounded-full"
+                              onClick={() =>
+                                setForm((current) => ({
+                                  ...current,
+                                  interval_minutes: String(option.value),
+                                }))
+                              }
+                            >
+                              {option.label}
+                              {option.value === 180 ? " (default)" : ""}
+                            </Button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          A new round starts every {formatIntervalLabel(Number(form.interval_minutes))}.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
