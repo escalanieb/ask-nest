@@ -26,6 +26,7 @@ import {
   Loader2,
   PenLine,
   Plus,
+  RotateCcw,
   Search,
   Sparkles,
   Square,
@@ -165,14 +166,24 @@ const sentimentToneStyles: Record<SentimentTone, string> = {
   mixed: "bg-amber-500/12 text-amber-700 ring-amber-500/20",
 };
 
-type ScrapingStatus = "scraping" | "done";
+type AnalysisStatus = "scraping" | "done" | "failed";
 
-function getScrapingStatus(value?: string | null): ScrapingStatus {
+function getAnalysisStatus(value?: string | null): AnalysisStatus {
+  if (value === "failed") return "failed";
   if (value === "scraping") return "scraping";
   return "done";
 }
 
-function StatusBadge({ status }: { status: ScrapingStatus }) {
+function StatusBadge({ status }: { status: AnalysisStatus }) {
+  if (status === "failed") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-700 ring-1 ring-rose-500/20">
+        <AlertTriangle className="size-3.5" />
+        Failed
+      </span>
+    );
+  }
+
   if (status === "scraping") {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-500/20">
@@ -777,7 +788,11 @@ function formatRoundCount(count: number) {
 }
 
 function isMonitoringOngoing(news: NewsItem) {
-  if (news.analysis_type !== "comprehensive" || news.monitoring_status === "stopped") {
+  if (
+    news.status === "failed" ||
+    news.analysis_type !== "comprehensive" ||
+    news.monitoring_status === "stopped"
+  ) {
     return false;
   }
 
@@ -809,6 +824,14 @@ function NextRoundSchedule({
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  if (news.status === "failed") {
+    return (
+      <div className="flex items-center gap-2 text-xs font-medium text-rose-700">
+        <AlertTriangle className="size-3.5" /> Analysis failed · retry to continue
+      </div>
+    );
+  }
 
   if (news.monitoring_status === "stopped") {
     return (
@@ -1119,6 +1142,20 @@ export default function NewsWorkspace() {
     },
   });
 
+  const retryMutation = useMutation({
+    mutationFn: async (id: number) =>
+      insightFetch<{ data: NewsItem; message: string }>(`/news/${id}/retry`, "POST"),
+    onSuccess: async ({ data, message }) => {
+      toast.success(message || "Analysis queued again successfully");
+      setSentimentTarget((current) => (current?.id === data.id ? data : current));
+      await queryClient.invalidateQueries({ queryKey: ["insight-news"] });
+      await queryClient.invalidateQueries({ queryKey: ["insight-news-snapshots", data.id] });
+    },
+    onError: (error: InsightApiError) => {
+      toast.error(error.message || "Failed to retry analysis");
+    },
+  });
+
   const items = useMemo(() => newsQuery.data?.data ?? [], [newsQuery.data]);
 
   const sourceOptions = useMemo(() => {
@@ -1265,7 +1302,7 @@ export default function NewsWorkspace() {
         size: 120,
         minSize: 100,
         maxSize: 140,
-        cell: (info) => <StatusBadge status={getScrapingStatus(info.getValue())} />,
+        cell: (info) => <StatusBadge status={getAnalysisStatus(info.getValue())} />,
       }),
       columnHelper.display({
         id: "next_round",
@@ -1306,6 +1343,22 @@ export default function NewsWorkspace() {
         header: () => <span className="block text-right">Actions</span>,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-2">
+            {row.original.status === "failed" ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                disabled={retryMutation.isPending}
+                onClick={() => retryMutation.mutate(row.original.id)}
+              >
+                {retryMutation.isPending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="size-3.5" />
+                )}
+                Retry
+              </Button>
+            ) : null}
             <a
               href={row.original.link}
               target="_blank"
@@ -1337,7 +1390,7 @@ export default function NewsWorkspace() {
         ),
       }),
     ],
-    [openDetailsDialog, openExportDialog],
+    [openDetailsDialog, openExportDialog, retryMutation],
   );
 
   const table = useReactTable({
@@ -2196,6 +2249,35 @@ export default function NewsWorkspace() {
               </DialogHeader>
 
               <div className="space-y-5">
+                {sentimentTarget.status === "failed" ? (
+                  <div className="flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex gap-3">
+                      <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+                      <div>
+                        <p className="font-medium">Analysis failed</p>
+                        <p className="mt-1 text-sm text-rose-700">
+                          Retry with the saved link, comment count, and analysis settings. You do
+                          not need to recreate this story.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="shrink-0 border-rose-300 bg-white text-rose-700 hover:bg-rose-100 hover:text-rose-800"
+                      disabled={retryMutation.isPending}
+                      onClick={() => retryMutation.mutate(sentimentTarget.id)}
+                    >
+                      {retryMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <RotateCcw className="size-4" />
+                      )}
+                      Retry analysis
+                    </Button>
+                  </div>
+                ) : null}
+
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge
                     className={

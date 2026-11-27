@@ -73,7 +73,7 @@ export interface NewsItem {
   user_id: number;
   created_at: string;
   updated_at: string;
-  status: string;
+  status: "scraping" | "done" | "failed";
   analysis_type: AnalysisType;
   track_days?: number | null;
   interval_minutes?: number | null;
