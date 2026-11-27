@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createColumnHelper,
@@ -40,10 +40,11 @@ import { toast } from "sonner";
 
 import { insightFetch, type InsightApiError } from "@/services/insightApi";
 import type {
+  AnalysisBatch,
   AnalysisType,
   NewsItem,
   NewsSnapshot,
-  PaginatedNewsResponse,
+  PaginatedNewsFeedResponse,
   Sentiment,
 } from "@/types/insight";
 import { ExportDialog } from "@/components/insight/ExportDialog";
@@ -203,7 +204,9 @@ function StatusBadge({ status }: { status: AnalysisStatus }) {
   );
 }
 
-const columnHelper = createColumnHelper<NewsItem>();
+type FeedTableRow = NewsItem & { batch?: AnalysisBatch };
+
+const columnHelper = createColumnHelper<FeedTableRow>();
 
 type AnalysisOptions = {
   analysis_type: AnalysisType;
@@ -1022,6 +1025,7 @@ export default function NewsWorkspace() {
   const [exportingFormat, setExportingFormat] = useState<"xlsx" | "csv" | null>(null);
   const [form, setForm] = useState<NewsFormState>(emptyFormState);
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [expandedBatchIds, setExpandedBatchIds] = useState<Set<number>>(() => new Set());
   const [showAdvancedReport, setShowAdvancedReport] = useState(false);
   const deferredSearch = useDeferredValue(search.trim());
 
@@ -1045,10 +1049,8 @@ export default function NewsWorkspace() {
         per_page: String(pagination.pageSize),
       });
       if (analysisFilter !== "all") params.set("analysis_type", analysisFilter);
-      const endpoint = deferredSearch
-        ? `/news/search?q=${encodeURIComponent(deferredSearch)}&${params.toString()}`
-        : `/news?${params.toString()}`;
-      return insightFetch<PaginatedNewsResponse>(endpoint);
+      if (deferredSearch) params.set("q", deferredSearch);
+      return insightFetch<PaginatedNewsFeedResponse>(`/news/feed?${params.toString()}`);
     },
     placeholderData: keepPreviousData,
     refetchInterval: 60 * 1000,
@@ -1095,34 +1097,15 @@ export default function NewsWorkspace() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => insightFetch<{ message: string }>(`/news/${id}`, "DELETE"),
-    onMutate: async (id: number) => {
-      // Cancel in-flight refetches so they don't overwrite our optimistic removal
-      await queryClient.cancelQueries({ queryKey: ["insight-news"] });
-      // Snapshot all cached pages for rollback on error
-      const previousData = queryClient.getQueriesData<PaginatedNewsResponse>({
-        queryKey: ["insight-news"],
-      });
-      // Immediately remove from every cached page — item disappears instantly
-      queryClient.setQueriesData<PaginatedNewsResponse>({ queryKey: ["insight-news"] }, (old) => {
-        if (!old) return old;
-        return { ...old, data: old.data.filter((item) => item.id !== id) };
-      });
-      // Close dialog right away
+    onMutate: () => {
       setDeleteTarget(null);
-      return { previousData };
     },
     onSuccess: async () => {
       toast.success("News item deleted successfully");
       // Refetch to sync server-side pagination totals
       await queryClient.invalidateQueries({ queryKey: ["insight-news"] });
     },
-    onError: (error: InsightApiError, _id, context) => {
-      // Rollback: restore item in cache so it reappears if deletion failed
-      if (context?.previousData) {
-        for (const [queryKey, data] of context.previousData) {
-          queryClient.setQueryData(queryKey, data);
-        }
-      }
+    onError: (error: InsightApiError) => {
       toast.error(error.message || "Failed to delete news item");
     },
   });
@@ -1156,21 +1139,73 @@ export default function NewsWorkspace() {
     },
   });
 
-  const items = useMemo(() => newsQuery.data?.data ?? [], [newsQuery.data]);
+  const retryBatchMutation = useMutation({
+    mutationFn: async (batchId: number) =>
+      insightFetch<{ data: AnalysisBatch; message: string }>(
+        `/analysis-batches/${batchId}/retry-failed`,
+        "POST",
+      ),
+    onSuccess: async ({ message }) => {
+      toast.success(message || "Failed analyses queued again successfully");
+      await queryClient.invalidateQueries({ queryKey: ["insight-news"] });
+    },
+    onError: (error: InsightApiError) => {
+      toast.error(error.message || "Failed to retry the batch");
+    },
+  });
+
+  const allStories = useMemo(
+    () =>
+      (newsQuery.data?.data ?? []).flatMap((entry) =>
+        entry.type === "batch" ? entry.batch.items : [entry.story],
+      ),
+    [newsQuery.data],
+  );
+
+  const items = useMemo<FeedTableRow[]>(
+    () =>
+      (newsQuery.data?.data ?? []).flatMap((entry) => {
+        if (entry.type === "story") return [entry.story];
+
+        const first = entry.batch.items[0];
+        if (!first) return [];
+
+        return [
+          {
+            ...first,
+            id: -entry.batch.id,
+            title: entry.batch.name,
+            created_at: entry.batch.created_at,
+            updated_at: entry.batch.updated_at,
+            status: entry.batch.status,
+            analysis_type: entry.batch.analysis_type,
+            track_days: entry.batch.track_days,
+            interval_minutes: entry.batch.interval_minutes,
+            batch: entry.batch,
+          },
+        ];
+      }),
+    [newsQuery.data],
+  );
 
   const sourceOptions = useMemo(() => {
     const seen = new Set<string>();
-    for (const item of items) {
+    for (const item of allStories) {
       if (item.source) seen.add(item.source);
     }
     return Array.from(seen).sort();
-  }, [items]);
+  }, [allStories]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
+      const stories = item.batch?.items ?? [item];
       const toneMatch =
-        toneFilter === "all" || getSentimentTone(item.sentiment?.overall_sentiment) === toneFilter;
-      const sourceMatch = sourceFilter === "all" || (item.source ?? "") === sourceFilter;
+        toneFilter === "all" ||
+        stories.some(
+          (story) => getSentimentTone(story.sentiment?.overall_sentiment) === toneFilter,
+        );
+      const sourceMatch =
+        sourceFilter === "all" || stories.some((story) => (story.source ?? "") === sourceFilter);
       return toneMatch && sourceMatch;
     });
   }, [items, toneFilter, sourceFilter]);
@@ -1277,7 +1312,39 @@ export default function NewsWorkspace() {
         size: 9999,
         minSize: 240,
         cell: (info) => {
+          const batch = info.row.original.batch;
           const tone = getSentimentTone(info.row.original.sentiment?.overall_sentiment);
+          if (batch) {
+            const total = Math.max(batch.total_count, 1);
+            return (
+              <div className="min-w-0 space-y-2.5">
+                <div>
+                  <p className="font-semibold leading-6 text-foreground">{batch.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {batch.total_count} {batch.total_count === 1 ? "link" : "links"} ·{" "}
+                    <span className="capitalize">{batch.analysis_type}</span> analysis
+                  </p>
+                </div>
+                <div
+                  className="flex h-1.5 overflow-hidden rounded-full bg-muted"
+                  aria-label={`${batch.done_count} done, ${batch.scraping_count} processing, ${batch.failed_count} failed`}
+                >
+                  <span
+                    className="bg-emerald-500"
+                    style={{ width: `${(batch.done_count / total) * 100}%` }}
+                  />
+                  <span
+                    className="bg-amber-400"
+                    style={{ width: `${(batch.scraping_count / total) * 100}%` }}
+                  />
+                  <span
+                    className="bg-rose-500"
+                    style={{ width: `${(batch.failed_count / total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            );
+          }
           return (
             <div className="min-w-0 space-y-2">
               <p className="overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] font-medium leading-6 text-foreground">
@@ -1302,7 +1369,20 @@ export default function NewsWorkspace() {
         size: 120,
         minSize: 100,
         maxSize: 140,
-        cell: (info) => <StatusBadge status={getAnalysisStatus(info.getValue())} />,
+        cell: (info) => {
+          const batch = info.row.original.batch;
+          return (
+            <div className="space-y-1.5">
+              <StatusBadge status={getAnalysisStatus(info.getValue())} />
+              {batch ? (
+                <p className="whitespace-nowrap text-[11px] text-muted-foreground">
+                  {batch.done_count} done
+                  {batch.failed_count > 0 ? ` · ${batch.failed_count} failed` : ""}
+                </p>
+              ) : null}
+            </div>
+          );
+        },
       }),
       columnHelper.display({
         id: "next_round",
@@ -1311,7 +1391,13 @@ export default function NewsWorkspace() {
         minSize: 155,
         maxSize: 190,
         cell: ({ row }) =>
-          row.original.analysis_type === "comprehensive" ? (
+          row.original.batch ? (
+            <span className="text-xs text-muted-foreground">
+              {row.original.batch.analysis_type === "comprehensive"
+                ? `Monitoring ${row.original.batch.total_count} links`
+                : "Not applicable"}
+            </span>
+          ) : row.original.analysis_type === "comprehensive" ? (
             <NextRoundSchedule
               news={row.original}
               latestSnapshot={row.original.latest_snapshot}
@@ -1327,6 +1413,9 @@ export default function NewsWorkspace() {
         minSize: 100,
         maxSize: 180,
         cell: (info) => {
+          if (info.row.original.batch) {
+            return <span className="text-sm text-muted-foreground">Multiple sources</span>;
+          }
           const value = info.getValue();
           return value ? (
             <span className="text-sm text-foreground">{value}</span>
@@ -1341,56 +1430,104 @@ export default function NewsWorkspace() {
         minSize: 180,
         maxSize: 220,
         header: () => <span className="block text-right">Actions</span>,
-        cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-2">
-            {row.original.status === "failed" ? (
+        cell: ({ row }) => {
+          const batch = row.original.batch;
+          if (batch) {
+            const expanded = expandedBatchIds.has(batch.id);
+            return (
+              <div className="flex items-center justify-end gap-2">
+                {batch.failed_count > 0 ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-full border-rose-200 text-rose-700 hover:bg-rose-50"
+                    disabled={retryBatchMutation.isPending}
+                    onClick={() => retryBatchMutation.mutate(batch.id)}
+                  >
+                    {retryBatchMutation.isPending ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <RotateCcw className="size-3.5" />
+                    )}
+                    Retry failed
+                  </Button>
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full"
+                  aria-expanded={expanded}
+                  onClick={() =>
+                    setExpandedBatchIds((current) => {
+                      const next = new Set(current);
+                      if (next.has(batch.id)) next.delete(batch.id);
+                      else next.add(batch.id);
+                      return next;
+                    })
+                  }
+                >
+                  {expanded ? (
+                    <ChevronDown className="size-4" />
+                  ) : (
+                    <ChevronRight className="size-4" />
+                  )}
+                  {expanded ? "Hide" : "View links"}
+                </Button>
+              </div>
+            );
+          }
+
+          return (
+            <div className="flex items-center justify-end gap-2">
+              {row.original.status === "failed" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                  disabled={retryMutation.isPending}
+                  onClick={() => retryMutation.mutate(row.original.id)}
+                >
+                  {retryMutation.isPending ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="size-3.5" />
+                  )}
+                  Retry
+                </Button>
+              ) : null}
+              <a
+                href={row.original.link}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+              >
+                <ExternalLink className="size-3.5" />
+                Visit
+              </a>
               <Button
                 size="sm"
                 variant="outline"
-                className="rounded-full border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-                disabled={retryMutation.isPending}
-                onClick={() => retryMutation.mutate(row.original.id)}
+                className="rounded-full"
+                onClick={() => openDetailsDialog(row.original)}
               >
-                {retryMutation.isPending ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <RotateCcw className="size-3.5" />
-                )}
-                Retry
+                <ArrowUpRight className="size-4" />
+                Details
               </Button>
-            ) : null}
-            <a
-              href={row.original.link}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-            >
-              <ExternalLink className="size-3.5" />
-              Visit
-            </a>
-            <Button
-              size="sm"
-              variant="outline"
-              className="rounded-full"
-              onClick={() => openDetailsDialog(row.original)}
-            >
-              <ArrowUpRight className="size-4" />
-              Details
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="rounded-full text-muted-foreground hover:text-foreground"
-              title="Quick Export"
-              onClick={() => openExportDialog(row.original)}
-            >
-              <Clipboard className="size-4" />
-            </Button>
-          </div>
-        ),
+              <Button
+                size="sm"
+                variant="ghost"
+                className="rounded-full text-muted-foreground hover:text-foreground"
+                title="Quick Export"
+                onClick={() => openExportDialog(row.original)}
+              >
+                <Clipboard className="size-4" />
+              </Button>
+            </div>
+          );
+        },
       }),
     ],
-    [openDetailsDialog, openExportDialog, retryMutation],
+    [expandedBatchIds, openDetailsDialog, openExportDialog, retryBatchMutation, retryMutation],
   );
 
   const table = useReactTable({
@@ -1406,21 +1543,21 @@ export default function NewsWorkspace() {
   });
 
   const metrics = useMemo(() => {
-    const total = items.length;
-    const positive = items.filter(
+    const total = allStories.length;
+    const positive = allStories.filter(
       (item) => getSentimentTone(item.sentiment?.overall_sentiment) === "positive",
     ).length;
-    const neutral = items.filter(
+    const neutral = allStories.filter(
       (item) => getSentimentTone(item.sentiment?.overall_sentiment) === "neutral",
     ).length;
-    const negative = items.filter(
+    const negative = allStories.filter(
       (item) => getSentimentTone(item.sentiment?.overall_sentiment) === "negative",
     ).length;
-    const mixed = items.filter(
+    const mixed = allStories.filter(
       (item) => getSentimentTone(item.sentiment?.overall_sentiment) === "mixed",
     ).length;
     return { total, positive, neutral, negative, mixed };
-  }, [items]);
+  }, [allStories]);
 
   const submitForm = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1740,25 +1877,101 @@ export default function NewsWorkspace() {
                   ))}
                 </TableHeader>
                 <TableBody>
-                  {table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      className="group border-b border-border/40 transition-colors hover:bg-muted/30"
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
-                          style={{
-                            width:
-                              cell.column.getSize() === 9999 ? undefined : cell.column.getSize(),
-                          }}
-                          className="px-5 py-4 align-middle whitespace-normal"
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
+                  {table.getRowModel().rows.map((row) => {
+                    const batch = row.original.batch;
+                    const expanded = batch ? expandedBatchIds.has(batch.id) : false;
+
+                    return (
+                      <Fragment key={row.id}>
+                        <TableRow className="group border-b border-border/40 transition-colors hover:bg-muted/30">
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell
+                              key={cell.id}
+                              style={{
+                                width:
+                                  cell.column.getSize() === 9999
+                                    ? undefined
+                                    : cell.column.getSize(),
+                              }}
+                              className="px-5 py-4 align-middle whitespace-normal"
+                            >
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                        {batch && expanded ? (
+                          <TableRow className="border-b border-border/50 bg-muted/20 hover:bg-muted/20">
+                            <TableCell colSpan={row.getVisibleCells().length} className="px-5 py-4">
+                              <div className="ml-4 space-y-2 border-l-2 border-primary/20 pl-4">
+                                {batch.items.map((story, index) => (
+                                  <div
+                                    key={story.id}
+                                    className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-background px-4 py-3 lg:flex-row lg:items-center lg:justify-between"
+                                  >
+                                    <div className="min-w-0">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-xs font-semibold text-muted-foreground">
+                                          Link {index + 1}
+                                        </span>
+                                        <StatusBadge status={getAnalysisStatus(story.status)} />
+                                      </div>
+                                      <p className="mt-1 truncate text-sm font-medium text-foreground">
+                                        {story.title || story.link}
+                                      </p>
+                                      <p className="truncate text-xs text-muted-foreground">
+                                        {story.source || story.link}
+                                      </p>
+                                    </div>
+                                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                                      {story.status === "failed" ? (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="rounded-full border-rose-200 text-rose-700"
+                                          disabled={retryMutation.isPending}
+                                          onClick={() => retryMutation.mutate(story.id)}
+                                        >
+                                          <RotateCcw className="size-3.5" />
+                                          Retry
+                                        </Button>
+                                      ) : null}
+                                      <a
+                                        href={story.link}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-1.5 rounded-full border border-border/70 px-3 py-1.5 text-xs font-medium hover:text-primary"
+                                      >
+                                        <ExternalLink className="size-3.5" />
+                                        Visit
+                                      </a>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="rounded-full"
+                                        onClick={() => openDetailsDialog(story)}
+                                      >
+                                        <ArrowUpRight className="size-4" />
+                                        Details
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="rounded-full"
+                                        title="Quick Export"
+                                        onClick={() => openExportDialog(story)}
+                                      >
+                                        <Clipboard className="size-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
               {/* Pagination */}

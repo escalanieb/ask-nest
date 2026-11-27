@@ -52,6 +52,7 @@ export interface ReactionCounts {
 
 export interface NewsItem {
   id: number;
+  analysis_batch_id?: number | null;
   title: string;
   link: string;
   source?: string | null;
@@ -101,6 +102,31 @@ export interface NewsPageLinks {
 
 export interface PaginatedNewsResponse {
   data: NewsItem[];
+  links?: NewsPageLinks;
+  meta?: NewsPageMeta;
+}
+
+export interface AnalysisBatch {
+  id: number;
+  name: string;
+  status: "scraping" | "done" | "failed";
+  analysis_type: AnalysisType;
+  track_days?: number | null;
+  interval_minutes?: number | null;
+  total_count: number;
+  done_count: number;
+  scraping_count: number;
+  failed_count: number;
+  items: NewsItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type NewsFeedItem =
+  { type: "story"; story: NewsItem } | { type: "batch"; batch: AnalysisBatch };
+
+export interface PaginatedNewsFeedResponse {
+  data: NewsFeedItem[];
   links?: NewsPageLinks;
   meta?: NewsPageMeta;
 }
